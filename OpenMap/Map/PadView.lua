@@ -779,6 +779,12 @@ end
 function mod.PadViewBuilt() return built end
 -- for Dungeons.lua: this view is the map now (Blizzard's left as it is)
 function mod.PadViewOn() return built and On() end
+function mod.PadViewHalfExtents(atZoom)
+	if not view or not view:IsShown() or not On() then return end
+	local W, H = S.Size()
+	local pixels = FitPx() * (atZoom or zoom)
+	return view:GetWidth() / (2 * W * pixels), view:GetHeight() / (2 * H * pixels)
+end
 -- for the files whose pins are handed out again as they're redrawn (Stitch.lua's sets reuse their frames):
 -- the pin under the controller's cursor, if it's one of `pins`, is left first, as the mouse would leave it,
 -- and entered again if it's back, its tooltip as it is then

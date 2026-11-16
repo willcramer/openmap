@@ -48,7 +48,8 @@ class GPSIntegrationTests(unittest.TestCase):
                 if not MISSING then return { x = PX, y = PY } end
             end
             C_Map.GetWorldPosFromMapPos = function(_, p)
-                return 0, { x = 1000 - p.y * 1000, y = 1000 - p.x * 1000 }
+                -- Keep this synthetic map outside any real imported continent.
+                return 900001, { x = 1000 - p.y * 1000, y = 1000 - p.x * 1000 }
             end
             C_Map.GetMapInfo = function(id) return { mapID = id, name = "Test road" } end
             WAYPOINT = nil

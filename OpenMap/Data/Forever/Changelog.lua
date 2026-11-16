@@ -4,6 +4,10 @@
 local _, ns = ...
 
 ns.MapChangelog = {
+	{ version = "v0.8.10-gps.3", date = "2026-11-16", heads = { [1] = "New", }, items = {
+		"|cff6e2c0aBundled road network:|r all 8,944 Forever Maps 2.0.166 road nodes and associated room/floor metadata, used with author permission. Independent routing preserves one-way drops, faction restrictions, no-start roads, stairs and intermediate landings, elevators and swimming. Room inference respects portal crossings and Undercity's separate surface and underground layers.",
+		"|cff6e2c0aRoad integration:|r user recordings extend the graph; pins and search continue to start GPS. Road network can be shown in the map menu, and routing preferences are in Options. Zephras Isle has route drawing on its native maps. The separate OpenMapGPS package and reload switching remain.",
+	} },
 	{ version = "v0.8.10-gps.2", date = "2026-11-16", heads = { [1] = "Improved", }, items = {
 		"|cff6e2c0aInstall beside the original:|r the separate OpenMapGPS package uses its own folder, settings, commands, frames, bindings and API. With both enabled, GPS stays in standby. /omgps use gps and /omgps use original switch the active map with a UI reload.",
 	} },
@@ -39,9 +43,5 @@ ns.MapChangelog = {
 	} },
 	{ version = "v0.8.7", date = "2026-11-12", heads = { [1] = "Fixed", }, items = {
 		"|cff6e2c0aQuestie's icons show on the first map you open|r: with Questie 12.8, a map opened on a zone showed none of Questie's icons (their tooltips still came up) until you'd zoomed out to the continent once: icons Questie placed before the map was first opened stayed under its art (#194, #193, #195).",
-	} },
-	{ version = "v0.8.6", date = "2026-11-12", heads = { [1] = "Improved", [2] = "Fixed", }, items = {
-		"|cff6e2c0aIcons stay shown while zooming|r: \"Fade icons while zooming\" is now off for everyone, as zooming is smooth enough with them shown; turn it on again in the menu's On the map tab if you prefer it.",
-		"|cff6e2c0aQuestie's icons show again with Questie 12.8|r: Questie 12.8 brings its map icons a new way (its own module, with a new name), which OpenMap didn't know, so they were left off the map; and each icon Questie drew again sank under the map's art, so they faded away one by one. Older Questie versions work as before (#18). With bv101rj. Questie 12.8 hides its objective icons (mobs to kill, items to loot) until you turn them on: /questie, Icon Options, Objectives.",
 	} },
 }

@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+## v0.8.10-gps.3 (2026-11-16)
+
+### New
+
+- **Bundled road network:** all 8,944 Forever Maps 2.0.166 road nodes and associated room/floor
+  metadata, used with author permission. Independent routing preserves one-way drops, faction
+  restrictions, no-start roads, stairs and intermediate landings, elevators and swimming. Room
+  inference respects portal crossings and Undercity's separate surface and underground layers.
+- **Road integration:** user recordings extend the graph; pins and search continue to start GPS.
+  Road network can be shown in the map menu, and routing preferences are in Options. Zephras Isle
+  has route drawing on its native maps. The separate OpenMapGPS package and reload switching remain.
+
 ## v0.8.10-gps.2 (2026-11-16)
 
 ### Improved

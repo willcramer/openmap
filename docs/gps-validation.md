@@ -1,40 +1,74 @@
-# GPS test build validation — 2026-11-16
+# GPS road-network validation
 
-Base: upstream OpenMap `9ebb7d3` (v0.8.9). Custom package: `v0.8.10-gps.2`.
+Candidate: **v0.8.10-gps.3**, Forever Maps dataset **2.0.166**, separate addon **OpenMapGPS**.
+This is an offline-verified test build. No live game-client verification is claimed.
 
-## Passed locally
+## Data and routing
 
-- Lint: zero problems; generated changelog and locale consistency checks passed.
-- Forever and Retail: all six loader modes (`plain`, `combat`, `secret`, `pad`, `padmap`,
-  `padview`), navigation and controller-waypoint tests.
-- Forever: all applicable existing focused tests (bosses, brightness, caves, combat, exploration,
-  sea chart, friends, instances, controller friends, player, press, Questie and quests).
-- GPS core: nine tests, run on both clients. Recorded-road detours and junctions, arrival,
-  reverse/loop/pingpong playback, gap detection and explicit partial save, recording cancellation,
-  rerouting, secret coordinates, taxi/position loss, and external waypoint ownership.
-- GPS integration: seven tests, run on both clients. Full toc and Init boot, slash commands,
-  map-closed HUD/arrival, mixed-case route names, external waypoint takeover, missing/secret
-  positions, idempotent initialization and HUD recording discard.
-- Map click tests: ten passed, including Alt-click GPS and Alt-drag suppression.
-- Separate packaging: seven tests check both clients' metadata, saved-variable names, commands,
-  bindings, paths, preserved library/art bytes, and compilation/dormant guards for every own Lua file.
-- Coexistence: seven tests per client load the original and transformed GPS in one Lua runtime.
-  Original globals/API/settings/commands/bindings remain unchanged while GPS is dormant. GPS alone
-  has independent settings/API/media paths; switching enables the requested addon then reloads.
-  Combat and missing-original cases leave the working addon enabled.
-- Python tools compile successfully (an existing invalid-escape warning in `caves.py` is unrelated).
+- The restricted importer preserves all 8,944 nodes and 19,416 adjacency entries, every supplied
+  node metadata field, 1,061 buildings with room polygons/height intervals/portals, level tables,
+  the Zephras area grid and four explicitly linked upper-platform anchors. Eleven import tests
+  pass, including an exact round trip against the permitted source archive. The manifest records
+  source/member hashes and semantic output hashes. No source archive or reference code is bundled.
+- Twenty-two required router tests cover explicit topology, direction, room/layer compatibility,
+  faction and level constraints, off-road costs, segment attachment, stair winding/exits, elevator
+  flags, recorded extensions and cache invalidation. Nearby roads never become new junctions.
+- The optional differential audit runs the separately installed reference Graph in an isolated
+  Lua state without filesystem, OS, Python or network access. It checks all 19,416 adjacency
+  directions, 24 staircase stop windings, room/layer entry cases, 100 known-node journeys, 100
+  offset-start journeys, 100 map-pin destinations with both endpoints offset, and 100 journeys
+  using source product preferences. All 400 sampled route
+  costs agree within relative tolerance 1e-8. Boundary fixtures also compare final connectors at
+  199, 201, 600, 1,000 and 1,500 yards and the reference's named-destination auto-link threshold.
+  OpenMap coordinate destinations use map-pin semantics. The audit prints reference version and
+  implementation hashes.
+  This evidence covers those contracts; it is not proof of every possible journey.
+  A deliberate difference protects the last partial segment against reversing a one-way drop,
+  which the reference can allow on its final pin approach. See the decision record.
+- Seventeen room tests and twelve full-addon vertical tests cover real building geometry,
+  249,563 same-building floor pairs, stairs in both directions, intermediate exits, first movement
+  without a pause, floor-safe arrival, idle room observation, missed road corners, elevator flags
+  without player height, and the Ruins above Undercity separately from its underground map.
 
-The consolidated local run contained 32 successful check invocations. GPS core/integration were
-also run separately with `OPENMAP_CLIENT=retail`. Packaging reruns lint, the principal loader
-scenarios and the GPS tests.
+## OpenMap integration and installation
+
+- All six loader modes, navigation and controller-waypoint checks pass for Forever and Retail.
+  Existing focused tests also pass. The consolidated local run has 42 successful invocations.
+- Nine GPS core and seven original integration tests preserve recording, playback modes,
+  partial-save handling, arrival, rerouting and external waypoint ownership.
+- Twelve bundled full-addon integration tests pass on Forever (ten plus two source-only skips on
+  Retail). They exercise actual road data, recorded extensions, Brill's upper platform, Zephras,
+  faction border stops with a persistent HUD, resuming the original target after changing the
+  faction option, and ghost routing through otherwise restricted paths.
+- Six road-overlay and nine native-map tests cover bounded drawing pools, clipping, view caching,
+  controller geometry, map visibility and coexistence with other map content. Active native routes
+  use at most 300 dots; optional network views use at most 800 markers on each canvas.
+- Seven package-transform and seven coexistence/switch tests check both clients. The original and
+  GPS addon load in the same Lua runtime without sharing saved variables, API, commands, frames,
+  bindings or message prefixes. Original-first loading leaves GPS dormant. Switching changes
+  character enable state and reloads; combat and missing-original cases leave the working addon on.
+- Python tools compile; Lua lint passes. New output is generated through its importer, changelog
+  builder or locale builder. The package builder reruns the routing and coexistence checks.
+- All 94 GPS strings have translations in each of the ten supported locales. Placeholder and
+  command checks report zero problems. Six pre-existing unrelated strings remain untranslated.
+  Standby/bootstrap messages can fall back to English before active locale tables are loaded.
+
+The reference-dependent checks are optional in public CI because the reference addon is not
+redistributed as a test dependency. To reproduce locally, set `OPENMAP_ROAD_SOURCE` to the permitted
+2.0.166 ZIP and `FOREVER_MAPS_REFERENCE` to a separately installed reference addon, then run
+`roads_import.py` and `gps_road_parity.py` under `tools/offline-test/` with Python and lupa.
 
 ## Still requires the game
 
-This environment has no running WoW Forever client. The stock terrain renderer needs the game's
-DB2 tables and texture cache and does not render the new live HUD; no visual render of the HUD is
-claimed. Actual arrow orientation, protected API behavior, layout at your UI scale, frame rate on
-a large recorded network, terrain correctness and controller interaction remain in-game checks.
-Follow the acceptance steps in [gps.md](gps.md).
+The live HUD's arrow alignment, UI-scale layout, actual protected/secret API behavior, controller
+interaction, performance and terrain walkability need the acceptance checks in [gps.md](gps.md).
+The stock map-preview renderer needs the game's DB2 tables and texture cache and does not render
+the live HUD or new road overlay; no rendered HUD or in-game screenshot is claimed.
 
-This build has no preloaded walking-road graph and no multi-transport itinerary planner.
-Unknown routes use direct guidance. All source changes are independent of Forever Maps' code.
+The imported network has the coverage and limits of its source beta. Endpoint approaches are
+explicit off-network connectors, not terrain-verified roads. An uncertain overlapping floor is
+reported rather than guessed. Source-compatible route costs and topology do not establish that
+every connector crosses walkable terrain. Multi-continent flight/boat itineraries, the complete
+reference road editor and reference public API are outside this walking-network pass.
+
+See [gps-decisions.md](gps-decisions.md) for decisions, supporting evidence and alternatives.

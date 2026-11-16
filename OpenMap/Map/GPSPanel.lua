@@ -124,8 +124,10 @@ local function Refresh()
 	if not mod.GPSStatus then return end
 	local status = mod.GPSStatus()
 	Draw(status)
+	if mod.GPSDrawNative then mod.GPSDrawNative(status) end
+	if mod.GPSRefreshRoadView then mod.GPSRefreshRoadView() end
 	if hud then
-		hud:SetShown(status.active or status.recording ~= nil and status.recording ~= false)
+		hud:SetShown(status.active or status.state == "faction-stop" or status.recording ~= nil and status.recording ~= false)
 		hud.title:SetText(status.recording and L["Recording: %s"]:format(status.recording) or status.title or L["GPS"])
 		hud.instruction:SetText(status.recording and RecordingText(status) or status.instruction or "")
 		hud.stop:SetText(status.recording and L["Discard"] or L["Stop"])
@@ -251,6 +253,8 @@ end
 function mod:SetupGPSPanel()
 	if ticker or not mod.GPSUpdate then return end
 	BuildHUD()
+	if mod.SetupGPSRooms then mod:SetupGPSRooms() end
+	if mod.SetupGPSNative then mod:SetupGPSNative() end
 	ticker = CreateFrame("Frame", nil, UIParent)
 	local elapsed = 0
 	ticker:SetScript("OnUpdate", function(_, dt)
@@ -273,6 +277,8 @@ function mod:GPSCommand(rest)
 	local command, args = rest:match("^(%S+)%s*(.*)$")
 	command = command and command:lower() or "panel"
 	if command == "panel" then self:ToggleGPS()
+	elseif command == "roads" and mod.GPSSetRoadsShown then
+		mod.GPSSetRoadsShown(args == "on" or args ~= "off" and not mod.GPSRoadsShown())
 	elseif command == "waypoint" then Waypoint()
 	elseif command == "stop" then mod.GPSStop()
 	elseif command == "record" then Result(mod.GPSRecord(args))
@@ -293,8 +299,13 @@ function mod:GPSCommand(rest)
 		else Result(nil, L["Usage: /openmap gps go <mapID> <x 0-100> <y 0-100>"]) end
 	elseif command == "status" then
 		local status = mod.GPSStatus()
-		ns:Print(status.recording and RecordingText(status) or status.active and status.instruction or L["GPS is stopped."])
+		ns:Print(status.recording and RecordingText(status) or (status.active or status.state == "faction-stop")
+			and status.instruction or L["GPS is stopped."])
 		if status.active then ns:Print(L["Remaining: %s"]:format(Distance(status.remaining))) end
+		if mod.GPSRoadStats then
+			local roads = mod.GPSRoadStats()
+			if roads.nodes > 0 then ns:Print(L["Road network: %d nodes (%s)"]:format(roads.nodes, roads.version or "")) end
+		end
 	else
 		ns:Print(L["GPS: waypoint, go <mapID> <x> <y>, stop, record <name>, save, savepartial, cancelrecord, follow [once/reverse/loop/pingpong] <name>, list, delete <name>, status."])
 	end

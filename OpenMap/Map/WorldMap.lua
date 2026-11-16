@@ -1808,6 +1808,7 @@ function mod:Options()
 	}
 	if mod.ExtraOptions then mod:ExtraOptions(opts, get, set, off) end
 	if mod.NavOptions then mod:NavOptions(opts, get, set, off) end
+	if mod.GPSOptions then mod:GPSOptions(opts, get, off) end
 	if mod.PinOptions then mod:PinOptions(opts, get, set, off) end
 	if mod.FriendsOptions then mod:FriendsOptions(opts, get, set, off) end
 	if mod.DungeonOptions then mod:DungeonOptions(opts, get, set, off) end

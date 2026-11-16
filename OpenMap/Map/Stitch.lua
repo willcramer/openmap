@@ -931,7 +931,7 @@ end
 -- (Townsfolk are never shown further out than their own: there are thousands of them)
 local places = { from = nil, sets = { dungeons = true, boats = true, zeppelins = true, flight = true },
 	world = { friends = true, friendzones = true, boats = true, zeppelins = true,
-		routes = true, flight = true, route = true, quests = true } }
+		routes = true, flight = true, route = true, quests = true, gps = true, gpsroads = true } }
 
 function S.WorldPinsHidden(key)
 	return places.hidden and places.world[key] or false

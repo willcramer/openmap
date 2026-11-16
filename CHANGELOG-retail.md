@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+## v0.8.10-gps.3 (2026-11-16)
+
+### Improved
+
+- **GPS integration:** shared floor-aware routing and native-map drawing infrastructure; user
+  recordings and the separate addon package remain supported. Forever's supplied road data is
+  loaded only by the Forever client and is not included in the Retail package.
+
 ## v0.8.10-gps.2 (2026-11-16)
 
 ### Improved

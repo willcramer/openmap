@@ -4,6 +4,9 @@
 local _, ns = ...
 
 ns.MapChangelog = {
+	{ version = "v0.8.10-gps.3", date = "2026-11-16", heads = { [1] = "Improved", }, items = {
+		"|cff6e2c0aGPS integration:|r shared floor-aware routing and native-map drawing infrastructure; user recordings and the separate addon package remain supported. Forever's supplied road data is loaded only by the Forever client and is not included in the Retail package.",
+	} },
 	{ version = "v0.8.10-gps.2", date = "2026-11-16", heads = { [1] = "Improved", }, items = {
 		"|cff6e2c0aSeparate OpenMapGPS package:|r independent settings and commands; safe standby beside the original. /omgps use gps and /omgps use original switch maps with a UI reload.",
 	} },
@@ -27,10 +30,5 @@ ns.MapChangelog = {
 	} },
 	{ version = "v0.8.6", date = "2026-11-12", heads = { [1] = "Improved", }, items = {
 		"|cff6e2c0aIcons stay shown while zooming|r: \"Fade icons while zooming\" is now off for everyone, as zooming is smooth enough with them shown; turn it on again in the menu's On the map tab if you prefer it.",
-	} },
-	{ version = "v0.8.5", date = "2026-11-12", heads = { [1] = "New", [3] = "Fixed", }, items = {
-		"|cff6e2c0aOpenMap's map with a controller|r (the game's Gamepad UI; a test, off until you turn it on in Options: \"OpenMap's map with the Gamepad UI (test)\"): the seamless map with the Gamepad UI on, where OpenMap leaves the world map to Blizzard. OpenMap draws its map over Blizzard's, so the controller's buttons keep working and B closes the map. The left stick moves the cursor (at the edge it pans), the right stick zooms about it, A zooms in or presses what's under the cursor, X zooms out or closes what's open, and pressing the left stick puts the waypoint there. Off (the default): Blizzard's map with the Gamepad UI, as before. If you play with a controller, try it and tell us how it goes (#57). By FlyingPenguin98.",
-		"|cff6e2c0aReopen the map on your zone|r (the menu's More tab, Reopen map: \"Center on your zone\"): the map opens on the whole zone you're in, in the middle, wherever you stand in it (#143).",
-		"|cff6e2c0a\"Darken unexplored areas\" keeps its soft edges up close|r: once the minimap's detail shows, the shade was hard-edged rectangles; it now has each unexplored area's own shape, as further out (#101, #129).",
 	} },
 }

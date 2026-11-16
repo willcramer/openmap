@@ -38,6 +38,9 @@ ns.Credits = {
 	{ L["Map art"], {
 		{ "Blizzard Entertainment", L["the map art is the game's own"] },
 	} },
+	{ L["Road network data"], {
+		{ "sahnetee", L["Forever Maps road network and associated room data, used with author permission"] },
+	} },
 	{ L["Libraries"], {
 		{ "Ace3", "AceConfig-3.0, AceGUI-3.0" },
 		{ "CallbackHandler-1.0, LibStub" },

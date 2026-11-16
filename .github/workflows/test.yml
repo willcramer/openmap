@@ -37,6 +37,14 @@ jobs:
       - run: python -P tools/offline-test/gps_integration.py
       - run: python -P tools/offline-test/gps_package.py
       - run: python -P tools/offline-test/variant.py
+      - run: python -P tools/offline-test/roads_import.py
+      - run: python -P tools/offline-test/gps_rooms.py
+      - run: python -P tools/offline-test/gps_roads.py
+      - run: python -P tools/offline-test/gps_road_view.py
+      - run: python -P tools/offline-test/gps_native.py
+      - run: python -P tools/offline-test/gps_bundled_integration.py
+      - run: python -P tools/offline-test/gps_vertical.py
+      - run: python -P tools/offline-test/gps_road_parity.py
       - run: python -P tools/offline-test/player.py
       - run: python -P tools/offline-test/instances.py
       - run: python -P tools/offline-test/press.py

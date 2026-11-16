@@ -4,11 +4,13 @@ This build adds GPS guidance to OpenMap: an arrow and distance while the map is 
 a route on the map, automatic progress through turns, and a recorder for roads and repeatable
 walking routes. It is an independent implementation inspired by the publicly described
 [Forever Maps GPS feature](https://www.curseforge.com/wow/addons/forever-maps-world-map-gps-navigation).
-No Forever Maps source, road data or art is included.
+The Forever package includes the 2.0.166 road network and associated room/floor metadata with
+author permission. The importer and routing code are independently implemented; no Forever Maps
+routing implementation or art is included. See the [data notice](../OpenMap/Data/Forever/RoadData-NOTICE.md).
 
 ## Install
 
-Use **OpenMapGPS-v0.8.10-gps.2-forever.zip**, the separate-addon build. The older gps.1 ZIP
+Use **OpenMapGPS-v0.8.10-gps.3-forever.zip**, the separate-addon build. The older gps.1 ZIP
 used the original addon's folder and should not be used for a side-by-side install.
 If you already installed gps.1 into `OpenMap`, reinstall the official OpenMap there first.
 
@@ -68,6 +70,7 @@ Commands:
 | `/omgps gps delete Elwynn road` | Delete saved route |
 | `/omgps gps stop` | Stop navigation; recording is separate |
 | `/omgps gps status` | Print current status |
+| `/omgps gps roads on` | Show the bundled road network on the stitched map (`off` hides it) |
 
 Flights or teleports interrupt road recording. The controls offer Save partial or Discard recording
 rather than adding the jump as a walkable road. Loops must end within 100 yards of their start;
@@ -77,19 +80,44 @@ The GPS controls list saved routes and offer playback modes. Saved walking trail
 the road graph for destination routing. Only record paths you intend to walk; map points alone
 cannot identify cliffs, walls, locked doors or a path's vertical level.
 
-## Coverage and remaining parity work
+## Bundled roads and coverage
 
-This is a test build, not complete parity with Forever Maps. OpenMap's upstream data includes
-flight and sailing routes but no walkable road graph. This build starts with **no recorded roads**.
-Where no usable recorded connection exists it labels the result **direct guidance**, which points
-toward the destination without knowing the terrain. It must not be treated as a safe walking path.
-On a different continent, record/follow only supported walking sections; transport itinerary planning
-and automatic flight/boat transfers are not implemented.
+The Forever package starts with **8,944 supplied nodes**: 4,467 in the Eastern Kingdoms, 4,134 in
+Kalimdor, 341 on Zephras Isle, and two isolated entries without a map assignment. All 19,416 adjacency
+entries are retained, together with one-way directions, faction types, swimming, no-start flags,
+staircases, intermediate landings, elevators, room identities and layers. The associated geometry
+contains 1,061 buildings with room footprints, height intervals and portals.
 
-Full parity requires a sourced, redistributable road network (including city interiors, entrances,
-bridges, heights and one-way links), connecting it to faction/learned-flight-aware transport legs,
-and in-game verification of each transport transition. Forever Maps' proprietary road data is not
-part of this build. Its route editing tools and complete public API are also outside this first build.
+Use bundled roads is on by default. The map menu's Road network switch shows the network; Options
+provides Use bundled roads, Allow enemy roads, Off-road paths and Off-road paths above your level.
+Off-road choices are Shortest, Avoid, Only when needed and Never; level choices are Warn, Avoid and
+Never. Avoid applies a cost penalty; it does not promise that the route avoids every such path.
+Changing routing preferences replans the active destination. User recordings can extend the
+supplied graph without changing its source data. Faction restrictions and floor identities remain
+separate.
+
+Living players stop at the last safe point before an enemy-faction road unless Allow enemy roads
+is enabled. The HUD explains the stop; enabling the option resumes the requested destination and
+warns along the enemy section. Ghost routing ignores faction and level restrictions and off-road
+penalties, matching the reference's walking-network policy.
+
+Directions follow stairs by angular progress and retain intermediate exits; elevators and swimming
+have their own instructions. Live room inference uses room bounds, portal crossings, recent movement
+and WMO change events. It resets after loading or teleports and keeps unresolved floors ambiguous.
+The Ruins above Undercity are distinguished from the underground city by subzone evidence.
+
+Zephras routes use its native maps (2521 and 2665), with the GPS route drawn on their own canvas.
+Set a waypoint there and choose Guide to waypoint, or use the `go` command. Stitched-map Alt-click
+continues working across the two main continents. Native-map gestures keep the game's behavior.
+
+Missing coverage can fall back to explicitly labeled direct guidance. A blocked, disconnected or
+ambiguous floor route is reported instead of silently drawing a road through it. Short approaches
+to the network are off-road connectors; the data does not establish that every such approach is
+walkable. The source network itself is still beta and does not cover every path in the game.
+
+This goal concerns the supplied walking network. Multi-continent flight/boat itinerary planning,
+the reference addon's complete road editor and its full public API are not part of this pass.
+See [parity and validation](gps-validation.md) for verified cases and remaining live checks.
 
 Position reads can be unavailable or secret in instances or combat. Guidance waits rather than
 doing arithmetic on those values. Setting a different waypoint lets another addon take over;
@@ -106,6 +134,14 @@ GPS must not replace that addon's destination.
 5. While navigating, set another waypoint. Confirm GPS yields and leaves the new waypoint intact.
 6. Enter combat or an instance and check for Lua errors and stale guidance. Return outdoors.
 7. Repeat with TomTom if installed and with the controller view if used.
+8. Enable Road network and plan a bundled route without recording first. Check the route, toggle
+   the overlay, pan and zoom, then change a routing preference while navigating.
+9. Test a known staircase, an intermediate landing and an elevator. On overlapping floors, check
+   that the route does not finish until you reach the indicated floor. Test Brill's upper platform
+   when possible, and the Ruins above Undercity separately from the city below.
+10. Check a faction border: stop before the enemy road, then enable Allow enemy roads to resume.
+    Test a Zephras waypoint on its native map. Switch back with `/omgps use original`, confirm the
+    original settings and map, and switch to GPS again.
 
 Offline tests cover the Lua logic and stubbed client behavior. Arrow alignment, actual protected
 API behavior, terrain, and the live window layout still require this game-client test.

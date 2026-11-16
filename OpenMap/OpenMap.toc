@@ -58,6 +58,11 @@ Data\Forever\Grade.lua
 Data\Forever\Levels.lua
 Data\Forever\Fishing.lua
 Data\Forever\FlightData.lua
+Data\Forever\Roads.lua
+Data\Forever\RoadBuildings.lua
+Data\Forever\RoadLevels.lua
+Data\Forever\RoadAreas.lua
+Data\Forever\RoadAnchors.lua
 Data\Forever\Minimap.lua
 Data\Forever\MinimapLOD.lua
 Data\Forever\Caves.lua
@@ -93,7 +98,11 @@ Map\Gamepad.lua
 Map\PadView.lua
 Map\Report.lua
 Map\Nav.lua
+Map\GPSRooms.lua
+Map\GPSRoads.lua
+Map\GPSRoadView.lua
 Map\GPS.lua
+Map\GPSNative.lua
 Map\GPSPanel.lua
 Map\Combat.lua
 Map\Pins.lua

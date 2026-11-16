@@ -223,6 +223,9 @@ local function Rows()
 			texture = "Interface\\Icons\\Ability_Mount_Wyvern_01", icon = true }),
 		optRow(L["Only places you've found"], "foundOnly", Icon("INV_Misc_Spyglass_03")),
 		optRow(L["Boat and zeppelin routes"], "routes", { atlas = "Ships_CargoShip-Map", texture = "Interface\\Icons\\INV_Misc_Spyglass_02", icon = true }),
+		row(L["Road network"], "gpsShowRoads", Icon("INV_Misc_Map_01"),
+			function() return mod.GPSRoadsShown and mod.GPSRoadsShown() end,
+			function(on) if mod.GPSSetRoadsShown then mod.GPSSetRoadsShown(on) end end),
 		optRow(L["Your arrow"], "playerArrow", { texture = "Interface\\Minimap\\MinimapArrow" }),
 		optRow(L["Party and raid members"], "group", Icon("Spell_Holy_PrayerOfFortitude")),
 		optRow(L["Friends on the map"], "friends", Icon("INV_Misc_GroupNeedMore")),
@@ -339,6 +342,12 @@ local function Rows()
 	rows[#rows + 1] = optRow(L["Caves underground"], "underground", Icon("Trade_Mining"))
 	-- the rest
 	rows[#rows + 1] = { L["Moving about"], tab = "more" }
+	rows[#rows + 1] = row(L["Use bundled roads"], "gpsUseRoads", Icon("INV_Misc_Map_01"),
+		function() return db.gpsUseRoads ~= false end,
+		function(on) if mod.GPSSetRoutingOption then mod.GPSSetRoutingOption("gpsUseRoads", on) end end)
+	rows[#rows + 1] = row(L["Allow enemy roads"], "gpsAllowEnemy", Icon("INV_Misc_Map_01"),
+		function() return db.gpsAllowEnemy == true end,
+		function(on) if mod.GPSSetRoutingOption then mod.GPSSetRoutingOption("gpsAllowEnemy", on) end end)
 	rows[#rows + 1] = optRow(L["Load the zone in view"], "autoSwitch", Icon("Ability_Hunter_Pathfinding"))
 	fromOptions(L["Ctrl-click drops a pin"], "ctrlClickPin", Icon("INV_Misc_Map_01"))
 	fromOptions(L["Follow new pins"], "pinsFollowNew", Icon("INV_Misc_Map_01"))

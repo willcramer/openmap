@@ -33,6 +33,8 @@ jobs:
       - run: python tools/offline-test/run.py padview
       - run: python -P tools/offline-test/padwaypoint.py
       - run: python tools/offline-test/navigation.py
+      - run: python -P tools/offline-test/gps.py
+      - run: python -P tools/offline-test/gps_integration.py
       - run: python -P tools/offline-test/player.py
       - run: python -P tools/offline-test/instances.py
       - run: python -P tools/offline-test/press.py

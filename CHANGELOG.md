@@ -1,5 +1,17 @@
 # OpenMap changelog
 
+## Unreleased
+
+## v0.8.10-gps.1 (2026-11-16)
+
+### New
+
+- **Custom GPS test build:** Alt-click the map, Shift-click a search result or press a map pin's
+  GPS button for live directions with the map closed. Record walking trails and replay them once,
+  in reverse, on a loop or back and forth. Saved trails supply a road network with turn guidance
+  and rerouting. Locations without connected recorded roads use explicitly labeled direct guidance;
+  transport itinerary planning and a bundled road network are not included. By willcramer.
+
 ## v0.8.9 (2026-11-14)
 
 ### New

@@ -67,6 +67,8 @@ Map\Gamepad.lua
 Map\PadView.lua
 Map\Report.lua
 Map\Nav.lua
+Map\GPS.lua
+Map\GPSPanel.lua
 Map\Combat.lua
 Map\Pins.lua
 Map\Friends.lua

@@ -1072,6 +1072,10 @@ local function OnCanvasClick(from, button)
 	-- NeedRoll draws over a world-map host: a click must not select a zone underneath it.
 	if mod.instanceWorldHidden then return true end
 	if not active then return false end
+	if button == "LeftButton" and mod.GPSGoWorld and IsAltKeyDown() and not WasDrag() then
+		mod.GPSGoWorld(mod.CursorWorld())
+		return true
+	end
 	if Dropping(button) then
 		DropAtCursor()
 		return true

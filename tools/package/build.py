@@ -47,6 +47,7 @@ if dirty and "--dirty" not in sys.argv:
 
 if "--no-tests" not in sys.argv:
     checks = [["-P", "tools/offline-test/lint.py"]] + [["tools/offline-test/run.py", m_] for m_ in ("plain", "combat", "secret", "pad", "padmap")]
+    checks += [["-P", "tools/offline-test/" + name + ".py"] for name in ("gps", "gps_integration")]
     for c in checks:
         r = subprocess.run([sys.executable] + c, cwd=ROOT, capture_output=True, text=True,
                            env=dict(os.environ, OPENMAP_CLIENT=client))

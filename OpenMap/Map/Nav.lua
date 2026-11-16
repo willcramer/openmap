@@ -330,6 +330,10 @@ end
 local function Go(p)
 	box:ClearFocus()
 	list:Hide()
+	if IsShiftKeyDown() and mod.GPSGoWorld then
+		mod.GPSGoWorld((p[1] + p[3]) / 2, (p[2] + p[4]) / 2, p.name)
+		return
+	end
 	if p[1] == p[3] then
 		mod.Glide(p[1], p[2], math.max(14, select(3, mod.ViewNow()) or 1))
 		Ping(p[1], p[2])
@@ -712,6 +716,7 @@ end
 
 function mod:SetupNav(worldMap)
 	map, sc = worldMap, worldMap.ScrollContainer
+	if mod.SetupGPSPanel then mod:SetupGPSPanel() end
 	map:HookScript("OnHide", function()
 		ringHandoff = nil
 		if nativeRings then nativeRings.members = nil end

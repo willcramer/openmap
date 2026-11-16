@@ -46,9 +46,10 @@ local function Slash(msg)
 	msg = raw:lower()
 	local mod = ns:GetModule("worldmap")
 	local word, rest = msg:match("^(%S+)%s+(.+)$")
-	local takes = { bench = true, entrance = true }  -- (/openmap bench 16: at that zoom; /openmap entrance Dire Maul - East)
+	local takes = { bench = true, entrance = true, gps = true }  -- GPS subcommands preserve route names' case.
 	if takes[word] then msg, rest = word, raw:match("^%S+%s+(.+)$") end
 	local run = {
+		gps = "GPSCommand",
 		status = "Diag", paint = "TogglePaint", notes = "TogglePaint", debug = "ToggleDebugOverlay",
 		bench = "Bench", pins = "TogglePins", news = "ToggleNews", entrance = "Entrance", draw = "ToggleSketch", dungeons = "DungeonDiag", bosses = "ToggleBossPlacer", forgetflights = "ForgetFlights",
 		welcome = "ShowWelcome", highlights = "Highlights", warm = "ToggleWarm",
@@ -58,9 +59,9 @@ local function Slash(msg)
 	if msg == "padview" and mod.PadViewDiag then return mod.PadViewDiag() end
 	-- the controller view's map (PadView.lua): what works on it, its status its own
 	if run[msg] and mod.padWaits and mod.PadViewOn and mod.PadViewOn() then
-		local onView = { pins = true, draw = true, news = true }
+		local onView = { pins = true, draw = true, news = true, gps = true }
 		if msg == "status" and mod.PadViewDiag then mod.PadViewDiag()
-		elseif onView[msg] and mod[run[msg]] then mod[run[msg]](mod)
+		elseif onView[msg] and mod[run[msg]] then mod[run[msg]](mod, takes[msg] and rest or nil)
 		else ns:Print(ns.L["That isn't available with the Gamepad UI yet."]) end
 		return
 	end
@@ -83,6 +84,8 @@ boot:SetScript("OnEvent", function(self, event, name)
 	elseif event == "PLAYER_LOGIN" then
 		local t0 = debugprofilestop and debugprofilestop()
 		ns:EnableModules()
+		local mod = ns:GetModule("worldmap")
+		if mod.db.enabled and mod.SetupGPSPanel then mod:SetupGPSPanel() end
 		if t0 then ns.loadMs.login = debugprofilestop() - t0 end
 		local AC = LibStub("AceConfig-3.0", true)
 		if AC then AC:RegisterOptionsTable("OpenMap", Options) end

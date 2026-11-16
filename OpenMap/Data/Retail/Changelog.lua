@@ -4,6 +4,9 @@
 local _, ns = ...
 
 ns.MapChangelog = {
+	{ version = "v0.8.10-gps.1", date = "2026-11-16", heads = { [1] = "New", }, items = {
+		"|cff6e2c0aCustom GPS test build:|r live directions, walking-trail recording and replay, and routing over saved trails. Alt-click the map, Shift-click a search result or use a pin's GPS button. No bundled road network or transport planning; unrecorded locations use direct guidance. By willcramer.",
+	} },
 	{ version = "v0.8.9", date = "2026-11-14", heads = { [1] = "New", [3] = "Improved", [4] = "Fixed", }, items = {
 		"|cff6e2c0aHide world markers in instances|r (the menu's On the map tab, and Options; off unless turned on): in dungeons, raids and battlegrounds, OpenMap's friends, guild, transport and all-zone quest markers step aside. With Dungeon maps off and another addon's dungeon map shown over the world (NeedRoll's), the world under it stops answering the mouse, and a right-click brings the world map back, at the dungeon's outdoor entrance (#232). By HonzoNebro.",
 		"|cff6e2c0aPin options|r (OpenMap's options, Moving about and Sharing): - |cff6e2c0aFollow new pins|r: on by default, as before. Off, a pin you drop doesn't become the waypoint, so addons that route to it (Shortest Path Forever) are left alone; the pin's Follow still sets it. - |cff6e2c0aSend new pins to group|r: a pin you drop goes to your party or raid once its card is closed. - |cff6e2c0aAuto-add group's pins|r: pins your party or raid shares are added without asking. By diegodiaz1256.",
@@ -33,16 +36,5 @@ ns.MapChangelog = {
 		"|cff6e2c0a\"Party and raid members\" off means off|r: Blizzard's own blips for your group are hidden too, not only OpenMap's dots (#77, found by Luquatic).",
 		"|cff6e2c0aDragging the map no longer zooms into a zone or city|r: a drag that came back near where it started counted as a click and zoomed into what was under the cursor, Ironforge from parts of Dun Morogh most of all (#37, #64).",
 		"|cff6e2c0aGuild markers clear when a guildmate joins your group|r: their shared-location dot or zone badge entry could stay when the guild roster and the party spelled the character's name differently. By puschie286.",
-	} },
-	{ version = "v0.8.3", date = "2026-11-09", heads = { [1] = "New", [5] = "Improved", [9] = "Fixed", }, items = {
-		"|cff6e2c0aTurn off OpenMap's dungeon maps|r (Options and the menu's On the map tab): off, clicking an entrance shows its card over the world map, and opening the map inside a dungeon shows the world map, so another dungeon map addon (NeedRoll, Dungeon Journal ...) can show its own. By ZiiMs.",
-		"|cff6e2c0aFriends and guild each have their own switch|r: keep your friends on the map and hide a big guild, or the other way round. A save with the old single switch off turns both off. By ZiiMs.",
-		"|cff6e2c0aMap brightness|r in the Look tab: dim the whole stitched map, including explored areas and the sea, while player and quest icons stay bright. 100% keeps the original look (the default). By forcedroidbrain.",
-		"|cff6e2c0aA launcher for Titan Panel|r and other LibDataBroker displays: it works like the minimap button (click: the map with its menu; right-click: the options window). By Naladdar.",
-		"|cff6e2c0aThe settings menu can be resized|r: drag its bottom-right corner to make it wider or shorter, double-click the corner to reset it. Long labels (German, the nearby zones settings) wrap instead of running into the next column, and the settings scroll when they don't fit the screen, instead of the whole menu shrinking. By Naladdar.",
-		"|cff6e2c0aThe map window can be resized with Move Any|r: Move Any still places and scales the window, and OpenMap's corner grips set its width and height. By Naladdar.",
-		"|cff6e2c0aClicking a quest's icon on the windowed map shows it in the quest log|r: the quest log beside the map opens if it was closed, with the quest's details, as well as tracking the quest and zooming in on it. (On the full-screen map a click still tracks and zooms only.)",
-		"|cff6e2c0aA dungeon map remembers its tab|r: picking Quests beside the quest log keeps it picked the next time a dungeon's map opens.",
-		"|cff6e2c0aNo more dot in the bottom-left corner of the screen|r after closing the map, or inside a dungeon: the map art OpenMap keeps loaded while the map is closed was drawn there, hundreds of faint copies on one pixel. Found by ryanull24.",
 	} },
 }

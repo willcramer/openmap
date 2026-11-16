@@ -45,9 +45,10 @@ class CtrlClickTests(unittest.TestCase):
     def setUp(self):
         self.lua = LuaRuntime(unpack_returned_tuples=True)
         self.lua.execute("""
-            ctrl, shift = false, false
+            ctrl, shift, alt = false, false, false
             function IsControlKeyDown() return ctrl end
             function IsShiftKeyDown() return shift end
+            function IsAltKeyDown() return alt end
             active, dropped, glided = true, 0, 0
             mod = { db = {}, DropWaypoint = function() dropped = dropped + 1 end,
                 CursorWorld = function() return 0.5, 0.5 end }
@@ -61,7 +62,7 @@ class CtrlClickTests(unittest.TestCase):
             function GlideTo() glided = glided + 1 end
         """)
         chunk = SOURCE[SOURCE.index('local function Dropping('):SOURCE.index('-- our icons: a press')]
-        self.lua.execute(chunk + '\n_G.OnCanvasClick = OnCanvasClick\n')
+        self.lua.execute(chunk + '\n_G.OnCanvasClick, _G.PressDown, _G.PressTrack = OnCanvasClick, PressDown, PressTrack\n')
 
     def check(self, code):
         self.lua.execute(code)
@@ -76,6 +77,31 @@ class CtrlClickTests(unittest.TestCase):
 
     def test_plain_click_still_zooms_when_turned_off(self):
         self.check("mod.db.ctrlClickPin = false assert(OnCanvasClick(true, 'LeftButton') == true) assert(glided == 1)")
+
+    def test_alt_click_navigates_without_zooming_or_dropping_a_pin(self):
+        self.check("""
+            local navigated = 0
+            mod.GPSGoWorld = function(u, v)
+                assert(u == .5 and v == .5)
+                navigated = navigated + 1
+            end
+            alt = true
+            assert(OnCanvasClick(true, 'LeftButton') == true)
+            assert(navigated == 1 and dropped == 0 and glided == 0)
+        """)
+
+    def test_alt_drag_does_not_start_navigation(self):
+        self.check("""
+            mod.GPSGoWorld = function() error('a drag started GPS') end
+            alt = true
+            sc.GetCursorPosition = function() return 0, 0 end
+            PressDown(nil, 'LeftButton')
+            sc.mouseButtonInfo.LeftButton.down = true
+            sc.GetCursorPosition = function() return 100, 0 end
+            PressTrack()
+            assert(OnCanvasClick(true, 'LeftButton') == true)
+            assert(dropped == 0 and glided == 0)
+        """)
 
 
 if __name__ == '__main__':

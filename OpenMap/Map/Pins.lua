@@ -528,6 +528,13 @@ local function Editor()
 		mod.RefreshPins()
 	end, L["Blizzard's waypoint and its arrow on it (and TomTom's, if you use it)."])
 	editor.follow:SetPoint("TOPRIGHT", -16, -46 - top)
+	local gps = Button(editor, 60, L["GPS"], function()
+		local p = editor.pin
+		if not p or not mod.GPSStart then return end
+		local ok, err = mod.GPSStart(p.map, p.x, p.y, Clean(editor.box:GetText()))
+		if not ok and err then ns:Print(L[err]) end
+	end, L["Navigate to this pin with GPS."])
+	gps:SetPoint("RIGHT", editor.follow, "LEFT", -4, 0)
 	-- drawing on this pin (Sketch.lua): the tray opens under this card, and what's drawn goes with it
 	local drawLabel = editor:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
 	drawLabel:SetPoint("TOPLEFT", 18, -92 - top)

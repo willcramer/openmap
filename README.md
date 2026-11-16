@@ -20,6 +20,9 @@ OpenMap stitches every zone map into one continuous map. Scroll out of Elwynn an
   Blizzard's where it drew one, else the game's own minimap of it.
 - **Flight paths.** Learned ones in colour, the rest greyed out. Click two flight masters to see the route you'd fly and roughly how long it takes.
 - **Getting around.** Search for a zone, city, dungeon or flight master; a "Find me" button (or middle-click the map); choose how the map reopens; party and raid members are shown across the whole map. Or take your own arrow off the map and find your way old-school.
+- **Custom GPS test build:** live directions, recorded roads and reusable routes. Alt-click the map,
+  Shift-click a search result, or use a pin's GPS button. `/openmap gps` opens the controls.
+  See [GPS setup and testing](docs/gps.md) for coverage and limits.
 - **Map pins and drawing.** Ctrl-click for as many pins as you like, each with a note and a colour, followed with Blizzard's waypoint (and TomTom's); share them with your group, guild or a friend. Draw on the map with a pen, lines, arrows, circles and raid marks, on its own or on a pin.
 - **Vendors, spirit healers and rares** (needs Questie): repair, innkeepers, trainers, bankers, auctioneers, stable masters, spirit healers and rare mobs. Questie's quest icons can be switched on or off from OpenMap's menu too. (Still working on performance here.)
 - **A map that fits your screen.** No more black bars at the sides: resize the window to any shape, or go full screen and the map fills it.

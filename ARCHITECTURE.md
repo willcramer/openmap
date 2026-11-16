@@ -218,6 +218,15 @@ Fed the view (centre, half extents, zoom) on every pan and zoom (`S.SetView`):
 
 ## The rest of `Map/`
 
+- `GPS.lua` and `GPSPanel.lua` (custom GPS test build): player-recorded walking trails stored
+  in `worldmap.gpsRoutes`, bounded to 50 routes / 2,000 points per route / 10,000 points total.
+  A lazy graph joins samples within 10 yards; heap-based Dijkstra connects nearby endpoints
+  (at most 100 yards from a sample). No bundled road graph. A disconnected same-continent
+  destination uses explicitly labeled direct guidance; cross-continent requests fail.
+  Live progress owns only its current waypoint and yields to external changes. Secret or
+  missing positions and taxi travel suspend guidance. The panel's 0.2-second ticker works
+  with the map closed; its pooled route pins rebuild on route/step changes. `docs/gps.md`
+  covers commands, recording, coverage and the remaining in-game acceptance test.
 - `Chart.lua`: the sea chart (Options' Responsive ocean & border, off unless chosen): Santiago Reyes's sea, ornaments and
   frame round the world map, laid out for the window's shape (`Data/Chart.lua`, `tools/map-chart/`'s
   layout, which `tools/offline-test/chart.py` checks it against). Drawn on a frame of its own just under the

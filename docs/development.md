@@ -40,6 +40,8 @@ AI coding agents: read [AGENTS.md](../AGENTS.md) too.
    python -P tools/offline-test/player.py   # the player arrow and location ping hidden together
    python -P tools/offline-test/instances.py # temporary world-marker filtering and instance events
    python -P tools/offline-test/press.py    # a press that wandered off isn't a click
+   python -P tools/offline-test/gps.py      # recorded-road planning, playback, gaps and ownership
+   python -P tools/offline-test/gps_integration.py # GPS through Init/Nav/HUD, with the map closed
    python tools/offline-test/run.py padview  # ... and with padView: OpenMap's map over Blizzard's (PadView.lua)
    python -P tools/offline-test/padwaypoint.py  # the controller view's waypoint: the stick's put where its cursor is, another addon's left alone
    python -P tools/offline-test/combat.py   # the map's pins in combat (Combat.lua)

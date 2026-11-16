@@ -149,6 +149,10 @@ end
 -- right = true (it takes right-clicks itself), grey = fn (optional: its icon greyed, as a setting's off) }
 local function Actions()
 	local list = {
+		{ L["GPS"], id = "gps", icon = Icon("INV_Misc_Map_01"),
+			tip = L["Live directions and recorded routes. Alt-click the map or Shift-click a search result to navigate."],
+			run = function() if mod.ToggleGPS then mod:ToggleGPS() end end,
+			lit = function() return mod.GPSStatus and mod.GPSStatus().active or false end },
 		{ L["Find me"], id = "find", icon = Icon("Ability_Hunter_SniperShot"),   -- (a crosshair)
 			 tip = L["Glide to where you are. Middle-click the map to center on you at the current zoom."],
 			run = function() mod:FindMe() end },

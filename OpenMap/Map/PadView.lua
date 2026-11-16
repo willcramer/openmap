@@ -912,6 +912,15 @@ local function Setup()
 		drag = nil
 		if (d and d.moved) or (button ~= "LeftButton" and button ~= "RightButton") then return end
 		lastX, lastY = GetCursorPosition()
+		-- Mouse navigation uses this view's coordinates, not Blizzard's canvas or
+		-- the controller cursor. Keep the active drawing/pin tools in control.
+		if button == "LeftButton" and mod.GPSGoWorld and IsAltKeyDown()
+			and not (mod.DungeonViewShown and mod.DungeonViewShown())
+			and not (mod.IsSketching and mod:IsSketching())
+			and not (mod.PinMode and mod.PinMode()) then
+			mod.GPSGoWorld(WorldAt(Offset(lastX, lastY)))
+			return
+		end
 		local h = hovered
 		hovered = nil          -- (the pad's icon isn't the mouse's; OpenMap's icons take their own clicks)
 		Step(button == "LeftButton")

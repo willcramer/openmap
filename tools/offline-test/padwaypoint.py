@@ -320,5 +320,113 @@ class PadWaypointTests(unittest.TestCase):
         self.assertEqual(self.ev("#sets"), 1)
         self.the_other_addon_s()
 
+class PadMouseGPSInputTests(unittest.TestCase):
+    """Exercise the complete PadView's actual mouse scripts, not WorldMap helpers."""
+
+    def setUp(self):
+        self.lua = LuaRuntime(unpack_returned_tuples=True)
+        self.lua.execute(STUB)
+        self.lua.execute('''
+            mx, my, alt = 600, 350, false
+            gpsCalls = {}
+            function GetCursorPosition() return mx, my end
+            function IsAltKeyDown() return alt end
+            function mod.GPSGoWorld(u,v) gpsCalls[#gpsCalls+1]={u,v} return true end
+            function C_Map.GetMapInfo(id) return {mapType=Enum.UIMapType.Zone} end
+            function S.ArtSize() return 1000,500 end
+            function S.Stitched() return true end
+        ''')
+        self.lua.execute("local f = assert(loadstring(...)) f('OpenMap', ns)", PADVIEW.read_text(encoding="utf-8"))
+        self.lua.execute('''
+            Open()
+            for _,frame in ipairs(frames) do
+                if frame:GetScript('OnMouseUp') then mouseView=frame end
+            end
+            assert(mouseView, 'controller view did not install its mouse handler')
+            function MouseDown(button) mouseView:GetScript('OnMouseDown')(mouseView,button or 'LeftButton') end
+            function MouseUp(button) mouseView:GetScript('OnMouseUp')(mouseView,button or 'LeftButton') end
+            function MouseClick(button) MouseDown(button) MouseUp(button) end
+            function Settle() for _=1,8 do Tick() end end
+        ''')
+
+    def test_alt_click_starts_gps_at_the_mouse_instead_of_the_controller_cursor(self):
+        self.lua.execute('''
+            alt=true
+            MouseClick()
+            assert(#gpsCalls==1)
+            assert(math.abs(gpsCalls[1][1]-.6)<1e-8 and math.abs(gpsCalls[1][2]-.4)<1e-8)
+            assert(not mod.Animating(), 'GPS click also started a zoom')
+        ''')
+
+    def test_alt_drag_out_and_back_does_not_start_gps_or_zoom(self):
+        self.lua.execute('''
+            alt=true
+            MouseDown()
+            mx=660 Tick()
+            mx=600 Tick()
+            MouseUp()
+            assert(#gpsCalls==0 and not mod.Animating())
+        ''')
+
+    def test_ordinary_click_and_alt_right_click_keep_zooming(self):
+        self.lua.execute('''
+            MouseClick()
+            assert(#gpsCalls==0 and mod.Animating())
+            Settle()
+            local _,_,zoom=mod.ViewNow()
+            assert(zoom>1)
+            alt=true
+            MouseClick('RightButton')
+            assert(#gpsCalls==0 and mod.Animating())
+            Settle()
+            local _,_,out=mod.ViewNow()
+            assert(out<zoom)
+        ''')
+
+    def test_sketch_tool_retains_alt_click(self):
+        self.lua.execute('''
+            alt=true
+            mod.IsSketching=function() return true end
+            sketchPresses=0
+            mod.PadSketchPress=function() sketchPresses=sketchPresses+1 end
+            MouseClick()
+            assert(sketchPresses==1 and #gpsCalls==0)
+        ''')
+
+    def test_pin_tool_retains_alt_click_and_uses_mouse_position(self):
+        self.lua.execute('''
+            alt=true
+            pinMode=true
+            mod.PinMode=function() return pinMode end
+            mod.SetPinMode=function(on) pinMode=on end
+            mod.DropWaypoint=function(u,v) dropped={u,v} end
+            MouseClick()
+            assert(dropped and not pinMode and #gpsCalls==0)
+            assert(math.abs(dropped[1]-.6)<1e-8 and math.abs(dropped[2]-.4)<1e-8)
+        ''')
+
+    def test_dungeon_view_keeps_its_clicks(self):
+        self.lua.execute('''
+            alt=true
+            mod.DungeonViewShown=function() return true end
+            closed=0
+            mod.CloseDungeonView=function() closed=closed+1 end
+            MouseClick()
+            MouseClick('RightButton')
+            assert(closed==1 and #gpsCalls==0 and not mod.Animating())
+        ''')
+
+    def test_no_gps_handler_and_controller_a_keep_the_original_zoom(self):
+        self.lua.execute('''
+            alt=true
+            WorldMapFrame:NavigateToGamepadCursor()
+            assert(#gpsCalls==0 and mod.Animating())
+            mod.ShowNow(.5,.5,1)
+            mod.GPSGoWorld=nil
+            MouseClick()
+            assert(#gpsCalls==0 and mod.Animating())
+        ''')
+
+
 if __name__ == "__main__":
     unittest.main()

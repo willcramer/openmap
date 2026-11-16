@@ -13,7 +13,7 @@ local function Switch(target)
 		Print(L["Leave combat before switching map addons."])
 		return
 	end
-	if not addons or not addons.EnableAddOn or not addons.DisableAddOn or not ReloadUI then
+	if not addons or not addons.EnableAddOn or not addons.DisableAddOn or not addons.SaveAddOns or not ReloadUI then
 		Print(L["Use the AddOns list to enable one map addon, then reload."])
 		return
 	end
@@ -21,13 +21,21 @@ local function Switch(target)
 		Print(L["The original OpenMap is not installed. Install it beside OpenMapGPS first."])
 		return
 	end
-	local character = UnitName("player")
+	-- The Forever/retail AddOns list keys per-character overrides by GUID.
+	-- A display name can be accepted without changing the current character.
+	local character = UnitGUID("player")
+	if type(character) ~= "string" or character == "" then
+		Print(L["Use the AddOns list to enable one map addon, then reload."])
+		return
+	end
 	-- Keep the small GPS switch command loaded in standby when using the original.
 	-- OptionalDeps in the variant toc makes the original load first in that case.
 	local ok = pcall(function()
 		addons.EnableAddOn("OpenMapGPS", character)
 		if target == "gps" then addons.DisableAddOn("OpenMap", character)
 		else addons.EnableAddOn("OpenMap", character) end
+		-- Commit the changed enable list before reloading, as the AddOns UI does.
+		addons.SaveAddOns()
 	end)
 	if not ok then
 		Print(L["Use the AddOns list to enable one map addon, then reload."])

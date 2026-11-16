@@ -4,6 +4,10 @@
 local _, ns = ...
 
 ns.MapChangelog = {
+	{ version = "v0.8.10-gps.4", date = "2026-11-16", heads = { [1] = "Fixed", }, items = {
+		"|cff6e2c0aGPS addon switching:|r save the current character's addon selection before reloading so /omgps use gps activates GPS and /omgps use original restores the original.",
+		"|cff6e2c0aController-view mouse input:|r Alt-click starts GPS without changing ordinary zoom or active drawing/pin tools.",
+	} },
 	{ version = "v0.8.10-gps.3", date = "2026-11-16", heads = { [1] = "Improved", }, items = {
 		"|cff6e2c0aGPS integration:|r shared floor-aware routing and native-map drawing infrastructure; user recordings and the separate addon package remain supported. Forever's supplied road data is loaded only by the Forever client and is not included in the Retail package.",
 	} },
@@ -27,8 +31,5 @@ ns.MapChangelog = {
 	{ version = "v0.8.8", date = "2026-11-13", heads = { [1] = "Fixed", }, items = {
 		"|cff6e2c0aParty and raid markers stay steady|r: one marker per member, moving smoothly. OpenMap's ring now follows Blizzard's own dot where the game places a member, instead of a second dot of its own that lagged behind it; elsewhere OpenMap's dot keeps its highlight and tooltip as it moves. The ring is now a thin gold edge (the wide one round a dark gap read as a target: #158, #170). By puschie286.",
 		"|cff6e2c0aFriends on the map: your own faction only.|r Your place is only shared with, and shown from, players of your own faction: Battle.net friends on the other faction no longer see where you are, nor you them (a player's report: it let Horde and Alliance find each other for PvP).",
-	} },
-	{ version = "v0.8.6", date = "2026-11-12", heads = { [1] = "Improved", }, items = {
-		"|cff6e2c0aIcons stay shown while zooming|r: \"Fade icons while zooming\" is now off for everyone, as zooming is smooth enough with them shown; turn it on again in the menu's On the map tab if you prefer it.",
 	} },
 }

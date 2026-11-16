@@ -10,7 +10,7 @@ routing implementation or art is included. See the [data notice](../OpenMap/Data
 
 ## Install
 
-Use **OpenMapGPS-v0.8.10-gps.3-forever.zip**, the separate-addon build. The older gps.1 ZIP
+Use **OpenMapGPS-v0.8.10-gps.4-forever.zip**, the separate-addon build. The older gps.1 ZIP
 used the original addon's folder and should not be used for a side-by-side install.
 If you already installed gps.1 into `OpenMap`, reinstall the official OpenMap there first.
 
@@ -24,6 +24,10 @@ If you already installed gps.1 into `OpenMap`, reinstall the official OpenMap th
    GPS stays enabled in standby so you can switch back with the same command.
 
 Switch outside combat. You can always switch manually through the AddOns list and reload.
+If updating from gps.3, first `/reload` to load the corrected switcher, then run `/omgps use gps`.
+If a GPS command says Original OpenMap is active, GPS is in standby and its map controls are not
+running. The gps.3 switcher could reload without actually switching the current character;
+gps.4 saves the GUID-specific selection before reloading.
 The GPS build has independent `OpenMapGPSDB` and `OpenMapGPSCharDB` saved variables, its own
 named frames, key bindings, addon-message prefixes and public API (`OpenMapGPSAPI`). It does not
 read, copy or overwrite the original's settings. Its commands are `/openmapgps` and `/omgps`;
@@ -39,6 +43,10 @@ TomTom is optional. The test build retains OpenMap's normal map and pins.
 - Shift-click a result in OpenMap's search to navigate to it (plain click still moves the view).
 - Open one of your map pins and press GPS.
 - Or set a waypoint normally and use the GPS controls to navigate to it.
+
+Ordinary right-click retains OpenMap's zoom-out action. This build does not have a right-click
+Go Here context menu. Alt-left-click empty terrain; click an existing OpenMap pin normally and
+press GPS in its card. Controller-view mouse input supports the same Alt-click shortcut.
 
 The arrow continues updating with the map closed. Stop GPS from its controls or with
 `/omgps gps stop`. The player still walks, boards vessels and operates the game normally.

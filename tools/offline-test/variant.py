@@ -48,18 +48,30 @@ class VariantTests(unittest.TestCase):
             loaded = {}
             addonChanges = {}
             reloads = 0
+            saves = 0
+            committed = {OpenMap=true,OpenMapGPS=true}
+            pending = {OpenMap=true,OpenMapGPS=true}
             originalExists = true
             C_AddOns.IsAddOnLoaded = function(name) return loaded[name] or false end
             C_AddOns.DoesAddOnExist = function(name) return name ~= 'OpenMap' or originalExists end
             C_AddOns.EnableAddOn = function(name, character)
-                assert(character == 'Tester')
+                assert(character == 'Player-1-0001', 'enable state must use character GUID')
+                pending[name] = true
                 addonChanges[#addonChanges+1] = 'enable:' .. name
             end
             C_AddOns.DisableAddOn = function(name, character)
-                assert(character == 'Tester')
+                assert(character == 'Player-1-0001', 'disable state must use character GUID')
+                pending[name] = false
                 addonChanges[#addonChanges+1] = 'disable:' .. name
             end
-            ReloadUI = function() reloads = reloads + 1 end
+            C_AddOns.SaveAddOns = function()
+                committed = {OpenMap=pending.OpenMap,OpenMapGPS=pending.OpenMapGPS}
+                saves = saves + 1
+            end
+            ReloadUI = function()
+                assert(saves > reloads, 'enable changes must be saved before reload')
+                reloads = reloads + 1
+            end
         """)
 
     def load(self, gps=False):
@@ -113,6 +125,7 @@ class VariantTests(unittest.TestCase):
             assert(#addonChanges == 2)
             assert(addonChanges[1] == 'enable:OpenMapGPS' and addonChanges[2] == 'disable:OpenMap')
             assert(reloads == 1)
+            assert(saves == 1 and committed.OpenMap == false and committed.OpenMapGPS == true)
             assert(gpsNS.variantDormant, 'switch tried to hot-swap map hooks before reload')
         """)
 
@@ -145,6 +158,7 @@ class VariantTests(unittest.TestCase):
             SlashCmdList.OPENMAPGPS('use original')
             assert(#addonChanges == 2 and addonChanges[1] == 'enable:OpenMapGPS')
             assert(addonChanges[2] == 'enable:OpenMap' and reloads == 1)
+            assert(saves == 1 and committed.OpenMap == true and committed.OpenMapGPS == true)
         """)
 
     def test_switch_refuses_combat_without_changing_addon_state(self):
@@ -172,6 +186,54 @@ class VariantTests(unittest.TestCase):
         for body in re.findall(r"<Binding\b[^>]*>(.*?)</Binding>", source.decode(), flags=re.S):
             self.lua.execute(body)
         self.lua.execute("assert(#ERRORS == 0, ERRORS[1])")
+
+    def test_switch_survives_reload_into_gps_then_original_standby(self):
+        self.load()
+        self.load(gps=True)
+        self.login()
+        self.lua.execute("SlashCmdList.OPENMAPGPS('use gps')")
+        enabled = self.lua.globals().committed
+        self.assertFalse(enabled.OpenMap)
+        self.assertTrue(enabled.OpenMapGPS)
+
+        # Reload reconstructs addon loading from the saved GUID-specific list.
+        self.setUp()
+        self.lua.execute("pending.OpenMap=false; committed.OpenMap=false")
+        self.load(gps=True)
+        self.login()
+        self.lua.execute("""
+            assert(not gpsNS.variantDormant and OpenMapGPSAPI)
+            SlashCmdList.OPENMAPGPS('use original')
+            assert(committed.OpenMap and committed.OpenMapGPS)
+        """)
+
+        self.setUp()
+        self.load()
+        self.load(gps=True)
+        self.login()
+        self.lua.execute("assert(gpsNS.variantDormant and OpenMapAPI)")
+
+    def test_missing_character_guid_or_save_api_does_not_reload(self):
+        self.load(gps=True)
+        self.login()
+        self.lua.execute("""
+            UnitGUID=function() return nil end
+            SlashCmdList.OPENMAPGPS('use gps')
+            assert(#addonChanges==0 and saves==0 and reloads==0)
+            UnitGUID=function() return 'Player-1-0001' end
+            C_AddOns.SaveAddOns=nil
+            SlashCmdList.OPENMAPGPS('use gps')
+            assert(#addonChanges==0 and saves==0 and reloads==0)
+        """)
+
+    def test_failed_save_does_not_claim_a_reload_will_switch_addons(self):
+        self.load(gps=True)
+        self.login()
+        self.lua.execute("""
+            C_AddOns.SaveAddOns=function() error('save failed') end
+            SlashCmdList.OPENMAPGPS('use gps')
+            assert(reloads==0 and saves==0 and committed.OpenMap==true)
+        """)
 
 
 if __name__ == "__main__":

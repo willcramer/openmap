@@ -1,6 +1,6 @@
 # GPS road-network validation
 
-Candidate: **v0.8.10-gps.3**, Forever Maps dataset **2.0.166**, separate addon **OpenMapGPS**.
+Candidate: **v0.8.10-gps.4**, Forever Maps dataset **2.0.166**, separate addon **OpenMapGPS**.
 This is an offline-verified test build. No live game-client verification is claimed.
 
 ## Data and routing
@@ -43,10 +43,17 @@ This is an offline-verified test build. No live game-client verification is clai
 - Six road-overlay and nine native-map tests cover bounded drawing pools, clipping, view caching,
   controller geometry, map visibility and coexistence with other map content. Active native routes
   use at most 300 dots; optional network views use at most 800 markers on each canvas.
-- Seven package-transform and seven coexistence/switch tests check both clients. The original and
+- Seven package-transform and ten coexistence/switch tests check both clients. The original and
   GPS addon load in the same Lua runtime without sharing saved variables, API, commands, frames,
   bindings or message prefixes. Original-first loading leaves GPS dormant. Switching changes
   character enable state and reloads; combat and missing-original cases leave the working addon on.
+- A live gps.3 report exposed that the switcher used a character name and omitted saving addon
+  enable changes. gps.4 uses the GUID and saves before reloading, matching the Forever AddOns UI.
+  Regression tests model pending/committed GUID-specific states and rebuild the Lua runtime from
+  the committed selection to check GPS activation and switching back to original standby.
+- Seven additional mouse-input cases exercise the complete controller view's actual mouse scripts:
+  Alt-click at the mouse rather than controller cursor, drag suppression, ordinary zoom, and
+  drawing/pin/dungeon tools. All 24 controller-waypoint/input tests pass.
 - Python tools compile; Lua lint passes. New output is generated through its importer, changelog
   builder or locale builder. The package builder reruns the routing and coexistence checks.
 - All 94 GPS strings have translations in each of the ten supported locales. Placeholder and

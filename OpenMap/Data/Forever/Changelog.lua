@@ -4,6 +4,10 @@
 local _, ns = ...
 
 ns.MapChangelog = {
+	{ version = "v0.8.10-gps.4", date = "2026-11-16", heads = { [1] = "Fixed", }, items = {
+		"|cff6e2c0aSwitching to GPS:|r target the current character's addon selection and save it before reloading. The original no longer remains active after /omgps use gps because of an override written for the wrong character identifier. Switching back still keeps GPS in standby.",
+		"|cff6e2c0aAlt-click with the controller view:|r mouse clicks now start GPS at the mouse position. Dragging, ordinary zoom and active drawing/pin tools keep their existing behavior.",
+	} },
 	{ version = "v0.8.10-gps.3", date = "2026-11-16", heads = { [1] = "New", }, items = {
 		"|cff6e2c0aBundled road network:|r all 8,944 Forever Maps 2.0.166 road nodes and associated room/floor metadata, used with author permission. Independent routing preserves one-way drops, faction restrictions, no-start roads, stairs and intermediate landings, elevators and swimming. Room inference respects portal crossings and Undercity's separate surface and underground layers.",
 		"|cff6e2c0aRoad integration:|r user recordings extend the graph; pins and search continue to start GPS. Road network can be shown in the map menu, and routing preferences are in Options. Zephras Isle has route drawing on its native maps. The separate OpenMapGPS package and reload switching remain.",
@@ -40,8 +44,5 @@ ns.MapChangelog = {
 		"|cff6e2c0aParty and raid markers stay steady|r: one marker per member, moving smoothly. OpenMap's ring now follows Blizzard's own dot where the game places a member, instead of a second dot of its own that lagged behind it; elsewhere OpenMap's dot keeps its highlight and tooltip as it moves. The ring is now a thin gold edge (the wide one round a dark gap read as a target: #158, #170). By puschie286.",
 		"|cff6e2c0aFriends on the map: your own faction only.|r Your place is only shared with, and shown from, players of your own faction: Battle.net friends on the other faction no longer see where you are, nor you them (a player's report: it let Horde and Alliance find each other for PvP).",
 		"|cff6e2c0aFriends in another realm group show on the map|r: a friend on CAMWOW US1 and one on US2 (or EU4 and EU5) never saw each other with \"Share where you are\" on (#164, #167).",
-	} },
-	{ version = "v0.8.7", date = "2026-11-12", heads = { [1] = "Fixed", }, items = {
-		"|cff6e2c0aQuestie's icons show on the first map you open|r: with Questie 12.8, a map opened on a zone showed none of Questie's icons (their tooltips still came up) until you'd zoomed out to the continent once: icons Questie placed before the map was first opened stayed under its art (#194, #193, #195).",
 	} },
 }

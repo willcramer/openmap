@@ -71,6 +71,14 @@
 
 ## Integration and parity
 
+- A live gps.3 report showed `/omgps use gps` reloading into original OpenMap again. The earlier
+  stub incorrectly modeled per-character enable state using a display name, masking the failure.
+  Follow the Forever AddOns UI's GUID-based selection and SaveAddOns-before-ReloadUI sequence.
+  Keep missing GUID/save capability fail-safe instead of silently changing every character's
+  addon selection. Tests now model persistence and reload selection, not just function calls.
+- Add Alt-click to the controller view's separate mouse handler using that view's actual mouse
+  coordinates. Keep ordinary right-click zoom and existing tools; the reference's Go Here context
+  menu is not implemented by this input fix.
 - Keep the isolated `OpenMapGPS` addon identity and standby/switching behavior from gps.2.
   Original OpenMap settings, commands and named frames stay separate.
 - Continue supporting existing pins, search, recorded routes and map-closed guidance. Imported

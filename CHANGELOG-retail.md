@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+## v0.8.10-gps.4 (2026-11-16)
+
+### Fixed
+
+- **GPS addon switching:** save the current character's addon selection before reloading so
+  `/omgps use gps` activates GPS and `/omgps use original` restores the original.
+- **Controller-view mouse input:** Alt-click starts GPS without changing ordinary zoom or
+  active drawing/pin tools.
+
 ## v0.8.10-gps.3 (2026-11-16)
 
 ### Improved

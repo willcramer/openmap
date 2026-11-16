@@ -4,6 +4,10 @@
 local _, ns = ...
 
 ns.MapChangelog = {
+	{ version = "v0.8.10-gps.10", date = "2026-11-16", heads = { [1] = "Added", }, items = {
+		"|cff6e2c0aPlace and connect road nodes on the map:|r choose Edit road network in GPS navigation, then right-click to add nodes, select an existing node, or add a connected node along a new path. Connect separate nodes, remove your connections, or delete your own nodes with confirmation. Changes save automatically and become available for GPS route planning.",
+		"|cff6e2c0aSeparate custom-road display:|r cyan nodes and links show your map edits; a white marker shows the selected node. The editor supports the world map, controller view and Zephras maps. Finish editing restores normal right-click behavior. The bundled road data stays intact.",
+	} },
 	{ version = "v0.8.10-gps.9", date = "2026-11-16", heads = { [1] = "Improved", }, items = {
 		"|cff6e2c0aGPS controls in the map menu:|r open GPS navigation to show the road network, record and save new paths, select and follow saved routes, delete a saved route, or hide the tracker. Route names and playback modes are labeled, and deletion asks for confirmation.",
 		"|cff6e2c0aRoad nodes on the map:|r the Road network display marks actual bundled nodes and saved trail samples, alongside road connections. The view updates when a recording is saved or deleted. Wide views limit markers to keep the map responsive; zoom in to inspect a junction.",
@@ -22,9 +26,5 @@ ns.MapChangelog = {
 	{ version = "v0.8.10-gps.5", date = "2026-11-16", heads = { [1] = "Improved", }, items = {
 		"|cff6e2c0aGreen GPS route:|r a continuous line joins the remaining waypoint nodes, with a larger destination marker. Its leading segment follows your current position. The line keeps its width while zooming and works on the stitched map, controller view and native Zephras maps.",
 		"|cff6e2c0aImport original map settings:|r /omgps sync settings copies relevant appearance, window, filter and control preferences from original OpenMap, then returns to GPS. It switches through the original with UI reloads to read its live profile. GPS routes and GPS-specific options, recordings and map-pin data remain separate.",
-	} },
-	{ version = "v0.8.10-gps.4", date = "2026-11-16", heads = { [1] = "Fixed", }, items = {
-		"|cff6e2c0aSwitching to GPS:|r target the current character's addon selection and save it before reloading. The original no longer remains active after /omgps use gps because of an override written for the wrong character identifier. Switching back still keeps GPS in standby.",
-		"|cff6e2c0aAlt-click with the controller view:|r mouse clicks now start GPS at the mouse position. Dragging, ordinary zoom and active drawing/pin tools keep their existing behavior.",
 	} },
 }

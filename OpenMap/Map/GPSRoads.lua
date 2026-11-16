@@ -5,6 +5,7 @@ local mod = ns:GetModule("worldmap")
 local Safe = ns.Safe
 local cachedData, cachedNetworks
 local extraCache = {}
+local EMPTY_GRAPH = { nodes = {}, list = {}, links = {}, edgeCount = 0, source = {} }
 
 local function Number(value)
 	value = Safe.Value(value)
@@ -361,10 +362,13 @@ end
 
 local function Augmented(graph, continent, context)
 	local extra = context.extraRoutes
-	if type(extra) ~= "table" or not next(extra) then return graph end
+	local manual = context.manualRoads
+	if (type(extra) ~= "table" or not next(extra)) and (type(manual) ~= "table"
+		or not next(manual.nodes or {}) and not next(manual.links or {})) then return graph end
 	local cached = extraCache[continent]
 	if cached and cached.base == graph and cached.revision == context.extraRevision
-		and (cached.extra == extra or context.extraRevision ~= nil) then return cached.graph end
+		and (cached.extra == extra or context.extraRevision ~= nil) and cached.manual == manual
+		and cached.manualRevision == (manual and manual.revision) then return cached.graph end
 	local out = { nodes = {}, list = {}, links = {}, edgeCount = graph.edgeCount, source = graph.source }
 	local cells = {}
 	local function cellKey(x, y) return x .. ":" .. y end
@@ -384,7 +388,7 @@ local function Augmented(graph, continent, context)
 		out.edgeCount = out.edgeCount + 2
 	end
 	local names = {}
-	for name in pairs(extra) do names[#names + 1] = name end
+	for name in pairs(type(extra) == "table" and extra or {}) do names[#names + 1] = name end
 	table.sort(names)
 	for _, name in ipairs(names) do
 		local trail = extra[name]
@@ -410,7 +414,42 @@ local function Augmented(graph, continent, context)
 			else previous = nil end
 		end
 	end
-	extraCache[continent] = { base = graph, extra = extra, revision = context.extraRevision, graph = out }
+	-- Manual nodes never enter the recorded-trail proximity index. Only the
+	-- player's explicit links may connect them to another node or the base graph.
+	local refs = {}
+	for _, id in ipairs(graph.list) do refs["b:" .. continent .. ":" .. id] = id end
+	local manualRefs = {}
+	for ref in pairs(type(manual) == "table" and manual.nodes or {}) do
+		if type(ref) == "string" then manualRefs[#manualRefs + 1] = ref end
+	end
+	table.sort(manualRefs)
+	for _, ref in ipairs(manualRefs) do
+		local raw = manual.nodes[ref]
+		if type(raw) == "table" and raw.cont == continent and Number(raw.wx) and Number(raw.wy)
+			and not raw.unknown and (not raw.ambiguous or raw.floorResolved) then
+			local id, p = nextID, CopyPoint(raw)
+			nextID = nextID + 1
+			p.nodeID, p.source, p.editRef = id, "manual", ref
+			out.nodes[id], out.links[id], refs[ref] = p, {}, id
+			out.list[#out.list + 1] = id
+		end
+	end
+	for _, edge in ipairs(type(manual) == "table" and manual.links or {}) do
+		local a, b = refs[edge.a], refs[edge.b]
+		local first, last = a and out.nodes[a], b and out.nodes[b]
+		if a and b and a ~= b and first.layer == last.layer
+			and not first.unknown and not last.unknown
+			and (not first.ambiguous or first.floorResolved) and (not last.ambiguous or last.floorResolved)
+			and not (mod.GPSOtherFloor and mod.GPSOtherFloor(first, last)) then
+			local forward, reverse
+			for _, id in ipairs(graph.links[a] or {}) do if id == b then forward = true break end end
+			for _, id in ipairs(graph.links[b] or {}) do if id == a then reverse = true break end end
+			-- A manual connection must not quietly reverse an existing one-way road.
+			if forward == reverse and not forward then link(a, b) end
+		end
+	end
+	extraCache[continent] = { base = graph, extra = extra, revision = context.extraRevision,
+		manual = manual, manualRevision = manual and manual.revision, graph = out }
 	return out
 end
 
@@ -573,7 +612,7 @@ local function Solve(graph, from, to, context)
 			AddPoint(route, target, context)
 			return route, nil, { source = "bundled", length = straight, cost = approach(straight), visited = visited,
 				nodes = #graph.list, edges = graph.edgeCount, startDistance = 0, finishDistance = straight,
-				connectorDistance = straight, direct = true, version = ns.GPSRoadData.version }
+				connectorDistance = straight, direct = true, version = ns.GPSRoadData and ns.GPSRoadData.version }
 		end
 	end
 	if not winner and not direct then return nil, "disconnected" end
@@ -620,7 +659,7 @@ local function Solve(graph, from, to, context)
 	return route, nil, { source = "bundled", length = length, cost = best, visited = visited,
 		nodes = #graph.list, edges = graph.edgeCount, enemy = enemy, firstEnemy = firstEnemy, startDistance = start.distance,
 		finishDistance = finish.distance, connectorDistance = start.distance + finish.distance,
-		version = ns.GPSRoadData.version }
+		version = ns.GPSRoadData and ns.GPSRoadData.version }
 end
 
 -- A click can overlap adjacent room boxes on one known floor. Preserve the
@@ -648,15 +687,15 @@ function mod.GPSRoadRoute(from, to, context)
 	if type(from) ~= "table" or type(to) ~= "table" or not Number(from.cont) or not Number(to.cont)
 		or not Number(from.wx) or not Number(from.wy) or not Number(to.wx) or not Number(to.wy) then return nil, "position" end
 	if from.cont ~= to.cont then return nil, "continent" end
-	local graph = Network(from.cont)
-	if not graph or #graph.list == 0 then return nil, "no-data" end
 	context = context or {}
+	local graph = not context.excludeBundled and Network(from.cont) or EMPTY_GRAPH
 	from, to = ResolveFloor(from), ResolveFloor(to)
 	if not context.allowUnknownFloor then
 		if to.unknown or (to.ambiguous and not to.floorResolved) then return nil, "floor" end
 		if (from.unknown or (from.ambiguous and not from.floorResolved)) and not (context.tops and next(context.tops)) then return nil, "floor" end
 	end
 	graph = Augmented(graph, from.cont, context)
+	if #graph.list == 0 then return nil, "no-data" end
 	return Solve(graph, from, to, context)
 end
 

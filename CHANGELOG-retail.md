@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+## v0.8.10-gps.10 (2026-11-16)
+
+### Added
+
+- **Map road editor:** add and connect custom road nodes directly from the map's right-click
+  menu. Edits save separately, participate in GPS planning and have cyan markers with a white
+  selection. Remove your connections or confirm deletion of your own nodes from the same menu.
+
 ## v0.8.10-gps.9 (2026-11-16)
 
 ### Improved

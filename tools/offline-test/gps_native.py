@@ -489,6 +489,97 @@ class NativeGPSRouteTests(unittest.TestCase):
                 'profile replacement did not invalidate the saved-road display')
         ''')
 
+    def test_manual_nodes_long_links_and_selected_endpoint_refresh_without_route_changes(self):
+        self.check('''
+            mod.GPSRoadsShown=function()return true end
+            local base={cont=2991,wx=100,wy=500,links={}}
+            ns.GPSRoadData={networks={[2991]={nodes={[1]=base}}}}
+            local a,b={cont=2991,wx=500,wy=500},{cont=2991,wx=900,wy=500}
+            manual={nodes={['m:1']=a,['m:2']=b},links={
+                {a='b:2991:1',b='m:1'},{a='m:1',b='m:2'}},revision=1}
+            selected='m:1'
+            function mod.GPSRoadEditSnapshot()return manual end
+            function mod.GPSRoadEditPoint(ref)return ref=='b:2991:1'and base or manual.nodes[ref]end
+            function mod.GPSRoadSelected()return selected end
+            function NetworkMarks()
+                local marks={}
+                for _,frame in ipairs(FRAMES)do
+                    local owner=frame:GetParent()
+                    if owner and owner:GetParent()==canvas and owner:GetFrameLevel()==canvas:GetFrameLevel()+9
+                        and frame:GetObjectType()=='Texture'and frame:IsShown()then marks[#marks+1]=frame end
+                end
+                return marks
+            end
+            mod.GPSDrawNative(status)
+            local stats=mod.GPSNativeStats()
+            assert(stats.networkNodesDrawn==3 and stats.networkDrawn>50)
+            assert(stats.shown and stats.drawn==2 and stats.lines==1)
+            local cyan,white,gold,links=0,0,0,0
+            for _,mark in ipairs(NetworkMarks())do
+                local _,_,_,x,y=mark:GetPoint()
+                assert(y==-250)
+                if mark:GetWidth()==3 then
+                    links=links+1 assert(mark.color[1]==.25 and x>=100 and x<=900)
+                elseif mark:GetWidth()==10 then
+                    white=white+1 assert(x==500 and mark.color[1]==1 and mark.color[2]==1)
+                elseif mark.color[1]==.25 then cyan=cyan+1 assert(x==900)
+                else gold=gold+1 assert(x==100)end
+            end
+            assert(cyan==1 and white==1 and gold==1 and links>50)
+            local projected,allocated=projections,#FRAMES
+            mod.GPSDrawNative(status)
+            assert(projections==projected and #FRAMES==allocated)
+            selected='b:2991:1' mod.GPSDrawNative(status)
+            assert(mod.GPSNativeStats().networkNodesDrawn==3)
+            for _,mark in ipairs(NetworkMarks())do
+                if mark:GetWidth()==10 then local _,_,_,x=mark:GetPoint()assert(x==100)end
+            end
+            manual.nodes['m:1']=nil manual.links={} manual.revision=2 selected=nil
+            mod.GPSDrawNative(status)
+            local after=mod.GPSNativeStats()
+            assert(after.networkNodesDrawn==2 and after.networkDrawn==0)
+            assert(after.shown and after.redraws==stats.redraws and after.lines==1,
+                'manual topology edits changed the active route drawing')
+            assert(base.u==nil and a.x==nil and b.map==nil,'view modified stored coordinates')
+            manual={nodes={},links={},revision=0}
+            mod.GPSDrawNative(status)
+            assert(mod.GPSNativeStats().networkNodesDrawn==1,'profile change retained manual nodes')
+        ''')
+
+    def test_manual_selected_node_keeps_its_budget_slot_and_unsafe_links_are_not_drawn(self):
+        self.check('''
+            mod.GPSRoadsShown=function()return true end
+            status.active=false
+            ns.GPSRoadData={networks={}}
+            manual={nodes={},links={},revision=1}
+            for i=1,1500 do manual.nodes['m:'..i]={cont=2991,wx=i/1501*1000,wy=500}end
+            selected='m:1499'
+            function mod.GPSRoadEditSnapshot()return manual end
+            function mod.GPSRoadEditPoint(ref)return manual.nodes[ref]end
+            function mod.GPSRoadSelected()return selected end
+            mod.GPSDrawNative(status)
+            local stats=mod.GPSNativeStats()
+            assert(stats.networkNodesDrawn==500 and stats.networkNodesPooled==500)
+            local white=0
+            for _,frame in ipairs(FRAMES)do
+                if frame:GetObjectType()=='Texture'and frame:IsShown()and frame:GetWidth()==10 and frame.color then
+                    white=white+1
+                    local _,_,_,x=frame:GetPoint()assert(math.abs(x-1499/1501*1000)<1e-8)
+                end
+            end
+            assert(white==1,'crowded native network omitted the selected node')
+            manual={nodes={
+                ['m:1']={cont=2991,wx=100,wy=300,layer=2521},
+                ['m:2']={cont=2991,wx=900,wy=300,layer=2665},
+                ['m:3']={cont=0,wx=500,wy=300},
+                ['m:4']={cont=2991,wx=800,wy=300,layer=2521,ambiguous=true}
+            },links={{a='m:1',b='m:2'},{a='m:1',b='m:3'},
+                {a='m:1',b='missing'},{a='m:1',b='m:4'}},revision=2}
+            selected=nil
+            mod.GPSDrawNative(status)
+            assert(mod.GPSNativeStats().networkNodesDrawn==2 and mod.GPSNativeStats().networkDrawn==0)
+        ''')
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -88,6 +88,117 @@ class LocationMenuTests(unittest.TestCase):
     def check(self, code):
         self.lua.execute(code)
 
+    def editor(self):
+        self.check('''
+            NIL_GLOBALS.selected,NIL_GLOBALS.nearest,NIL_GLOBALS.popup=true,true,true
+            editing,selected,nearest=false,nil,'b:0:4'
+            edits,links={},{}
+            mod.db.gpsManualRoads={nodes={},links={}}
+            function mod.GPSRoadEditing()return editing end
+            function mod.GPSRoadSelected()return selected end
+            function mod.GPSSetRoadEditing(on)
+                editing=on
+                mod.CloseLocationMenu()
+                if not on then selected=nil end
+                return true
+            end
+            function mod.GPSRoadEditNearest(map,x,y)return nearest end
+            function mod.GPSRoadEditSelect(ref)selected=ref return true end
+            function mod.GPSRoadEditAdd(map,x,y,from)
+                assert(not currentMenu)
+                edits[#edits+1]={kind='add',map=map,x=x,y=y,from=from}
+                selected='m:'..#edits
+                return selected
+            end
+            function mod.GPSRoadEditLinked(a,b)return links[a..'>'..b]or false end
+            function mod.GPSRoadEditConnect(a,b)
+                assert(not currentMenu)
+                edits[#edits+1]={kind='connect',a=a,b=b}
+                links[a..'>'..b]=true
+                return true
+            end
+            function mod.GPSRoadEditDisconnect(a,b)
+                assert(not currentMenu)
+                edits[#edits+1]={kind='disconnect',a=a,b=b}
+                links[a..'>'..b]=nil
+                return true
+            end
+            function mod.GPSRoadEditDelete(ref)
+                edits[#edits+1]={kind='delete',ref=ref}
+                return true
+            end
+            StaticPopup_Show=function(which,_,__,data)popup={which=which,data=data}end
+        ''')
+
+    def test_editor_menu_adds_and_connects_at_captured_locations_without_navigation(self):
+        self.editor()
+        self.check('''
+            assert(Open()and #lastMenu.rows==4)
+            assert(lastMenu.rows[4].label=='Edit road network')
+            Click(4)assert(editing)
+            assert(Open()and #lastMenu.rows==8)
+            assert(lastMenu.rows[1].label=='Add road node'and lastMenu.rows[2].label=='Add connected node')
+            assert(not lastMenu.rows[2].enabled and not lastMenu.rows[4].enabled)
+            Click(3)assert(selected=='b:0:4')
+            Open()
+            chosenMap,mx,my=1430,.9,.9
+            mod.FromWorld=function()return .99,.99 end
+            selected='m:999'
+            Click(2)
+            assert(#edits==1 and edits[1].kind=='add'and edits[1].map==1429)
+            assert(math.abs(edits[1].x-.3)<1e-8 and edits[1].y==.5 and edits[1].from=='b:0:4')
+            assert(selected=='m:1'and #calls==0,'editing changed GPS or a waypoint')
+        ''')
+
+    def test_editor_connect_disconnect_and_clear_use_captured_node_references(self):
+        self.editor()
+        self.check('''
+            editing,selected,nearest=true,'m:1','b:0:5'
+            Open()selected,nearest='m:999','b:0:999'
+            Click(4)
+            assert(edits[1].kind=='connect'and edits[1].a=='m:1'and edits[1].b=='b:0:5')
+            selected,nearest='m:1','b:0:5'
+            Open()assert(not lastMenu.rows[4].enabled and lastMenu.rows[5].enabled)
+            Click(5)assert(edits[2].kind=='disconnect'and not links['m:1>b:0:5'])
+            Open()Click(7)assert(selected==nil)
+            nearest=nil
+            Open()
+            assert(not lastMenu.rows[3].enabled and not lastMenu.rows[4].enabled and not lastMenu.rows[6].enabled)
+            Click(1)assert(edits[3].kind=='add'and edits[3].from==nil)
+        ''')
+
+    def test_editor_deletion_is_confirmed_and_cannot_delete_bundled_or_replaced_profile_nodes(self):
+        self.editor()
+        self.check('''
+            editing,selected,nearest=true,'m:1','b:0:5'
+            Open()assert(not lastMenu.rows[6].enabled)Click(6)assert(not popup)
+            nearest='m:1'
+            Open()Click(6)
+            assert(popup.which=='OPENMAP_GPS_DELETE_NODE'and popup.data.ref=='m:1'and #edits==0)
+            local captured=popup.data
+            nearest,selected='m:2','m:2'
+            StaticPopupDialogs[popup.which].OnAccept({},captured)
+            assert(#edits==1 and edits[1].kind=='delete'and edits[1].ref=='m:1')
+            Open()Click(6)
+            mod.db.gpsManualRoads={nodes={},links={}}
+            StaticPopupDialogs[popup.which].OnAccept({},popup.data)
+            assert(#edits==1,'confirmation from an old profile deleted a different node')
+        ''')
+
+    def test_editor_callbacks_are_revoked_and_finishing_restores_regular_menu(self):
+        self.editor()
+        self.check('''
+            editing=true
+            Open()local escaped=lastMenu.rows[1].callback
+            Menu.GetManager():HandleESC()escaped()assert(#edits==0)
+            Open()local stale=lastMenu.rows[1].callback
+            editing=false stale()assert(#edits==0)
+            editing=true mod.db.mapRightClick='zoom'
+            Open()Click(8)
+            assert(not editing and mod.db.mapRightClick=='zoom')
+            Open()assert(lastMenu.rows[1].label=='Place waypoint')
+        ''')
+
     def test_three_actions_use_the_location_captured_when_menu_opened(self):
         self.check('''
             assert(Open())
@@ -209,6 +320,115 @@ class LocationMenuTests(unittest.TestCase):
             world.ScrollContainer:GetScript('OnMouseDown')(world.ScrollContainer,'RightButton')
             held=false
             assert(nativeClick(world,'RightButton')and lastMenu)
+        ''')
+
+    def test_native_editor_temporarily_overrides_zoom_and_retains_drag_protection(self):
+        self.editor()
+        self.check('''
+            mod.SetupLocationMenu()chosenMap=2521
+            mod.db.mapRightClick='zoom'editing=true
+            assert(nativeClick(world,'RightButton'))
+            assert(lastMenu.rows[1].label=='Add road node'and mod.db.mapRightClick=='zoom')
+            Click(1)assert(edits[1].map==2521 and edits[1].x==.2 and edits[1].y==.3)
+            cx,cy,held=100,100,true
+            GetCursorPosition=function()return cx,cy end
+            IsMouseButtonDown=function()return held end
+            world.ScrollContainer:GetScript('OnMouseDown')(world.ScrollContainer,'RightButton')
+            cx=150 RunOnUpdate(.1)cx=100 RunOnUpdate(.1)held=false
+            assert(nativeClick(world,'RightButton')and not currentMenu)
+            assert(#edits==1)
+            mod.GPSSetRoadEditing(false)
+            assert(not nativeClick(world,'RightButton')and mod.db.mapRightClick=='zoom')
+        ''')
+
+
+class RoadEditorMenuIntegrationTests(unittest.TestCase):
+    """Place and connect a road using real menu/model/router code without moving."""
+
+    def setUp(self):
+        spec = importlib.util.spec_from_file_location('road_editor_menu_boot', HERE / 'gps_bundled_integration.py')
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        module.BundledGPSIntegrationTests.setUp(self)
+        self.lua.execute('''
+            -- The loader has no actual stitched canvas. Only drawing regions
+            -- are simulated; menu actions, stored edits and planning are real.
+            ns.MapStitch.PinSet=function()return {frame=CreateFrame('Frame')}end
+            ns.MapStitch.ClearPinSet=function()end
+            ns.MapStitch.SetPinSetOn=function()end
+            ns.MapStitch.AddPin=function()return CreateFrame('Button')end
+            ns.MapStitch.MovePin=function()end
+            ns.MapStitch.AddLine=function()return CreateFrame('Frame'):CreateLine()end
+            ns.MapStitch.IsBuilt=function()return true end
+            ns.MapStitch.ChainAt=function()return {947,900001}end
+            mod.ToWorld=function(_,x,y)return x,y end
+            mod.FromWorld=function(_,u,v)return u,v end
+            RoadFixture({
+                [1]={wx=100,wy=100,map=900001,links={[2]=true}},
+                [2]={wx=100,wy=200,map=900001,links={[1]=true}},
+                [3]={wx=900,wy=800,map=900001,links={[4]=true}},
+                [4]={wx=900,wy=900,map=900001,links={[3]=true}}
+            })
+            local manager={}
+            function manager:CloseMenu(menu)
+                if menu.onClose then menu.onClose(menu)end
+            end
+            Menu={GetManager=function()return manager end}
+            MenuUtil={CreateContextMenu=function(owner,generate)
+                local menu={rows={}}
+                function menu:SetClosedCallback(fn)self.onClose=fn end
+                generate(owner,{CreateButton=function(_,label,callback)
+                    local row={label=label,callback=callback,enabled=true}
+                    function row:SetEnabled(value)self.enabled=value end
+                    menu.rows[#menu.rows+1]=row
+                    return row
+                end})
+                editorMenu=menu
+                return menu
+            end}
+            function OpenAt(x,y)
+                assert(mod.OpenLocationMenu(x,y,WorldMapFrame))
+            end
+            function Choose(label)
+                for _,row in ipairs(editorMenu.rows)do
+                    if row.label==label then
+                        assert(row.enabled,'disabled editor action: '..label)
+                        row.callback()return
+                    end
+                end
+                error('missing editor action: '..label)
+            end
+            WorldMapFrame:Show()
+        ''')
+
+    def test_context_menu_places_and_connects_a_new_route_without_walking(self):
+        self.lua.execute('''
+            OpenAt(.1,.2)Choose('Edit road network')
+            assert(mod.GPSRoadEditing())
+            OpenAt(.1,.2)Choose('Select road node')
+            assert(mod.GPSRoadSelected()=='b:0:2')
+            OpenAt(.5,.2)Choose('Add connected node')
+            local first=mod.GPSRoadSelected()
+            OpenAt(.5,.8)Choose('Add connected node')
+            local second=mod.GPSRoadSelected()
+            assert(first~=second and mod.GPSRoadEditLinked(first,second))
+            OpenAt(.9,.8)Choose('Connect selected node')
+            assert(mod.GPSRoadEditLinked(second,'b:0:3'))
+            assert(player.x==.1 and player.y==.1,'placing a road needed player movement')
+            assert(mod.GPSStart(900001,.9,.9))
+            local a,b=false,false
+            for _,point in ipairs(mod.GPSStatus().route)do
+                a=a or point.source=='manual'and point.wx==500 and point.wy==200
+                b=b or point.source=='manual'and point.wx==500 and point.wy==800
+            end
+            assert(a and b,'navigation ignored the manually connected road bend')
+            assert(not ns.GPSRoadData.networks[0].nodes[2].links[3],'editing mutated bundled road data')
+            local saved=mod.db.gpsManualRoads
+            ns:InitDB()
+            assert(mod.db.gpsManualRoads==saved and mod.GPSRoadEditLinked(first,second))
+            OpenAt(.9,.8)Choose('Finish editing')
+            assert(not mod.GPSRoadEditing()and mod.GPSStatus().active)
+            assert(#ERRORS==0,ERRORS[1])
         ''')
 
 

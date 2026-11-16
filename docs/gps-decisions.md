@@ -71,6 +71,12 @@
 
 ## Integration and parity
 
+- Store manual nodes and explicit links separately under GPS-specific saved data, using stable
+  references to bundled nodes without mutating the source. Never infer a manual junction from
+  proximity. Reuse the existing projection, floor checks, routing and replan lifecycle. Manual
+  edits can extend an existing network or form their own connected graph. Editing/selection are
+  session state; graph changes save immediately. Right-click editor actions capture the location
+  and selected endpoints, preserve the saved zoom preference and keep controller zoom intact.
 - Expose road display, tracker visibility, recording, saving, saved-route choice, playback and
   confirmed deletion together under the map menu's GPS navigation action. Keep slash commands as
   shortcuts. Show exact road nodes and saved samples distinctly from interpolated road-link dots,

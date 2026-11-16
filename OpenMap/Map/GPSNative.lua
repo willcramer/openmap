@@ -15,8 +15,10 @@ local lastStyle, lastPlayerX, lastPlayerY, lastPlayerCont, lastPlayerLayer, last
 local networkRoot, networkCanvas, networkData, networkMap, networkWidth, networkHeight, networkScale
 local networkDots, networkDrawn, networkRedraws = {}, 0, 0
 local networkNodes, networkNodesDrawn, networkRoutes, networkRevision = {}, 0
+local networkEdits, networkEditRevision, networkSelected
 local NETWORK_LIMIT, NODE_LIMIT, RECORD_LIMIT = 800, 500, 10000
 local NODE_COLOR, RECORD_COLOR = { 1, 0.8, 0.35 }, { 1, 0.45, 0.1 }
+local MANUAL_COLOR, SELECTED_COLOR = { 0.25, 0.8, 1 }, { 1, 1, 1 }
 local NETWORK_COLORS = {
 	default = { 0.72, 0.67, 0.51 }, alliance = { 0.3, 0.5, 0.9 }, horde = { 0.8, 0.3, 0.25 },
 	swim = { 0.3, 0.75, 0.8 }, offroad = { 0.5, 0.5, 0.5 },
@@ -162,9 +164,13 @@ local function DrawNetwork(nextCanvas, host, continent, width, height, scale)
 	local network = data and data.networks and data.networks[continent]
 	local routes = mod.db and mod.db.gpsRoutes
 	local revision = mod.GPSRoadsRevision and mod.GPSRoadsRevision() or 0
+	local manual = mod.GPSRoadEditSnapshot and mod.GPSRoadEditSnapshot()
+	local manualRevision = manual and manual.revision
+	local selected = mod.GPSRoadSelected and mod.GPSRoadSelected()
 	if data == networkData and nextCanvas == networkCanvas and host == networkMap
 		and width == networkWidth and height == networkHeight and scale == networkScale
-		and routes == networkRoutes and revision == networkRevision then
+		and routes == networkRoutes and revision == networkRevision
+		and manual == networkEdits and manualRevision == networkEditRevision and selected == networkSelected then
 		if networkRoot then networkRoot:SetShown(networkDrawn > 0 or networkNodesDrawn > 0) end
 		return
 	end
@@ -182,10 +188,11 @@ local function DrawNetwork(nextCanvas, host, continent, width, height, scale)
 	networkData, networkCanvas, networkMap = data, nextCanvas, host
 	networkWidth, networkHeight, networkScale = width, height, scale
 	networkRoutes, networkRevision = routes, revision
+	networkEdits, networkEditRevision, networkSelected = manual, manualRevision, selected
 	networkRedraws = networkRedraws + 1
 	local points, ids, markers = {}, {}, {}
-	local function marker(point, size, color)
-		if point[1] >= 0 and point[1] <= 1 and point[2] >= 0 and point[2] <= 1 then
+	local function marker(point, size, color, ref)
+		if (not selected or ref ~= selected) and point[1] >= 0 and point[1] <= 1 and point[2] >= 0 and point[2] <= 1 then
 			markers[#markers + 1] = { point, size, color }
 		end
 	end
@@ -208,7 +215,7 @@ local function DrawNetwork(nextCanvas, host, continent, width, height, scale)
 	end
 	for _, id in ipairs(ids) do
 		local a = network.nodes[id]
-		marker(points[id], 6, NODE_COLOR)
+		marker(points[id], 6, NODE_COLOR, "b:" .. continent .. ":" .. id)
 		local links = {}
 		for target, linked in pairs(a.links or {}) do if linked and points[target] then links[#links + 1] = target end end
 		table.sort(links)
@@ -248,6 +255,29 @@ local function DrawNetwork(nextCanvas, host, continent, width, height, scale)
 		end
 		if sampled >= RECORD_LIMIT then break end
 	end
+	local manualPoints = {}
+	local function manualPoint(ref)
+		if manualPoints[ref] then return manualPoints[ref][1], manualPoints[ref][2] end
+		local raw = mod.GPSRoadEditPoint and mod.GPSRoadEditPoint(ref)
+		local point = raw and Project(raw, host, continent)
+		if point then manualPoints[ref] = { raw, point } return raw, point end
+	end
+	for ref in pairs(manual and manual.nodes or {}) do
+		local _, point = manualPoint(ref)
+		if point then marker(point, 7, MANUAL_COLOR, ref) end
+	end
+	for _, link in ipairs(manual and manual.links or {}) do
+		local a, first = manualPoint(link.a)
+		local b, last = manualPoint(link.b)
+		if first and last and a.cont == b.cont and not a.ambiguous and not b.ambiguous
+			and not (a.layer ~= nil and b.layer ~= nil and a.layer ~= b.layer)
+			and not (mod.GPSOtherFloor and mod.GPSOtherFloor(a, b)) then segment(first, last, MANUAL_COLOR) end
+	end
+	local selectedPoint
+	if selected then
+		local _, point = manualPoint(selected)
+		if point and point[1] >= 0 and point[1] <= 1 and point[2] >= 0 and point[2] <= 1 then selectedPoint = point end
+	end
 	networkDrawn = 0
 	local spacing, carry = math.max(7 / scale, total / (NETWORK_LIMIT - 1)), 0
 	for _, segment in ipairs(segments) do
@@ -264,12 +294,17 @@ local function DrawNetwork(nextCanvas, host, continent, width, height, scale)
 		carry = along - distance
 	end
 	for i = networkDrawn + 1, #networkDots do networkDots[i]:Hide() end
-	networkNodesDrawn = math.min(NODE_LIMIT, #markers)
+	networkNodesDrawn = math.min(NODE_LIMIT - (selectedPoint and 1 or 0), #markers)
 	for i = 1, networkNodesDrawn do
 		-- At wide views thin the markers across the whole network, always using
 		-- a real node position rather than creating another interpolated dot.
 		local item = markers[math.floor((i - 0.5) * #markers / networkNodesDrawn) + 1]
 		NetworkMark(networkNodes, i, item[1], item[2], item[3], width, height, scale, true)
+	end
+	if selectedPoint then
+		-- Keep the selected endpoint visible even when the wider network is thinned.
+		networkNodesDrawn = networkNodesDrawn + 1
+		NetworkMark(networkNodes, networkNodesDrawn, selectedPoint, 10, SELECTED_COLOR, width, height, scale, true)
 	end
 	for i = networkNodesDrawn + 1, #networkNodes do networkNodes[i]:Hide() end
 	networkRoot:SetShown(networkDrawn > 0 or networkNodesDrawn > 0)

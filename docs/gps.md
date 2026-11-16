@@ -10,7 +10,7 @@ routing implementation or art is included. See the [data notice](../OpenMap/Data
 
 ## Install
 
-Use **OpenMapGPS-v0.8.10-gps.9-forever.zip**, the separate-addon build. The older gps.1 ZIP
+Use **OpenMapGPS-v0.8.10-gps.10-forever.zip**, the separate-addon build. The older gps.1 ZIP
 used the original addon's folder and should not be used for a side-by-side install.
 If you already installed gps.1 into `OpenMap`, reinstall the official OpenMap there first.
 
@@ -34,7 +34,8 @@ the original retains `/openmap` and `/omap`.
 
 Open the map, press its **OpenMap** menu button, then choose **GPS navigation**. Its controls
 offer road display, tracker visibility, recording, saving, saved-route selection, playback and
-confirmed deletion. These actions do not require slash commands. You can star GPS navigation
+confirmed deletion, plus **Edit road network** for placing nodes directly on the map. These
+actions do not require slash commands. You can star GPS navigation
 in the map menu to give it a shortcut on the map. `/omgps gps` also opens the same controls.
 `/console scriptErrors 1` enables error reports.
 TomTom is optional. The test build retains OpenMap's normal map and pins.
@@ -92,6 +93,39 @@ Restore it with `/omgps gps tracker on`, or open `/omgps` → **More** → **Mov
 enable **GPS tracker**. The same preference is available in the full GPS options. TomTom is
 optional; tracker visibility can be selected independently of whether it is installed.
 
+## Place and connect road nodes on the map
+
+1. Open **OpenMap menu → GPS navigation → Edit road network**. The road display turns on.
+2. Right-click near an existing gold node and choose **Select road node**.
+3. Right-click the next point on your new path and choose **Add connected node**. This places
+   a custom node, connects it to the selection and selects the new node. Repeat along bends.
+4. To create a separate node, choose **Add road node**. To join two existing nodes, select the
+   first, right-click near the second, then choose **Connect selected node**.
+5. Choose **Finish editing** when done. GPS can use the new connections for destination routing.
+
+**Cyan** nodes and links are your map edits; **white** marks the selected node. Gold nodes are
+bundled roads and orange samples are recorded trails. Zoom in to select a junction accurately;
+right-click selection looks for a road node within 25 yards. Recorded samples remain managed
+through their saved routes rather than the manual node editor.
+
+Changes save immediately in OpenMapGPS's own profile, with limits of 2,000 custom nodes and 4,000
+custom connections. Select a node and choose **Clear selection**
+to leave it in place. **Disconnect selected node** removes a connection you added between the
+selection and the node near the menu location. **Delete road node** asks before deleting one of
+your custom nodes and its connections. Bundled nodes and source connections cannot be deleted.
+A connection directly between existing one-way road endpoints cannot reverse the supplied direction.
+
+Connections are straight segments you explicitly mark as usable paths; place intermediate nodes
+around corners. Map coordinates do not establish terrain clearance or the vertical shape of a
+staircase. Nodes must be on the same continent and a compatible known floor; ambiguous overlapping
+floors are rejected. The editor does not add automatic junctions just because nodes are nearby.
+
+The same menu works on the controller view with the mouse and on native Zephras maps. While editing,
+right-click opens the editor even if you normally use right-click to zoom out. Finish editing
+restores that preference, and controller zoom buttons retain their behavior. Hiding Road network
+ends editing. Editing mode and selection are temporary; the nodes and connections persist across
+reloads. Active GPS destinations replan after topology changes, while tracker visibility stays saved.
+
 ## Record a road or farming route
 
 1. Open the map's **OpenMap** menu and choose **GPS navigation**.
@@ -148,7 +182,8 @@ contains 1,061 buildings with room footprints, height intervals and portals.
 
 Use bundled roads is on by default. **Road network** in the GPS navigation window or the map
 menu's **On the map** tab shows the network. Small dots trace the road links; larger markers show
-actual bundled nodes and saved trail samples. Saved trails have a distinct color. Zoom in when
+actual bundled nodes, saved trail samples and manually placed nodes. Recorded and manual paths have
+distinct colors. Zoom in when
 inspecting a junction: wide views limit the marker count. Options
 provides Use bundled roads, Allow enemy roads, Off-road paths and Off-road paths above your level.
 Off-road choices are Shortest, Avoid, Only when needed and Never; level choices are Warn, Avoid and
@@ -176,8 +211,9 @@ ambiguous floor route is reported instead of silently drawing a road through it.
 to the network are off-road connectors; the data does not establish that every such approach is
 walkable. The source network itself is still beta and does not cover every path in the game.
 
-This goal concerns the supplied walking network. Multi-continent flight/boat itinerary planning,
-the reference addon's complete road editor and its full public API are not part of this pass.
+This build covers walking-network planning, recorded paths and explicit manual node/link editing.
+Multi-continent flight/boat itinerary planning, advanced travel/floor-metadata editing and the
+reference addon's full public API are not part of this pass.
 See [parity and validation](gps-validation.md) for verified cases and remaining live checks.
 
 Position reads can be unavailable or secret in instances or combat. Guidance waits rather than
@@ -211,6 +247,11 @@ GPS must not replace that addon's destination.
     new trail, select it, change playback mode, follow it and delete it with confirmation. Check
     that the road display updates after saving/deleting without panning, and that Cancel in the
     delete prompt preserves the trail. Close/reopen the controls and confirm the saved preferences.
+13. Open Edit road network, select an existing road node and extend a path with Add connected node.
+    Place separate nodes and connect them. Check cyan links and the white selection on the world,
+    controller and Zephras maps. Navigate over the new path, disconnect/delete your edits, and check
+    rerouting. Cancel the delete prompt once. Reload and confirm edits persist but editing is off.
+    Repeat with normal right-click configured as Zoom out; Finish editing must restore zoom-out.
 
 Offline tests cover the Lua logic and stubbed client behavior. Arrow alignment, actual protected
 API behavior, terrain, and the live window layout still require this game-client test.

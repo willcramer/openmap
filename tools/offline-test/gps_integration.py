@@ -389,6 +389,27 @@ class GPSIntegrationTests(unittest.TestCase):
             assert(#ERRORS==0,ERRORS[1])
         ''')
 
+    def test_panel_editor_toggle_preserves_guidance_tracker_and_right_click_preference(self):
+        self.lua.execute(r'''
+            gpsmod.db.mapRightClick='zoom'
+            gpsmod.GPSSetTrackerShown(false)
+            assert(gpsmod.GPSStart(900001,.4,.2))
+            local route,waypoint=gpsmod.GPSStatus().route,WAYPOINT
+            gpsmod:ToggleGPS(true)
+            local panel=OpenMapGPSPanel
+            assert(panel.edit:GetText()=='Edit road network')
+            panel.edit:GetScript('OnClick')(panel.edit)
+            assert(gpsmod.GPSRoadEditing()and gpsmod.GPSRoadsShown())
+            assert(panel.edit:GetText()=='Finish editing')
+            assert(panel.help:GetText():find('Right%-click'))
+            assert(gpsmod.GPSStatus().active and gpsmod.GPSStatus().route==route and WAYPOINT==waypoint)
+            assert(not OpenMapGPSGuide:IsShown()and gpsmod.db.mapRightClick=='zoom')
+            panel.edit:GetScript('OnClick')(panel.edit)
+            assert(not gpsmod.GPSRoadEditing()and panel.edit:GetText()=='Edit road network')
+            assert(gpsmod.GPSStatus().active and WAYPOINT==waypoint and gpsmod.db.mapRightClick=='zoom')
+            assert(#ERRORS==0,ERRORS[1])
+        ''')
+
     def test_panel_saves_partial_recordings_and_discards_false_starts(self):
         self.lua.execute(r'''
             gpsmod:ToggleGPS(true)

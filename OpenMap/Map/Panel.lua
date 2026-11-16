@@ -376,6 +376,11 @@ local function Rows()
 	rows[#rows + 1] = optRow(L["Share where you are"], "friendsShare", Icon("Ability_Hunter_EagleEye"))
 	rows[#rows].note = L["Your guild and friends see you"]   -- (a second line: what turning it on means)
 	rows[#rows + 1] = { L["Tools"] }
+	if mod.GPSSetRoadEditing then
+		rows[#rows + 1] = row(L["Edit road network"], "gpsRoadEditor", Icon("INV_Misc_Map_01"),
+			function() return mod.GPSRoadEditing() end,
+			function(v) mod.GPSSetRoadEditing(v) end)
+	end
 	if mod.TogglePaint then
 		rows[#rows + 1] = row(L["Map notes"], "paint", Icon("INV_Misc_Note_02"), function() return mod:IsPainting() end,
 			function(v) mod:TogglePaint(v) end)

@@ -437,6 +437,32 @@ class PadMouseGPSInputTests(unittest.TestCase):
             assert(menuCalls[1][3]==mouseView)
         ''')
 
+    def test_editor_mouse_menu_temporarily_overrides_zoom_without_changing_controller(self):
+        self.lua.execute('''
+            mod.db.mapRightClick='zoom'
+            local editing=true
+            mod.GPSRoadEditing=function()return editing end
+            MouseClick('RightButton')
+            assert(#menuCalls==1 and menuCalls[1][3]==mouseView and not mod.Animating())
+            assert(mod.db.mapRightClick=='zoom')
+            mod.ShowNow(.5,.5,2)
+            WorldMapFrame:NavigateToParentMap()
+            assert(#menuCalls==1 and mod.Animating())
+            Settle()
+            editing=false
+            mod.ShowNow(.5,.5,2)
+            MouseClick('RightButton')
+            assert(#menuCalls==1 and mod.Animating()and mod.db.mapRightClick=='zoom')
+        ''')
+
+    def test_editor_mouse_right_drag_stays_a_drag(self):
+        self.lua.execute('''
+            mod.db.mapRightClick='zoom'
+            mod.GPSRoadEditing=function()return true end
+            MouseDown('RightButton')mx=660 Tick()mx=600 Tick()MouseUp('RightButton')
+            assert(#menuCalls==0 and not mod.Animating())
+        ''')
+
     def test_right_drag_out_and_back_does_not_pan_zoom_or_open_menu(self):
         self.lua.execute('''
             mod.db.mapRightClick='menu'

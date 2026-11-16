@@ -932,7 +932,7 @@ local function Setup()
 			local dx, dy = (lastX - d.x) / es, (lastY - d.y) / es
 			if dx * dx + dy * dy > 16 then return end
 		end
-		if button == "RightButton" and d and mod.db.mapRightClick == "menu" and mod.OpenLocationMenu
+		if button == "RightButton" and d and (mod.db.mapRightClick == "menu" or mod.GPSRoadEditing and mod.GPSRoadEditing()) and mod.OpenLocationMenu
 			and not (mod.DungeonViewShown and mod.DungeonViewShown())
 			and not (mod.IsSketching and mod:IsSketching())
 			and not (mod.PinMode and mod.PinMode()) then

@@ -131,6 +131,32 @@ class CtrlClickTests(unittest.TestCase):
             assert(opened==1 and glided==0 and dropped==0)
         """)
 
+    def test_editor_mouse_menu_overrides_zoom_without_changing_controller_or_saved_choice(self):
+        self.check("""
+            mod.db.mapRightClick='zoom'
+            local editing,opened=true,0
+            mod.GPSRoadEditing=function()return editing end
+            mod.OpenLocationMenu=function(u,v,owner)
+                assert(u==.5 and v==.5 and owner==sc)
+                opened=opened+1 return true
+            end
+            assert(OnCanvasClick(true,'RightButton')==true and opened==1 and glided==0)
+            assert(mod.db.mapRightClick=='zoom')
+            assert(OnCanvasClick(nil,'RightButton')==true and opened==1 and glided==1)
+            editing=false
+            assert(OnCanvasClick(true,'RightButton')==true and opened==1 and glided==2)
+        """)
+
+    def test_editor_menu_does_not_capture_right_drag(self):
+        self.check("""
+            mod.GPSRoadEditing=function()return true end
+            mod.OpenLocationMenu=function()error('editor captured a drag')end
+            PressDown(nil,'RightButton')sc.mouseButtonInfo.RightButton.down=true
+            sc.GetCursorPosition=function()return 100,0 end PressTrack()
+            sc.GetCursorPosition=function()return 0,0 end PressTrack()
+            assert(OnCanvasClick(true,'RightButton')==true and glided==0)
+        """)
+
     def test_right_drag_suppresses_the_menu_and_zoom(self):
         self.check("""
             mod.db.mapRightClick='menu'

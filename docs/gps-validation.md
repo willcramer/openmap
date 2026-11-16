@@ -1,6 +1,6 @@
 # GPS road-network validation
 
-Candidate: **v0.8.10-gps.9**, Forever Maps dataset **2.0.166**, separate addon **OpenMapGPS**
+Candidate: **v0.8.10-gps.10**, Forever Maps dataset **2.0.166**, separate addon **OpenMapGPS**
 (display name **OpenMap - GPS**).
 This is an offline-verified test build. No live game-client verification is claimed.
 
@@ -34,8 +34,8 @@ This is an offline-verified test build. No live game-client verification is clai
 ## OpenMap integration and installation
 
 - All six loader modes, navigation and controller-waypoint checks pass for Forever and Retail.
-  Existing focused tests also pass. The consolidated local run has 44 successful invocations.
-- Nine GPS core and twelve full-addon integration tests preserve recording, playback modes,
+  Existing focused tests also pass. The consolidated local run has 45 successful invocations.
+- Nine GPS core and thirteen full-addon integration tests preserve recording, playback modes,
   partial-save handling, arrival, rerouting and external waypoint ownership.
 - Tracker visibility tests exercise the actual Hide button, commands and full options table,
   confirming that TomTom waypoints, route drawing, recorded-road rerouting, arrival and recording
@@ -45,18 +45,25 @@ This is an offline-verified test build. No live game-client verification is clai
   button callbacks without slash commands: road/tracker toggles, named recording, save/partial
   save/discard, saved-route selection, playback modes, following, stopping and confirmed deletion.
   Deletion captures the chosen route so later edits cannot delete a different recording.
+- Ten manual-road tests cover placed nodes, explicit bidirectional links, atomic add-and-connect,
+  limits, invalid inputs, same-floor/continent validation, one-way protection, no proximity joins,
+  deletion cleanup, source immutability, profile/reload persistence, active-route replanning and
+  hidden-tracker preferences. Manual-only routing works with no supplied dataset and with bundled
+  roads disabled. The new suite is required by CI and the package builder.
 - Twelve bundled full-addon integration tests pass on Forever (ten plus two source-only skips on
   Retail). They exercise actual road data, recorded extensions, Brill's upper platform, Zephras,
   faction border stops with a persistent HUD, resuming the original target after changing the
   faction option, and ghost routing through otherwise restricted paths.
-- Eleven road-overlay, eight stitched route-view and sixteen native-map tests cover solid green
+- Fourteen road-overlay, eight stitched route-view and eighteen native-map tests cover solid green
   line geometry, actual waypoint/destination nodes, clipping, view caching, player-head movement,
   completed segment removal and reuse of drawing regions. Both route renderers retain all bends
   for valid routes within a 25,000-point budget. Optional network views add exact bundled-node
   and saved-sample markers, with separate budgets of 500 nodes and 800 road-link dots per canvas.
   View caching invalidates after save/delete or profile replacement. Isolated and special nodes
   remain visible without unsafe straight links. Unprojectable points and continent gaps do not
-  become shortcuts.
+  become shortcuts. Manual nodes/links are cyan; the selected node is white and retains a slot in
+  the bounded marker pool even in crowded views. Selection and manual-data revisions invalidate
+  the cache on world/controller/native views.
 - Eight package-transform and sixteen coexistence/settings tests check both clients. The original and
   GPS addon load in the same Lua runtime without sharing saved variables, API, commands, frames,
   bindings or message prefixes. Original-first loading leaves GPS dormant. Explicit Group metadata
@@ -70,15 +77,21 @@ This is an offline-verified test build. No live game-client verification is clai
   enable changes. gps.4 uses the GUID and saves before reloading, matching the Forever AddOns UI.
   Regression tests model pending/committed GUID-specific states and rebuild the Lua runtime from
   the committed selection to check GPS activation and switching back to original standby.
-- Eighteen press tests and thirty controller-waypoint/input tests cover Alt-click GPS, right-click
+- Twenty press tests and thirty-two controller-waypoint/input tests cover Alt-click GPS, right-click
   menu selection, independent right-drag suppression, ordinary zoom, controller zoom buttons and
-  drawing/pin/dungeon tools. Fifteen context-menu tests cover captured target coordinates, the
+  drawing/pin/dungeon tools. Twenty-one context-menu tests cover captured target coordinates, the
   three actions, stale callback revocation, Escape/outside/owner-hide behavior, native Zephras
-  input and note-only pin creation without replacing an active waypoint.
+  input and note-only pin creation without replacing an active waypoint. Editor actions capture
+  selection and target references, protect delete confirmation across profile changes and restore
+  normal mouse zoom when editing ends. A full-TOC menu/model/router test builds a connected path
+  through clicks without moving the player and confirms that GPS uses its manually placed bends.
 - The context-menu default is tested through real Core.InitDB on fresh and old profiles,
   including one-time adoption, retained existing migrations/data and later Zoom out choices.
 - Python tools compile; Lua lint passes. New output is generated through its importer, changelog
   builder or locale builder. The package builder reruns the routing and coexistence checks.
+- Installation fixtures verify the one new editor module is added safely, a failure after its
+  addition rolls back both new and replaced files including timestamps, concurrent GPS edits
+  refuse overwrites, and original OpenMap remains unchanged.
 - New GPS/context-menu strings have translations in each of the ten supported locales. Placeholder and
   command checks report zero problems. Six pre-existing unrelated strings remain untranslated.
   Standby/bootstrap messages can fall back to English before active locale tables are loaded.
@@ -101,7 +114,7 @@ HUD or in-game screenshot is claimed.
 The imported network has the coverage and limits of its source beta. Endpoint approaches are
 explicit off-network connectors, not terrain-verified roads. An uncertain overlapping floor is
 reported rather than guessed. Source-compatible route costs and topology do not establish that
-every connector crosses walkable terrain. Multi-continent flight/boat itineraries, the complete
-reference road editor and reference public API are outside this walking-network pass.
+every connector crosses walkable terrain. Multi-continent flight/boat itineraries, advanced
+travel/floor-metadata editing and the reference public API are outside this walking-network pass.
 
 See [gps-decisions.md](gps-decisions.md) for decisions, supporting evidence and alternatives.

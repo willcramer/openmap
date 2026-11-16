@@ -4,6 +4,9 @@
 local _, ns = ...
 
 ns.MapChangelog = {
+	{ version = "v0.8.10-gps.10", date = "2026-11-16", heads = { [1] = "Added", }, items = {
+		"|cff6e2c0aMap road editor:|r add and connect custom road nodes directly from the map's right-click menu. Edits save separately, participate in GPS planning and have cyan markers with a white selection. Remove your connections or confirm deletion of your own nodes from the same menu.",
+	} },
 	{ version = "v0.8.10-gps.9", date = "2026-11-16", heads = { [1] = "Improved", }, items = {
 		"|cff6e2c0aGPS controls in the map menu:|r GPS navigation offers road display, recording, saving, route selection, playback, confirmed deletion and tracker visibility without slash commands.",
 		"|cff6e2c0aRoad nodes on the map:|r the optional road display marks actual network nodes and saved trail samples. Zoom in to inspect a junction; wide views keep a bounded marker budget.",
@@ -22,9 +25,5 @@ ns.MapChangelog = {
 	{ version = "v0.8.10-gps.5", date = "2026-11-16", heads = { [1] = "Improved", }, items = {
 		"|cff6e2c0aGPS route drawing:|r a solid green line follows the remaining waypoints from your current position, with distinct waypoint and destination nodes. It keeps its width while zooming.",
 		"|cff6e2c0aSettings import:|r /omgps sync settings copies shared OpenMap preferences through the original's live profile and returns to GPS, preserving GPS-specific settings and recordings.",
-	} },
-	{ version = "v0.8.10-gps.4", date = "2026-11-16", heads = { [1] = "Fixed", }, items = {
-		"|cff6e2c0aGPS addon switching:|r save the current character's addon selection before reloading so /omgps use gps activates GPS and /omgps use original restores the original.",
-		"|cff6e2c0aController-view mouse input:|r Alt-click starts GPS without changing ordinary zoom or active drawing/pin tools.",
 	} },
 }

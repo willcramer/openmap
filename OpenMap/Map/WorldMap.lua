@@ -1083,7 +1083,7 @@ local function OnCanvasClick(from, button)
 	if from and button == "RightButton" and WasDrag(button) then return true end
 	-- Controller X still zooms out. The menu is a mouse action, and tools keep
 	-- their own right-click behavior while drawing, dropping a pin or in a dungeon.
-	if from and button == "RightButton" and mod.db.mapRightClick == "menu" and mod.OpenLocationMenu
+	if from and button == "RightButton" and (mod.db.mapRightClick == "menu" or mod.GPSRoadEditing and mod.GPSRoadEditing()) and mod.OpenLocationMenu
 		and not (mod.IsSketching and mod:IsSketching())
 		and not (mod.PinMode and mod.PinMode())
 		and not (mod.DungeonViewShown and mod.DungeonViewShown()) then

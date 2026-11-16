@@ -187,6 +187,11 @@ local function Refresh()
 		if arrow then hud.arrow:SetRotation(status.bearing - facing) end
 	end
 	if panel and panel:IsShown() then
+		local editing = mod.GPSRoadEditing and mod.GPSRoadEditing() or false
+		panel.help:SetText(editing and L["Right-click to add or select nodes, then connect them. Edits save automatically; place nodes along bends."]
+			or L["Record roads you walk, then save them for future GPS journeys."])
+		panel.edit:SetText(editing and L["Finish editing"] or L["Edit road network"])
+		panel.edit:SetEnabled(type(mod.GPSSetRoadEditing) == "function")
 		local text = status.instruction or L["Choose a waypoint or a saved route."]
 		if status.recording then text = RecordingText(status) end
 		panel.status:SetText(text)
@@ -291,8 +296,9 @@ local function BuildPanel()
 	panel:SetSize(420, 464 + top)
 	Movable(panel, "gpsPanelAt", 0, 0)
 	local y = -math.max(top, 24) - 12
-	local help = Label(panel, "GameFontHighlightSmall", 18, y, 384)
-	help:SetText(L["Record roads you walk, then save them for future GPS journeys."])
+	panel.help = Label(panel, "GameFontHighlightSmall", 18, y, 384)
+	panel.help:SetHeight(40)
+	panel.help:SetText(L["Record roads you walk, then save them for future GPS journeys."])
 	panel.roads = Check(panel, L["Road network"], 18, y - 42, 384, function(on)
 		if mod.GPSSetRoadsShown then mod.GPSSetRoadsShown(on) end
 		Refresh()
@@ -330,6 +336,10 @@ local function BuildPanel()
 	panel.follow = Button(panel, L["Follow saved route"], 186, 216, y - 260, function()
 		Result(mod.GPSPlay(RouteName(), mode))
 		panel.name:ClearFocus()
+		Refresh()
+	end)
+	panel.edit = Button(panel, L["Edit road network"], 186, 18, y - 294, function()
+		if mod.GPSSetRoadEditing then Result(mod.GPSSetRoadEditing(not mod.GPSRoadEditing())) end
 		Refresh()
 	end)
 	panel.delete = Button(panel, L["Delete"], 186, 216, y - 294, function()

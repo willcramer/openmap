@@ -21,6 +21,26 @@ local nativeMap
 local nativePress, nativeWatch
 local NATIVE_MAPS = { [2521] = true, [2665] = true }
 
+local function Editing()
+	return mod.GPSRoadEditing and mod.GPSRoadEditing() or false
+end
+
+local function Result(ok, err)
+	if not ok and err then ns:Print(err) end
+	return ok
+end
+
+StaticPopupDialogs.OPENMAP_GPS_DELETE_NODE = {
+	text = L["Delete this road node and its connections?"],
+	button1 = L["Delete"], button2 = CANCEL,
+	OnAccept = function(_, data)
+		if Editing() and data and mod.db and mod.db.gpsManualRoads == data.roads and mod.GPSRoadEditDelete then
+			Result(mod.GPSRoadEditDelete(data.ref))
+		end
+	end,
+	timeout = 0, whileDead = true, hideOnEscape = true,
+}
+
 local function Number(value)
 	value = Safe.Value(value)
 	return type(value) == "number" and value == value and math.abs(value) < math.huge and value or nil
@@ -56,6 +76,41 @@ local function Open(target, owner)
 		end
 	end
 	local menu = util.CreateContextMenu(owner or map, function(_, root)
+		if Editing() then
+			local selected = mod.GPSRoadSelected and mod.GPSRoadSelected()
+			local nearest
+			if mod.GPSRoadEditNearest then nearest = mod.GPSRoadEditNearest(target.map, target.x, target.y) end
+			local linked = selected and nearest and mod.GPSRoadEditLinked and mod.GPSRoadEditLinked(selected, nearest)
+			local function Edit(label, enabled, callback)
+				local row = root:CreateButton(label, Action(function()
+					if Editing() then callback() end
+				end))
+				row:SetEnabled(enabled and true or false)
+			end
+			Edit(L["Add road node"], mod.GPSRoadEditAdd, function()
+				Result(mod.GPSRoadEditAdd(target.map, target.x, target.y))
+			end)
+			Edit(L["Add connected node"], selected and mod.GPSRoadEditAdd, function()
+				Result(mod.GPSRoadEditAdd(target.map, target.x, target.y, selected))
+			end)
+			Edit(L["Select road node"], nearest and mod.GPSRoadEditSelect, function()
+				Result(mod.GPSRoadEditSelect(nearest))
+			end)
+			Edit(L["Connect selected node"], selected and nearest and selected ~= nearest and not linked and mod.GPSRoadEditConnect, function()
+				Result(mod.GPSRoadEditConnect(selected, nearest))
+			end)
+			Edit(L["Disconnect selected node"], linked and mod.GPSRoadEditDisconnect, function()
+				Result(mod.GPSRoadEditDisconnect(selected, nearest))
+			end)
+			Edit(L["Delete road node"], type(nearest) == "string" and nearest:match("^m:") and mod.GPSRoadEditDelete, function()
+				StaticPopup_Show("OPENMAP_GPS_DELETE_NODE", nil, nil, { ref = nearest, roads = mod.db.gpsManualRoads })
+			end)
+			Edit(L["Clear selection"], selected and mod.GPSRoadEditSelect, function()
+				Result(mod.GPSRoadEditSelect(nil))
+			end)
+			Edit(L["Finish editing"], mod.GPSSetRoadEditing, function() Result(mod.GPSSetRoadEditing(false)) end)
+			return
+		end
 		local waypoint = root:CreateButton(L["Place waypoint"], Action(function()
 			mod.TrackPoint(target.map, target.x, target.y, L["Waypoint"])
 		end))
@@ -70,6 +125,9 @@ local function Open(target, owner)
 			if not ok and err then ns:Print(err) end
 		end))
 		gps:SetEnabled(type(mod.GPSStart) == "function")
+		if mod.GPSSetRoadEditing then
+			root:CreateButton(L["Edit road network"], Action(function() Result(mod.GPSSetRoadEditing(true)) end))
+		end
 	end)
 	if not menu then activeTarget = nil return false end
 	activeMenu = menu
@@ -102,7 +160,7 @@ function mod:ContextMenuOptions(opts, get, set, off)
 end
 
 local function NativeClick(map, button)
-	if button ~= "RightButton" or not mod.db or mod.db.enabled == false or mod.db.mapRightClick ~= "menu"
+	if button ~= "RightButton" or not mod.db or mod.db.enabled == false or (mod.db.mapRightClick ~= "menu" and not Editing())
 		or (mod.IsStitched and mod.IsStitched()) or (mod.PadViewOn and mod.PadViewOn())
 		or (mod.IsSketching and mod:IsSketching()) or (mod.PinMode and mod.PinMode()) then return false end
 	local mapID = Number(Safe.Call(map.GetMapID, map))
@@ -141,7 +199,7 @@ function mod.SetupLocationMenu()
 		sc:HookScript("OnMouseDown", function(_, button)
 			if button ~= "RightButton" then return end
 			local mapID = Number(Safe.Call(map.GetMapID, map))
-			if not mod.db or mod.db.mapRightClick ~= "menu" or not NATIVE_MAPS[mapID] then return end
+			if not mod.db or (mod.db.mapRightClick ~= "menu" and not Editing()) or not NATIVE_MAPS[mapID] then return end
 			local x, y = GetCursorPosition()
 			x, y = Number(x), Number(y)
 			if x and y then nativePress = { x = x, y = y } nativeWatch:Show() end

@@ -147,6 +147,90 @@ class RoadViewTests(unittest.TestCase):
             assert(#sets.gpsroadnodes.pins==7)
         """)
 
+    def test_manual_links_selected_nodes_and_deletion_refresh_without_navigation_changes(self):
+        self.lua.execute("""
+            ns.MapStitch.FromYards=function(cont,x,y)if cont==0 then return x/1000,y/1000 end end
+            local base={cont=0,wx=100,wy=500,links={}}
+            ns.GPSRoadData={networks={[0]={nodes={[1]=base}}}}
+            local a,b={cont=0,wx=500,wy=500},{cont=0,wx=900,wy=500}
+            manual={nodes={['m:1']=a,['m:2']=b},links={
+                {a='b:0:1',b='m:1'},{a='m:1',b='m:2'}},revision=1}
+            selected='m:1'
+            function mod.GPSRoadEditSnapshot()return manual end
+            function mod.GPSRoadEditPoint(ref)return ref=='b:0:1'and base or manual.nodes[ref]end
+            function mod.GPSRoadSelected()return selected end
+            sets.gps={sentinel=true}
+            mod.GPSRefreshRoadView()
+            local layer=sets.gpsroadnodes
+            assert(#layer.pins==3 and sets.gps.sentinel)
+            local cyan,white,gold=0,0,0
+            for _,pin in ipairs(layer.pins)do
+                assert(pin.mouse==false and pin.v==.5)
+                if pin.look.size==10 then
+                    white=white+1 assert(pin.u==.5 and pin.look.color[1]==1 and pin.look.color[2]==1)
+                elseif pin.look.color[1]==.25 then cyan=cyan+1 assert(pin.u==.9)
+                else gold=gold+1 assert(pin.u==.1)end
+            end
+            assert(cyan==1 and white==1 and gold==1)
+            local links=0
+            for _,pin in ipairs(sets.gpsroads.pins)do
+                if pin.look.color[1]==.25 then
+                    links=links+1 assert(pin.v==.5 and pin.u>=.1 and pin.u<=.9)
+                end
+            end
+            assert(links>50,'explicit long manual links were clipped by recording gap limits')
+            local pins,clears=layer.pins,layer.clears
+            mod.GPSRefreshRoadView()assert(layer.pins==pins and layer.clears==clears)
+            selected='b:0:1' mod.GPSRefreshRoadView()
+            assert(layer.clears==clears+1 and #layer.pins==3)
+            assert(layer.pins[#layer.pins].look.size==10 and layer.pins[#layer.pins].u==.1)
+            manual.nodes['m:1']=nil manual.links={} manual.revision=2 selected=nil
+            mod.GPSRefreshRoadView()
+            assert(#layer.pins==2 and #sets.gpsroads.pins==0 and sets.gps.sentinel)
+            assert(base.u==nil and a.u==nil and b.u==nil,'road display mutated stored positions')
+        """)
+
+    def test_manual_display_rejects_missing_cross_continent_and_known_floor_links(self):
+        self.lua.execute("""
+            ns.GPSRoadData={networks={}}
+            manual={nodes={
+                ['m:1']={cont=0,wx=.1,wy=.3,layer=1},
+                ['m:2']={cont=0,wx=.9,wy=.3,layer=2},
+                ['m:3']={cont=1,wx=.5,wy=.3},
+                ['m:4']={cont=0,wx=.8,wy=.3,layer=1,ambiguous=true}
+            },links={{a='m:1',b='m:2'},{a='m:1',b='m:3'},
+                {a='m:1',b='missing'},{a='m:1',b='m:4'}},revision=1}
+            function mod.GPSRoadEditSnapshot()return manual end
+            function mod.GPSRoadEditPoint(ref)return manual.nodes[ref]end
+            mod.GPSRefreshRoadView()
+            assert(#sets.gpsroadnodes.pins==3 and #sets.gpsroads.pins==0)
+            manual={nodes={},links={},revision=0}
+            mod.GPSRefreshRoadView()
+            assert(#sets.gpsroadnodes.pins==0,'profile replacement retained manual nodes')
+        """)
+
+    def test_selected_manual_node_survives_dense_budget_and_hiding_finishes_editing(self):
+        self.lua.execute("""
+            ns.GPSRoadData={networks={}}
+            manual={nodes={},links={},revision=1}
+            for i=1,1500 do manual.nodes['m:'..i]={cont=0,wx=i/1501,wy=.5}end
+            local selected='m:1499'
+            local editing=true
+            function mod.GPSRoadEditSnapshot()return manual end
+            function mod.GPSRoadEditPoint(ref)return manual.nodes[ref]end
+            function mod.GPSRoadSelected()return selected end
+            function mod.GPSRoadEditing()return editing end
+            function mod.GPSSetRoadEditing(on)editing=on selected=nil end
+            mod.GPSRefreshRoadView()
+            local nodes=sets.gpsroadnodes.pins
+            assert(#nodes==500 and nodes[#nodes].look.size==10 and nodes[#nodes].u==1499/1501)
+            mod.GPSSetRoadsShown(false)
+            assert(not editing and selected==nil and not sets.gpsroadnodes.on)
+            mod.GPSSetRoadsShown(true)
+            assert(#sets.gpsroadnodes.pins==500)
+            for _,pin in ipairs(sets.gpsroadnodes.pins)do assert(pin.look.size==7)end
+        """)
+
     def test_controller_stitched_view_uses_the_same_road_layer(self):
         self.lua.execute("""
             stitched=false

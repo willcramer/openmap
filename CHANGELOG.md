@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+## v0.8.10-gps.10 (2026-11-16)
+
+### Added
+
+- **Place and connect road nodes on the map:** choose Edit road network in GPS navigation,
+  then right-click to add nodes, select an existing node, or add a connected node along a new
+  path. Connect separate nodes, remove your connections, or delete your own nodes with
+  confirmation. Changes save automatically and become available for GPS route planning.
+- **Separate custom-road display:** cyan nodes and links show your map edits; a white marker
+  shows the selected node. The editor supports the world map, controller view and Zephras maps.
+  Finish editing restores normal right-click behavior. The bundled road data stays intact.
+
 ## v0.8.10-gps.9 (2026-11-16)
 
 ### Improved

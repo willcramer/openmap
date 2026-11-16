@@ -349,7 +349,9 @@ local function RoadLevel(node)
 end
 
 local function Plan(from, to)
-	if mod.db.gpsUseRoads ~= false and mod.GPSRoadRoute then
+	local manual = mod.GPSRoadEditSnapshot and mod.GPSRoadEditSnapshot()
+	local hasManual = manual and (next(manual.nodes) or next(manual.links))
+	if mod.GPSRoadRoute and (mod.db.gpsUseRoads ~= false or hasManual) then
 		local ghost = Safe.Call(_G.UnitIsGhost, "player") == true
 		local extras = {}
 		for name, trail in pairs(Routes()) do
@@ -366,6 +368,7 @@ local function Plan(from, to)
 			allowEnemy = true, ghost = ghost, offroad = mod.db.gpsOffroad,
 			aboveLevel = mod.db.gpsAboveLevel, minLevel = RoadLevel,
 			extraRoutes = extras, extraRevision = roadsRevision,
+			manualRoads = manual, excludeBundled = mod.db.gpsUseRoads == false,
 		})
 		if route then
 			if not ghost and mod.db.gpsAllowEnemy ~= true then
@@ -696,6 +699,13 @@ function mod.GPSUpdate()
 end
 
 function mod.GPSStatus() return status end
+
+function mod.GPSManualRoadsChanged()
+	roadsRevision, graph = roadsRevision + 1, nil
+	if mod.GPSInvalidateRoads then mod.GPSInvalidateRoads() end
+	-- Reuse the ordinary preference replan path without changing a preference.
+	mod.GPSSetRoutingOption("gpsUseRoads", mod.db.gpsUseRoads ~= false)
+end
 
 function mod.GPSSetRoutingOption(key, value)
 	if key == "gpsUseRoads" or key == "gpsAllowEnemy" then value = value and true or false

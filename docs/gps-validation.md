@@ -1,6 +1,7 @@
 # GPS road-network validation
 
-Candidate: **v0.8.10-gps.6**, Forever Maps dataset **2.0.166**, separate addon **OpenMapGPS**.
+Candidate: **v0.8.10-gps.7**, Forever Maps dataset **2.0.166**, separate addon **OpenMapGPS**
+(display name **OpenMap - GPS**).
 This is an offline-verified test build. No live game-client verification is claimed.
 
 ## Data and routing
@@ -60,9 +61,11 @@ This is an offline-verified test build. No live game-client verification is clai
   the committed selection to check GPS activation and switching back to original standby.
 - Eighteen press tests and thirty controller-waypoint/input tests cover Alt-click GPS, right-click
   menu selection, independent right-drag suppression, ordinary zoom, controller zoom buttons and
-  drawing/pin/dungeon tools. Twelve context-menu tests cover captured target coordinates, the
+  drawing/pin/dungeon tools. Fifteen context-menu tests cover captured target coordinates, the
   three actions, stale callback revocation, Escape/outside/owner-hide behavior, native Zephras
   input and note-only pin creation without replacing an active waypoint.
+- The context-menu default is tested through real Core.InitDB on fresh and old profiles,
+  including one-time adoption, retained existing migrations/data and later Zoom out choices.
 - Python tools compile; Lua lint passes. New output is generated through its importer, changelog
   builder or locale builder. The package builder reruns the routing and coexistence checks.
 - New GPS/context-menu strings have translations in each of the ten supported locales. Placeholder and

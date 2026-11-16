@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+## v0.8.10-gps.7 (2026-11-16)
+
+### Improved
+
+- **OpenMap - GPS:** renamed the custom build in the AddOn List and its status messages.
+- **Right-click menu by default:** new and existing profiles start with the location menu.
+  You can still select Zoom out; that choice persists after this one-time default update.
+
 ## v0.8.10-gps.6 (2026-11-16)
 
 ### Improved

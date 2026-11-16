@@ -27,7 +27,7 @@ class GPSPackageTests(unittest.TestCase):
                 path = "OpenMap/" + toc
                 name, text = self.transform(path, (ROOT / path).read_text(), path)
                 self.assertEqual(name, "OpenMapGPS/" + toc.replace("OpenMap", "OpenMapGPS"))
-                self.assertIn("## Title: |cffe6b85cOpenMap GPS Test|r", text)
+                self.assertIn("## Title: |cffe6b85cOpenMap - GPS|r", text)
                 # AddonList's Group override makes this its own parent row,
                 # despite the similar name and optional load-order dependency.
                 self.assertEqual(re.findall(r"^## Group: (.+)$", text, re.M), ["OpenMapGPS"])

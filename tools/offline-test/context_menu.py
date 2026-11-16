@@ -149,7 +149,7 @@ class LocationMenuTests(unittest.TestCase):
             Open()old()assert(#calls==0)
             local options={}
             mod:ContextMenuOptions(options,function()end,function(info,v)mod.db[info[#info]]=v end,function()end)
-            assert(mod.defaults.mapRightClick=='zoom'and options.mapRightClick.values.menu=='Open location menu')
+            assert(mod.defaults.mapRightClick=='menu'and options.mapRightClick.values.menu=='Open location menu')
             options.mapRightClick.set({'mapRightClick'},'zoom')
             assert(not currentMenu and mod.db.mapRightClick=='zoom')
             options.mapRightClick.set({'mapRightClick'},'invalid')assert(mod.db.mapRightClick=='zoom')
@@ -209,6 +209,57 @@ class LocationMenuTests(unittest.TestCase):
             world.ScrollContainer:GetScript('OnMouseDown')(world.ScrollContainer,'RightButton')
             held=false
             assert(nativeClick(world,'RightButton')and lastMenu)
+        ''')
+
+
+class LocationMenuDefaultsTests(unittest.TestCase):
+    """Use the complete addon and real Core.InitDB migration/default filling."""
+
+    def setUp(self):
+        spec = importlib.util.spec_from_file_location('menu_defaults_boot', HERE / 'gps_integration.py')
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        module.GPSIntegrationTests.setUp(self)
+
+    def test_fresh_profile_defaults_to_location_menu_and_records_adoption(self):
+        self.lua.execute('''
+            assert(gpsmod.defaults.mapRightClick=='menu')
+            assert(gpsmod.db.mapRightClick=='menu'and gpsmod.db.gpsRightClickMenuDefault==true)
+            gpsmod.db.mapRightClick='zoom'
+            testns:InitDB()
+            assert(gpsmod.db.mapRightClick=='zoom','fresh profile lost its later explicit choice')
+        ''')
+
+    def test_existing_zoom_default_migrates_once_without_losing_other_settings(self):
+        self.lua.execute('''
+            OpenMapDB={worldmap={mapRightClick='zoom',icons=false,brightness=.7,
+                gpsUseRoads=false,gpsRoutes={Walk={points={{1429,.2,.3},{1429,.3,.4}}}}}}
+            local saved=OpenMapDB.worldmap
+            local routes=saved.gpsRoutes
+            OpenMapCharDB={worldmap={pin={1429,.4,.5}}}
+            local char=OpenMapCharDB.worldmap
+            testns:InitDB()
+            assert(gpsmod.db==saved and gpsmod.char==char)
+            assert(saved.mapRightClick=='menu'and saved.gpsRightClickMenuDefault==true)
+            assert(saved.brightness==.7 and saved.gpsUseRoads==false and saved.gpsRoutes==routes)
+            assert(char.pin[2]==.4 and char.pin[3]==.5)
+            assert(saved.boats==false and saved.zeppelins==false and saved.zoomHidePinsOff==true,
+                'the existing world-map migration was not chained')
+            local options=gpsmod:Options()
+            options.mapRightClick.set({'mapRightClick'},'zoom')
+            assert(saved.mapRightClick=='zoom')
+            testns:InitDB()
+            assert(saved.mapRightClick=='zoom','migration repeated after an explicit zoom choice')
+        ''')
+
+    def test_existing_menu_and_adopted_zoom_profiles_keep_their_choices(self):
+        self.lua.execute('''
+            OpenMapDB={worldmap={mapRightClick='menu'}}
+            testns:InitDB()
+            assert(gpsmod.db.mapRightClick=='menu'and gpsmod.db.gpsRightClickMenuDefault==true)
+            OpenMapDB={worldmap={mapRightClick='zoom',gpsRightClickMenuDefault=true}}
+            testns:InitDB()
+            assert(gpsmod.db.mapRightClick=='zoom')
         ''')
 
 

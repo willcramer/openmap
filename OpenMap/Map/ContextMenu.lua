@@ -3,7 +3,18 @@
 local _, ns = ...
 local mod = ns:GetModule("worldmap")
 local S, Safe, L = ns.MapStitch, ns.Safe, ns.L
-mod.defaults.mapRightClick = "zoom"
+mod.defaults.mapRightClick = "menu"
+mod.defaults.gpsRightClickMenuDefault = true
+
+local migrate = mod.Migrate
+function mod.Migrate(db)
+	if migrate then migrate(db) end
+	-- Earlier builds saved zoom as their filled default. Adopt the new default
+	-- once, then retain any later explicit zoom choice across reloads/imports.
+	if not db.gpsRightClickMenuDefault then
+		db.mapRightClick, db.gpsRightClickMenuDefault = "menu", true
+	end
+end
 
 local activeMenu, activeTarget
 local nativeMap

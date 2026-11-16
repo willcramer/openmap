@@ -77,8 +77,9 @@
   to avoid two map implementations running together. Remove the user-facing quick-switch
   commands; manual AddOns selection now chooses the map. Settings import retains its internal
   temporary handoff because it must read the original live profile safely.
-- Keep right-click zoom as the default and offer a location menu as a preference, both in the
-  full options and the map menu's More tab. Capture the clicked map/coordinates before opening
+- Right-click opens the location menu by default, as requested for gps.7. Adopt this once for
+  profiles with the old filled zoom default, then retain later explicit Zoom out choices. Keep
+  the preference in both the full options and the map menu's More tab. Capture the clicked map/coordinates before opening
   the menu, not when selecting a row after the cursor has moved. Use the game's native menu
   lifecycle for Escape, outside clicks and owner hiding. A note opens the pin editor without
   replacing the waypoint; the three actions must remain distinct.

@@ -10,16 +10,16 @@ routing implementation or art is included. See the [data notice](../OpenMap/Data
 
 ## Install
 
-Use **OpenMapGPS-v0.8.10-gps.6-forever.zip**, the separate-addon build. The older gps.1 ZIP
+Use **OpenMapGPS-v0.8.10-gps.7-forever.zip**, the separate-addon build. The older gps.1 ZIP
 used the original addon's folder and should not be used for a side-by-side install.
 If you already installed gps.1 into `OpenMap`, reinstall the official OpenMap there first.
 
 1. Quit WoW. Leave your existing `Interface/AddOns/OpenMap` folder in place.
 2. Extract the Forever GPS ZIP into `Interface/AddOns`. The new folder must be
    `Interface/AddOns/OpenMapGPS`, containing `OpenMapGPS.toc`.
-3. Restart the client after updating to refresh its AddOn List metadata. **OpenMap GPS Test** has
+3. Restart the client after updating to refresh its AddOn List metadata. **OpenMap - GPS** has
    its own entry, rather than being nested under OpenMap.
-4. In AddOns, enable **OpenMap GPS Test** and disable original **OpenMap**, then reload. To use
+4. In AddOns, enable **OpenMap - GPS** and disable original **OpenMap**, then reload. To use
    the original again, enable it and disable GPS Test in that same list.
 
 The quick-switch commands were removed in gps.6. Both entries are independently selectable.
@@ -55,9 +55,11 @@ not a shared saved-variable store or automatic ongoing synchronization.
 - Open one of your map pins and press GPS.
 - Or set a waypoint normally and use the GPS controls to navigate to it.
 
-Right-click zooms out by default. To use the location menu, open `/omgps`, choose **More**, and
-enable **Right-click opens location menu** under **Moving about**. The full option **Right-click
-on the map** also offers **Zoom out** and **Open location menu**. Changes take effect immediately.
+Right-click opens the location menu by default. This update enables it once for existing profiles
+that inherited the old zoom default. To use zoom-out instead, open `/omgps`, choose **More**, and
+disable **Right-click opens location menu** under **Moving about**. The full option **Right-click
+on the map** also offers **Zoom out** and **Open location menu**. Changes take effect immediately,
+and later choices stay saved across reloads.
 
 Right-click empty terrain to choose **Place waypoint**, **Add note** or **Go Here**. The action
 uses the location where you opened the menu, even if you move the cursor afterward. Add note opens
@@ -174,7 +176,7 @@ GPS must not replace that addon's destination.
    when possible, and the Ruins above Undercity separately from the city below.
 10. Check a faction border: stop before the enemy road, then enable Allow enemy roads to resume.
     Test a Zephras waypoint on its native map. Select the original in AddOns, confirm its settings
-    and map, then select GPS Test again. Confirm neither quick-switch command changes addon state.
+    and map, then select OpenMap - GPS again. Confirm neither quick-switch command changes addon state.
 11. Toggle Right-click opens location menu. Check zoom-out when off and all three actions when on.
     Move the cursor after opening the menu and confirm the action still uses the original point.
     While navigating, add a note and confirm the GPS destination stays intact. Test Escape and

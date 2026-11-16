@@ -4,6 +4,10 @@
 local _, ns = ...
 
 ns.MapChangelog = {
+	{ version = "v0.8.10-gps.7", date = "2026-11-16", heads = { [1] = "Improved", }, items = {
+		"|cff6e2c0aOpenMap - GPS:|r renamed the custom build in the AddOn List and its status messages.",
+		"|cff6e2c0aRight-click menu by default:|r new and existing profiles start with the location menu. You can still select Zoom out; that choice persists after this one-time default update.",
+	} },
 	{ version = "v0.8.10-gps.6", date = "2026-11-16", heads = { [1] = "Improved", }, items = {
 		"|cff6e2c0aIndependent AddOn List entry:|r OpenMap GPS Test now has its own group. Choose the active map through the AddOns list; /omgps use gps and /omgps use original have been removed.",
 		"|cff6e2c0aRight-click choice:|r Options' Right-click on the map can keep Zoom out or open a location menu with Place waypoint, Add note and Go Here. The menu remembers where you clicked. Notes open the existing pin editor without replacing your active GPS waypoint.",
@@ -22,8 +26,5 @@ ns.MapChangelog = {
 	} },
 	{ version = "v0.8.10-gps.2", date = "2026-11-16", heads = { [1] = "Improved", }, items = {
 		"|cff6e2c0aInstall beside the original:|r the separate OpenMapGPS package uses its own folder, settings, commands, frames, bindings and API. With both enabled, GPS stays in standby. /omgps use gps and /omgps use original switch the active map with a UI reload.",
-	} },
-	{ version = "v0.8.10-gps.1", date = "2026-11-16", heads = { [1] = "New", }, items = {
-		"|cff6e2c0aCustom GPS test build:|r Alt-click the map, Shift-click a search result or press a map pin's GPS button for live directions with the map closed. Record walking trails and replay them once, in reverse, on a loop or back and forth. Saved trails supply a road network with turn guidance and rerouting. Locations without connected recorded roads use explicitly labeled direct guidance; transport itinerary planning and a bundled road network are not included. By willcramer.",
 	} },
 }

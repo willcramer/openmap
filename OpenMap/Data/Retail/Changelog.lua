@@ -4,6 +4,10 @@
 local _, ns = ...
 
 ns.MapChangelog = {
+	{ version = "v0.8.10-gps.7", date = "2026-11-16", heads = { [1] = "Improved", }, items = {
+		"|cff6e2c0aOpenMap - GPS:|r updated the custom addon's display name.",
+		"|cff6e2c0aContext menu by default:|r right-click opens the location menu on new and existing profiles. Later choices of Zoom out remain saved.",
+	} },
 	{ version = "v0.8.10-gps.6", date = "2026-11-16", heads = { [1] = "Improved", }, items = {
 		"|cff6e2c0aIndependent GPS entry:|r OpenMap GPS Test has its own AddOn List group; choose it manually in AddOns. The quick-switch commands have been removed.",
 		"|cff6e2c0aRight-click location menu:|r choose Zoom out or Open location menu in Options. The menu can place a waypoint, add a note or start GPS at the clicked location.",
@@ -21,8 +25,5 @@ ns.MapChangelog = {
 	} },
 	{ version = "v0.8.10-gps.2", date = "2026-11-16", heads = { [1] = "Improved", }, items = {
 		"|cff6e2c0aSeparate OpenMapGPS package:|r independent settings and commands; safe standby beside the original. /omgps use gps and /omgps use original switch maps with a UI reload.",
-	} },
-	{ version = "v0.8.10-gps.1", date = "2026-11-16", heads = { [1] = "New", }, items = {
-		"|cff6e2c0aCustom GPS test build:|r live directions, walking-trail recording and replay, and routing over saved trails. Alt-click the map, Shift-click a search result or use a pin's GPS button. No bundled road network or transport planning; unrecorded locations use direct guidance. By willcramer.",
 	} },
 }

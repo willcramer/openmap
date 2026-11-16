@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+## v0.8.10-gps.7 (2026-11-16)
+
+### Improved
+
+- **OpenMap - GPS:** updated the custom addon's display name.
+- **Context menu by default:** right-click opens the location menu on new and existing
+  profiles. Later choices of Zoom out remain saved.
+
 ## v0.8.10-gps.6 (2026-11-16)
 
 ### Improved

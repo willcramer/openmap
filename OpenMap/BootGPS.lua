@@ -2,7 +2,7 @@
 -- leaves this file's identifiers intact: "OpenMap" here means the original.
 local _, ns = ...
 local L = setmetatable({}, { __index = function(_, key) return ns.L and ns.L[key] or key end })
-local function Print(text) DEFAULT_CHAT_FRAME:AddMessage("|cffe6b85cOpenMap GPS|r: " .. text) end
+local function Print(text) DEFAULT_CHAT_FRAME:AddMessage("|cffe6b85cOpenMap - GPS|r: " .. text) end
 local addons = C_AddOns
 local originalLoaded = addons and addons.IsAddOnLoaded and addons.IsAddOnLoaded("OpenMap")
 ns.variantDormant = originalLoaded and true or false
@@ -134,7 +134,7 @@ local function Command(text)
 	local command = (text or ""):match("^%s*(.-)%s*$"):lower()
 	if command == "sync settings" then SyncSettings()
 	elseif ns.variantDormant then
-		Print(L["Original OpenMap is active. Disable it in the AddOns list and enable OpenMap GPS Test, then reload."])
+		Print(L["Original OpenMap is active. Disable it in the AddOns list and enable OpenMap - GPS, then reload."])
 	elseif dispatch then dispatch(text)
 	else Print(L["OpenMap GPS is still loading."]) end
 end

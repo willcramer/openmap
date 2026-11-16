@@ -646,6 +646,6 @@
  "Place waypoint": "Wegpunkt setzen",
  "Add note": "Notiz hinzufügen",
  "Go Here": "Hierher navigieren",
- "Original OpenMap is active. Disable it in the AddOns list and enable OpenMap GPS Test, then reload.": "Das ursprüngliche OpenMap ist aktiv. Deaktiviert es in der AddOns-Liste, aktiviert OpenMap GPS Test und ladet die Benutzeroberfläche neu.",
+ "Original OpenMap is active. Disable it in the AddOns list and enable OpenMap - GPS, then reload.": "Das ursprüngliche OpenMap ist aktiv. Deaktiviert es in der AddOns-Liste, aktiviert OpenMap - GPS und ladet die Benutzeroberfläche neu.",
  "Right-click opens location menu": "Rechtsklick öffnet das Ortsmenü"
 }

@@ -71,6 +71,10 @@
 
 ## Integration and parity
 
+- Expose road display, tracker visibility, recording, saving, saved-route choice, playback and
+  confirmed deletion together under the map menu's GPS navigation action. Keep slash commands as
+  shortcuts. Show exact road nodes and saved samples distinctly from interpolated road-link dots,
+  with cached projections and separate bounded marker pools; viewing data must not change routing.
 - Keep tracker visibility separate from GPS navigation. Hiding the custom window must not stop
   the update ticker, clear a waypoint, remove TomTom guidance or hide the map route. Store the
   preference under a GPS-specific key so settings import preserves it. Provide an explicit Hide

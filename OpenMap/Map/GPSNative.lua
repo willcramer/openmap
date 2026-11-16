@@ -14,7 +14,9 @@ local lastRoute, lastIndex, lastMap, lastWidth, lastHeight, lastScale, lastCount
 local lastStyle, lastPlayerX, lastPlayerY, lastPlayerCont, lastPlayerLayer, lastPlayerFloor
 local networkRoot, networkCanvas, networkData, networkMap, networkWidth, networkHeight, networkScale
 local networkDots, networkDrawn, networkRedraws = {}, 0, 0
-local NETWORK_LIMIT = 800
+local networkNodes, networkNodesDrawn, networkRoutes, networkRevision = {}, 0
+local NETWORK_LIMIT, NODE_LIMIT, RECORD_LIMIT = 800, 500, 10000
+local NODE_COLOR, RECORD_COLOR = { 1, 0.8, 0.35 }, { 1, 0.45, 0.1 }
 local NETWORK_COLORS = {
 	default = { 0.72, 0.67, 0.51 }, alliance = { 0.3, 0.5, 0.9 }, horde = { 0.8, 0.3, 0.25 },
 	swim = { 0.3, 0.75, 0.8 }, offroad = { 0.5, 0.5, 0.5 },
@@ -32,7 +34,7 @@ end
 
 local function HideNetwork()
 	if networkRoot then networkRoot:Hide() end
-	networkDrawn, networkData = 0, nil
+	networkDrawn, networkNodesDrawn, networkData, networkRevision = 0, 0, nil, nil
 end
 
 local function HideAll() Hide() HideNetwork() end
@@ -139,18 +141,37 @@ local function Head(status, host, continent, width, height, scale, style, change
 	if head and not headShown then head:Hide() end
 end
 
+local function NetworkMark(pool, index, point, size, color, width, height, scale, node)
+	local dot = pool[index]
+	if not dot then
+		dot = networkRoot:CreateTexture(nil, node and "OVERLAY" or "ARTWORK")
+		if node and C_Texture and C_Texture.GetAtlasInfo and C_Texture.GetAtlasInfo("WhiteCircle-RaidBlips") then
+			dot:SetAtlas("WhiteCircle-RaidBlips")
+		else dot:SetTexture("Interface\\Buttons\\WHITE8X8") end
+		pool[index] = dot
+	end
+	dot:ClearAllPoints()
+	dot:SetPoint("CENTER", networkRoot, "TOPLEFT", point[1] * width, -point[2] * height)
+	dot:SetSize(size / scale, size / scale)
+	dot:SetVertexColor(color[1], color[2], color[3], node and 1 or 0.8)
+	dot:Show()
+end
+
 local function DrawNetwork(nextCanvas, host, continent, width, height, scale)
 	local data = ns.GPSRoadData
 	local network = data and data.networks and data.networks[continent]
-	if not network then HideNetwork() return end
+	local routes = mod.db and mod.db.gpsRoutes
+	local revision = mod.GPSRoadsRevision and mod.GPSRoadsRevision() or 0
 	if data == networkData and nextCanvas == networkCanvas and host == networkMap
-		and width == networkWidth and height == networkHeight and scale == networkScale then
-		if networkRoot then networkRoot:SetShown(networkDrawn > 0) end
+		and width == networkWidth and height == networkHeight and scale == networkScale
+		and routes == networkRoutes and revision == networkRevision then
+		if networkRoot then networkRoot:SetShown(networkDrawn > 0 or networkNodesDrawn > 0) end
 		return
 	end
 	if not networkRoot then
 		networkRoot = CreateFrame("Frame", nil, nextCanvas)
 		networkRoot:EnableMouse(false)
+		networkRoot:SetClipsChildren(true)
 	end
 	if networkCanvas ~= nextCanvas then
 		networkRoot:SetParent(nextCanvas)
@@ -160,9 +181,15 @@ local function DrawNetwork(nextCanvas, host, continent, width, height, scale)
 	end
 	networkData, networkCanvas, networkMap = data, nextCanvas, host
 	networkWidth, networkHeight, networkScale = width, height, scale
+	networkRoutes, networkRevision = routes, revision
 	networkRedraws = networkRedraws + 1
-	local points, ids = {}, {}
-	for id, node in pairs(network.nodes or {}) do
+	local points, ids, markers = {}, {}, {}
+	local function marker(point, size, color)
+		if point[1] >= 0 and point[1] <= 1 and point[2] >= 0 and point[2] <= 1 then
+			markers[#markers + 1] = { point, size, color }
+		end
+	end
+	for id, node in pairs(network and network.nodes or {}) do
 		if Number(id) then
 			local projected = Project({ cont = continent, wx = node.wx, wy = node.wy, layer = node.layer }, host, continent)
 			if projected then points[id], ids[#ids + 1] = projected, id end
@@ -170,8 +197,18 @@ local function DrawNetwork(nextCanvas, host, continent, width, height, scale)
 	end
 	table.sort(ids)
 	local segments, total = {}, 0
+	local function segment(a, b, color)
+		local first, last = Clip(a, b)
+		if not first then return end
+		local distance = math.sqrt(((last[1] - first[1]) * width) ^ 2 + ((last[2] - first[2]) * height) ^ 2)
+		if distance > 0 then
+			segments[#segments + 1] = { first, last, distance, color }
+			total = total + distance
+		end
+	end
 	for _, id in ipairs(ids) do
 		local a = network.nodes[id]
+		marker(points[id], 6, NODE_COLOR)
 		local links = {}
 		for target, linked in pairs(a.links or {}) do if linked and points[target] then links[#links + 1] = target end end
 		table.sort(links)
@@ -182,16 +219,34 @@ local function DrawNetwork(nextCanvas, host, continent, width, height, scale)
 			-- connection must not become a straight line across another floor.
 			if (not reciprocal or id < target) and a.piece == b.piece and a.layer == b.layer
 				and not a.tower and not b.tower and not a.towerOf and not b.towerOf and not a.elevator and not b.elevator then
-				local first, last = Clip(points[id], points[target])
-				if first then
-					local distance = math.sqrt(((last[1] - first[1]) * width) ^ 2 + ((last[2] - first[2]) * height) ^ 2)
-					if distance > 0 then
-						segments[#segments + 1] = { first, last, distance, NETWORK_COLORS[a.type or b.type] or NETWORK_COLORS.default }
-						total = total + distance
-					end
-				end
+				segment(points[id], points[target], NETWORK_COLORS[a.type or b.type] or NETWORK_COLORS.default)
 			end
 		end
+	end
+	-- Saved trails are separate data. Show their actual samples and only the
+	-- walked links; projecting them never adds links to the navigation graph.
+	local names, sampled = {}, 0
+	for name in pairs(type(routes) == "table" and routes or {}) do
+		if type(name) == "string" then names[#names + 1] = name end
+	end
+	table.sort(names)
+	for _, name in ipairs(names) do
+		local trail, previous, previousPoint = routes[name]
+		for _, sample in ipairs(type(trail) == "table" and type(trail.points) == "table" and trail.points or {}) do
+			if sampled >= RECORD_LIMIT then break end
+			sampled = sampled + 1
+			local p = mod.GPSRecordedPoint and mod.GPSRecordedPoint(sample)
+			local point = p and Project(p, host, continent)
+			if point then
+				marker(point, 7, RECORD_COLOR)
+				if previous and p.cont == previous.cont and p.piece == previous.piece and p.layer == previous.layer
+					and (p.wx - previous.wx) ^ 2 + (p.wy - previous.wy) ^ 2 <= 10000 then
+					segment(previousPoint, point, RECORD_COLOR)
+				end
+			end
+			previous, previousPoint = point and p or nil, point
+		end
+		if sampled >= RECORD_LIMIT then break end
 	end
 	networkDrawn = 0
 	local spacing, carry = math.max(7 / scale, total / (NETWORK_LIMIT - 1)), 0
@@ -201,24 +256,23 @@ local function DrawNetwork(nextCanvas, host, continent, width, height, scale)
 		while along <= distance and networkDrawn < NETWORK_LIMIT do
 			local fraction = along / distance
 			networkDrawn = networkDrawn + 1
-			local dot = networkDots[networkDrawn]
-			if not dot then
-				dot = networkRoot:CreateTexture(nil, "ARTWORK")
-				dot:SetTexture("Interface\\Buttons\\WHITE8X8")
-				networkDots[networkDrawn] = dot
-			end
-			dot:ClearAllPoints()
-			dot:SetPoint("CENTER", networkRoot, "TOPLEFT", (first[1] + (last[1] - first[1]) * fraction) * width,
-				-(first[2] + (last[2] - first[2]) * fraction) * height)
-			dot:SetSize(3 / scale, 3 / scale)
-			dot:SetVertexColor(color[1], color[2], color[3], 0.8)
-			dot:Show()
+			NetworkMark(networkDots, networkDrawn,
+				{ first[1] + (last[1] - first[1]) * fraction, first[2] + (last[2] - first[2]) * fraction },
+				3, color, width, height, scale)
 			along = along + spacing
 		end
 		carry = along - distance
 	end
 	for i = networkDrawn + 1, #networkDots do networkDots[i]:Hide() end
-	networkRoot:SetShown(networkDrawn > 0)
+	networkNodesDrawn = math.min(NODE_LIMIT, #markers)
+	for i = 1, networkNodesDrawn do
+		-- At wide views thin the markers across the whole network, always using
+		-- a real node position rather than creating another interpolated dot.
+		local item = markers[math.floor((i - 0.5) * #markers / networkNodesDrawn) + 1]
+		NetworkMark(networkNodes, i, item[1], item[2], item[3], width, height, scale, true)
+	end
+	for i = networkNodesDrawn + 1, #networkNodes do networkNodes[i]:Hide() end
+	networkRoot:SetShown(networkDrawn > 0 or networkNodesDrawn > 0)
 end
 
 function mod:SetupGPSNative(worldMap)
@@ -286,5 +340,6 @@ function mod.GPSNativeStats()
 		headShown = headShown, headUpdates = headUpdates, pointLimit = MAX_POINTS,
 		shown = root and root:IsShown() or false, networkDrawn = networkDrawn,
 		networkPooled = #networkDots, networkRedraws = networkRedraws,
+		networkNodesDrawn = networkNodesDrawn, networkNodesPooled = #networkNodes,
 		networkShown = networkRoot and networkRoot:IsShown() or false }
 end

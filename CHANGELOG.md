@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+## v0.8.10-gps.9 (2026-11-16)
+
+### Improved
+
+- **GPS controls in the map menu:** open GPS navigation to show the road network, record and
+  save new paths, select and follow saved routes, delete a saved route, or hide the tracker.
+  Route names and playback modes are labeled, and deletion asks for confirmation.
+- **Road nodes on the map:** the Road network display marks actual bundled nodes and saved
+  trail samples, alongside road connections. The view updates when a recording is saved or
+  deleted. Wide views limit markers to keep the map responsive; zoom in to inspect a junction.
+
 ## v0.8.10-gps.8 (2026-11-16)
 
 ### Improved

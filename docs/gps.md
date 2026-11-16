@@ -10,7 +10,7 @@ routing implementation or art is included. See the [data notice](../OpenMap/Data
 
 ## Install
 
-Use **OpenMapGPS-v0.8.10-gps.8-forever.zip**, the separate-addon build. The older gps.1 ZIP
+Use **OpenMapGPS-v0.8.10-gps.9-forever.zip**, the separate-addon build. The older gps.1 ZIP
 used the original addon's folder and should not be used for a side-by-side install.
 If you already installed gps.1 into `OpenMap`, reinstall the official OpenMap there first.
 
@@ -20,7 +20,7 @@ If you already installed gps.1 into `OpenMap`, reinstall the official OpenMap th
 3. Restart the client after updating to refresh its AddOn List metadata. **OpenMap - GPS** has
    its own entry, rather than being nested under OpenMap.
 4. In AddOns, enable **OpenMap - GPS** and disable original **OpenMap**, then reload. To use
-   the original again, enable it and disable GPS Test in that same list.
+   the original again, enable it and disable OpenMap - GPS in that same list.
 
 The quick-switch commands were removed in gps.6. Both entries are independently selectable.
 If both are enabled, the original loads first and GPS remains in standby to avoid duplicate map
@@ -32,8 +32,11 @@ separate; the original's preferences are read only by the explicit import comman
 Its commands are `/openmapgps` and `/omgps`;
 the original retains `/openmap` and `/omap`.
 
-For example, `/omgps gps` opens the GPS controls, `/omgps gps record Elwynn road` starts a
-recording, and `/omgps gps save` saves it. `/console scriptErrors 1` enables error reports.
+Open the map, press its **OpenMap** menu button, then choose **GPS navigation**. Its controls
+offer road display, tracker visibility, recording, saving, saved-route selection, playback and
+confirmed deletion. These actions do not require slash commands. You can star GPS navigation
+in the map menu to give it a shortcut on the map. `/omgps gps` also opens the same controls.
+`/console scriptErrors 1` enables error reports.
 TomTom is optional. The test build retains OpenMap's normal map and pins.
 
 ### Copy the original's preferences
@@ -80,7 +83,8 @@ This drawing works on the stitched map and controller view and on Zephras's nati
 
 ### Hide the custom tracker while using TomTom
 
-Press **Hide** on the guidance window, or run `/omgps gps tracker off`. Navigation, the green
+Clear **GPS tracker** in the GPS navigation window, press **Hide** on the guidance window, or
+run `/omgps gps tracker off`. Navigation, the green
 map route and TomTom waypoint updates continue. The choice remains saved for later journeys
 and reloads. The Stop button still stops navigation; Hide only changes the window's visibility.
 
@@ -90,9 +94,17 @@ optional; tracker visibility can be selected independently of whether it is inst
 
 ## Record a road or farming route
 
-Start a recording with `/omgps gps record Elwynn road`, walk the road, then use
-`/omgps gps save`. Record another road starting at an existing junction to expand your network.
-Routes are stored in OpenMap's account saved variables, while active guidance is temporary.
+1. Open the map's **OpenMap** menu and choose **GPS navigation**.
+2. Enable **Road network** to see the existing roads and nodes. Start close to an existing node
+   on the same floor when connecting a new trail to the network.
+3. Enter a **Route name**, then press **Record** and walk the missing path.
+4. Press **Save route**. It becomes available for future GPS destination planning.
+5. Use **Saved routes** to select a recording. Choose its **Playback** mode and press
+   **Follow saved route**, or press **Delete** and confirm to remove it.
+
+Record another road starting at an existing junction to expand your network. The matching
+commands are `/omgps gps record Elwynn road` and `/omgps gps save`.
+Routes are stored in OpenMapGPS's account saved variables, while active guidance is temporary.
 Save before reloading or logging out: an unfinished recording is temporary too. Playback must
 start within 100 yards of its first point (the last point for reverse playback). The road planner
 attaches your position and destination to nearby samples within 100 yards; those short connectors
@@ -134,7 +146,10 @@ entries are retained, together with one-way directions, faction types, swimming,
 staircases, intermediate landings, elevators, room identities and layers. The associated geometry
 contains 1,061 buildings with room footprints, height intervals and portals.
 
-Use bundled roads is on by default. The map menu's Road network switch shows the network; Options
+Use bundled roads is on by default. **Road network** in the GPS navigation window or the map
+menu's **On the map** tab shows the network. Small dots trace the road links; larger markers show
+actual bundled nodes and saved trail samples. Saved trails have a distinct color. Zoom in when
+inspecting a junction: wide views limit the marker count. Options
 provides Use bundled roads, Allow enemy roads, Off-road paths and Off-road paths above your level.
 Off-road choices are Shortest, Avoid, Only when needed and Never; level choices are Warn, Avoid and
 Never. Avoid applies a cost penalty; it does not promise that the route avoids every such path.
@@ -192,6 +207,10 @@ GPS must not replace that addon's destination.
     Move the cursor after opening the menu and confirm the action still uses the original point.
     While navigating, add a note and confirm the GPS destination stays intact. Test Escape and
     clicking outside the menu, map close/reopen, and the native/controller map when available.
+12. Use only the map menu and GPS navigation window to toggle roads/tracker, record and save a
+    new trail, select it, change playback mode, follow it and delete it with confirmation. Check
+    that the road display updates after saving/deleting without panning, and that Cancel in the
+    delete prompt preserves the trail. Close/reopen the controls and confirm the saved preferences.
 
 Offline tests cover the Lua logic and stubbed client behavior. Arrow alignment, actual protected
 API behavior, terrain, and the live window layout still require this game-client test.

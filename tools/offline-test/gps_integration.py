@@ -311,6 +311,102 @@ class GPSIntegrationTests(unittest.TestCase):
             assert(not OpenMapGPSGuide:IsShown())
         ''')
 
+    def test_map_menu_and_panel_manage_roads_recording_and_saved_routes_without_commands(self):
+        self.lua.execute(r'''
+            -- Exercise the real map menu using its classic slider fallback;
+            -- the general frame stub does not model Blizzard template mixins.
+            NIL_GLOBALS.MinimalSliderWithSteppersMixin=true
+            MinimalSliderWithSteppersMixin=nil
+            gpsmod:SetupPanel(WorldMapFrame)
+            local action
+            for _,frame in ipairs(FRAMES)do
+                if frame:GetParent()==OpenMapMenu and frame.entry and frame.entry.id=='gps'then action=frame end
+            end
+            assert(action and action.label:GetText()=='GPS navigation','map menu has no GPS action')
+            action:GetScript('OnClick')(action,'LeftButton')
+            assert(OpenMapGPSPanel:IsShown())
+            local panel=OpenMapGPSPanel
+            local function Click(button)
+                assert(button.uiEnabled~=false,'clicked a disabled GPS control')
+                button:GetScript('OnClick')(button,'LeftButton')
+            end
+            local function Name(text)
+                panel.name:SetText(text)
+                panel.name:GetScript('OnTextChanged')(panel.name,true)
+            end
+            for _,control in ipairs({panel.roads,panel.tracker,panel.record,panel.save,panel.follow,panel.delete,panel.routes,panel.mode,panel.stop,panel.guide})do
+                control.SetEnabled=function(self,on)self.uiEnabled=on and true or false end
+                if control==panel.roads or control==panel.tracker then
+                    control.SetChecked=function(self,on)self.checked=on and true or false end
+                    control.GetChecked=function(self)return self.checked end
+                end
+            end
+            gpsmod.GPSRefreshPanel()
+            assert(panel.nameLabel:GetText()=='Route name'and panel.playbackLabel:GetText()=='Playback')
+            assert(not panel.save.uiEnabled and not panel.record.uiEnabled and not panel.follow.uiEnabled)
+            panel.roads:SetChecked(true)Click(panel.roads)
+            assert(gpsmod.GPSRoadsShown())
+            panel.tracker:SetChecked(false)Click(panel.tracker)
+            Name('  UI road  ')Click(panel.record)
+            assert(gpsmod.GPSStatus().recording=='UI road'and panel.name:GetText()=='UI road')
+            assert(panel.save.uiEnabled and not panel.record.uiEnabled and not panel.routes.uiEnabled)
+            PX=.22 TickGPS()PX=.24 TickGPS()
+            assert(not OpenMapGPSGuide:IsShown())
+            Click(panel.save)
+            assert(#gpsmod.db.gpsRoutes['UI road'].points==3 and not gpsmod.GPSStatus().recording)
+            assert(panel.follow.uiEnabled and panel.delete.uiEnabled and panel.routes.uiEnabled)
+            MenuUtil={CreateContextMenu=function(owner,generate)
+                routeChoices={}
+                generate(owner,{CreateButton=function(_,label,callback)
+                    routeChoices[#routeChoices+1]={label=label,callback=callback}
+                end})
+            end}
+            Name('Another name')Click(panel.routes)
+            assert(#routeChoices==1 and routeChoices[1].label=='UI road')
+            routeChoices[1].callback()
+            assert(panel.name:GetText()=='UI road')
+            Name('  UI road  ')
+            Click(panel.mode)assert(panel.mode:GetText()=='Reverse')
+            Click(panel.follow)
+            assert(gpsmod.GPSStatus().active and gpsmod.GPSStatus().route[1].x==.24)
+            assert(not OpenMapGPSGuide:IsShown(),'opening or following from the panel reset tracker visibility')
+            local route,waypoint=gpsmod.GPSStatus().route,WAYPOINT
+            panel.roads:SetChecked(false)Click(panel.roads)
+            panel.tracker:SetChecked(true)Click(panel.tracker)
+            assert(not gpsmod.GPSRoadsShown()and OpenMapGPSGuide:IsShown())
+            assert(gpsmod.GPSStatus().route==route and WAYPOINT==waypoint)
+            Click(panel.stop)assert(not gpsmod.GPSStatus().active)
+            StaticPopup_Show=function(which,name,_,data)popup={which=which,name=name,data=data}end
+            Click(panel.delete)
+            assert(popup.which=='OPENMAP_GPS_DELETE'and popup.name=='UI road'and popup.data=='UI road')
+            assert(gpsmod.db.gpsRoutes['UI road'],'opening deletion confirmation deleted a route')
+            -- The dialog captures its selected route instead of a later edit-box value.
+            gpsmod.db.gpsRoutes.Other={points={{900001,.2,.2},{900001,.22,.2}}}
+            Name('Other')
+            StaticPopupDialogs[popup.which].OnAccept({},popup.data)
+            assert(not gpsmod.db.gpsRoutes['UI road']and gpsmod.db.gpsRoutes.Other)
+            assert(panel.name:GetText()=='Other')
+            assert(#ERRORS==0,ERRORS[1])
+        ''')
+
+    def test_panel_saves_partial_recordings_and_discards_false_starts(self):
+        self.lua.execute(r'''
+            gpsmod:ToggleGPS(true)
+            local panel=OpenMapGPSPanel
+            local function Click(button)button:GetScript('OnClick')(button,'LeftButton')end
+            panel.name:SetText('Partial UI road')Click(panel.record)
+            PX=.22 TickGPS()
+            PX=.5 TickGPS()
+            assert(gpsmod.GPSStatus().recordingState=='gap'and panel.save:GetText()=='Save partial')
+            Click(panel.save)
+            assert(not gpsmod.GPSStatus().recording and #gpsmod.db.gpsRoutes['Partial UI road'].points==2)
+            panel.name:SetText('False start')Click(panel.record)
+            assert(panel.stop:GetText()=='Discard recording')
+            Click(panel.stop)
+            assert(not gpsmod.GPSStatus().recording and not gpsmod.db.gpsRoutes['False start'])
+            assert(#ERRORS==0,ERRORS[1])
+        ''')
+
 
 if __name__ == "__main__":
     unittest.main()

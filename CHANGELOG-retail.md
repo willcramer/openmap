@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+## v0.8.10-gps.9 (2026-11-16)
+
+### Improved
+
+- **GPS controls in the map menu:** GPS navigation offers road display, recording, saving,
+  route selection, playback, confirmed deletion and tracker visibility without slash commands.
+- **Road nodes on the map:** the optional road display marks actual network nodes and saved
+  trail samples. Zoom in to inspect a junction; wide views keep a bounded marker budget.
+
 ## v0.8.10-gps.8 (2026-11-16)
 
 ### Improved

@@ -10,7 +10,13 @@ class RoadViewTests(unittest.TestCase):
     def setUp(self):
         self.lua = lua = LuaRuntime(unpack_returned_tuples=True)
         lua.execute("""
-            mod={defaults={},db={gpsShowRoads=true}}
+            mod={defaults={},db={gpsShowRoads=true,gpsRoutes={}}}
+            roadsRevision=0
+            function mod.GPSRoadsRevision()return roadsRevision end
+            function mod.GPSRecordedPoint(sample)
+                if sample[1]~=900001 then return end
+                return {cont=0,wx=sample[2],wy=sample[3],piece=sample.piece,layer=sample.layer}
+            end
             ns={Safe={Value=function(v)return v end,Call=function(fn,...)if type(fn)=='function'then return fn(...)end end}}
             function ns:GetModule()return mod end
             shown,stitched,built=true,true,true
@@ -65,6 +71,82 @@ class RoadViewTests(unittest.TestCase):
             assert(n[1].links[2] and n[2].links[1] and n[1].u==nil)
         """)
 
+    def test_source_nodes_are_exact_positions_not_interpolated_road_dots(self):
+        self.lua.execute("""
+            mod.GPSRefreshRoadView()
+            local nodes=sets.gpsroadnodes
+            assert(nodes.on and #nodes.pins==2)
+            assert(nodes.pins[1].u==0 and nodes.pins[2].u==1)
+            for _,pin in ipairs(nodes.pins)do
+                assert(pin.v==.5 and pin.look.size==6 and pin.mouse==false)
+            end
+            assert(#sets.gpsroads.pins==100)
+            local n=ns.GPSRoadData.networks[0].nodes
+            assert(n[1].u==nil and n[2].u==nil,'view modified source coordinates')
+            local pins,clears=nodes.pins,nodes.clears
+            mod.GPSRefreshRoadView()
+            assert(nodes.pins==pins and nodes.clears==clears)
+            viewU=5.5 mod.GPSRefreshRoadView()
+            assert(#nodes.pins==2 and nodes.pins[1].u==5 and nodes.pins[2].u==6)
+        """)
+
+    def test_isolated_and_special_nodes_remain_visible_without_invented_links(self):
+        self.lua.execute("""
+            ns.GPSRoadData={networks={[0]={nodes={
+                [1]={wx=.1,wy=.2,links={}},
+                [2]={wx=.3,wy=.2,tower={top=3},links={[3]=true}},
+                [3]={wx=.4,wy=.2,links={[2]=true}},
+                [4]={wx=.5,wy=.2,layer=true,links={[5]=true}},
+                [5]={wx=.6,wy=.2,links={[4]=true}}
+            }}}}
+            mod.GPSRefreshRoadView()
+            assert(#sets.gpsroadnodes.pins==5 and #sets.gpsroads.pins==0)
+        """)
+
+    def test_saved_trails_refresh_on_save_delete_and_profile_change(self):
+        self.lua.execute("""
+            mod.GPSRefreshRoadView()
+            local s=sets.gpsroadnodes local clears=s.clears
+            mod.db.gpsRoutes['New road']={points={{900001,.2,.3},{900001,.4,.3}}}
+            roadsRevision=roadsRevision+1
+            mod.GPSRefreshRoadView()
+            assert(s.clears==clears+1 and #s.pins==4)
+            local recorded=0
+            for _,pin in ipairs(s.pins)do
+                if pin.look.size==7 then
+                    recorded=recorded+1
+                    assert(pin.v==.3 and (pin.u==.2 or pin.u==.4))
+                    assert(pin.look.color[1]==1 and pin.look.color[2]==.45)
+                end
+            end
+            assert(recorded==2)
+            local orange=0
+            for _,pin in ipairs(sets.gpsroads.pins)do
+                if pin.look.color[2]==.45 then orange=orange+1 assert(pin.v==.3)end
+            end
+            assert(orange>0,'saved links were not displayed')
+            local raw=mod.db.gpsRoutes['New road'].points
+            assert(raw[1].wx==nil and raw[2].u==nil,'view modified saved samples')
+            mod.db.gpsRoutes['New road']=nil roadsRevision=roadsRevision+1
+            mod.GPSRefreshRoadView()assert(#s.pins==2)
+            mod.db.gpsRoutes={['Profile road']={points={{900001,.6,.7},{900001,.8,.7}}}}
+            mod.GPSRefreshRoadView()assert(#s.pins==4)
+        """)
+
+    def test_recorded_floor_changes_invalid_points_and_large_gaps_do_not_make_links(self):
+        self.lua.execute("""
+            ns.GPSRoadData={networks={}}
+            mod.db.gpsRoutes={
+                floor={points={{900001,.1,.2,piece='a:0'},{900001,.2,.2,piece='a:1'}}},
+                layer={points={{900001,.1,.3,layer=true},{900001,.2,.3}}},
+                invalid={points={{900001,.1,.4},{-1,.2,.4},{900001,.3,.4}}},
+                gap={points={{900001,.1,.5},{900001,201,.5}}}
+            }
+            mod.GPSRefreshRoadView()
+            assert(#sets.gpsroads.pins==0,'unwalked or cross-floor connection was drawn')
+            assert(#sets.gpsroadnodes.pins==7)
+        """)
+
     def test_controller_stitched_view_uses_the_same_road_layer(self):
         self.lua.execute("""
             stitched=false
@@ -90,6 +172,17 @@ class RoadViewTests(unittest.TestCase):
             local low,high=false,false
             for _,p in ipairs(pins)do low=low or p.v<.2 high=high or p.v>.8 end
             assert(low and high,'the budget only showed one end of the network')
+            local nodes=sets.gpsroadnodes.pins
+            assert(#nodes==500)
+            low,high=false,false
+            for _,p in ipairs(nodes)do
+                assert(p.u==0 or p.u==1,'node display interpolated a position')
+                low=low or p.v<.2 high=high or p.v>.8
+            end
+            assert(low and high,'node budget only showed one end of the network')
+            halfU=.01 halfV=.01 viewU=0
+            mod.GPSRefreshRoadView()
+            assert(#sets.gpsroadnodes.pins>0 and #sets.gpsroadnodes.pins<500)
         """)
 
     def test_floor_changes_towers_and_unmapped_continents_are_not_straight_lines(self):
@@ -114,7 +207,8 @@ class RoadViewTests(unittest.TestCase):
             sets.gps={sentinel=true}
             mod.GPSRefreshRoadView()
             local s=sets.gpsroads local clears=s.clears
-            shown=false mod.GPSRefreshRoadView()assert(not s.on)
+            local nodes=sets.gpsroadnodes
+            shown=false mod.GPSRefreshRoadView()assert(not s.on and not nodes.on)
             shown=true stitched=false mod.GPSRefreshRoadView()assert(not s.on)
             stitched=true mod.instanceWorldHidden=true mod.GPSRefreshRoadView()assert(not s.on)
             mod.instanceWorldHidden=false mod.db.hideWorldPinsInInstances=true instance=true
@@ -127,6 +221,20 @@ class RoadViewTests(unittest.TestCase):
             mod.GPSSetRoadsShown(false)assert(not s.on and not mod.GPSRoadsShown())
             mod.GPSSetRoadsShown(true)assert(s.on and mod.GPSRoadsShown())
             assert(s.clears==clears and sets.gps.sentinel)
+        """)
+
+    def test_preference_changes_refresh_ui_without_altering_navigation(self):
+        self.lua.execute("""
+            local gps,panel,options=0,0,0
+            function mod.GPSRefreshPanel()gps=gps+1 mod.GPSRefreshRoadView()end
+            function mod:RefreshPanel()panel=panel+1 end
+            function ns.NotifyOptions()options=options+1 end
+            mod.GPSStatus=function()return {active=true,route='unchanged'}end
+            sets.gps={sentinel=true}
+            mod.GPSSetRoadsShown(false)
+            mod.GPSSetRoadsShown(true)
+            assert(gps==2 and panel==2 and options==2)
+            assert(mod.GPSStatus().active and mod.GPSStatus().route=='unchanged'and sets.gps.sentinel)
         """)
 
 

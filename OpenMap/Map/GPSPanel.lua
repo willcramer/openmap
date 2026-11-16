@@ -36,6 +36,17 @@ local function Label(parent, font, x, y, width)
 	return text
 end
 
+local function Check(parent, text, x, y, width, fn)
+	local b = CreateFrame("CheckButton", nil, parent, "UICheckButtonTemplate")
+	b:SetSize(22, 22)
+	b:SetPoint("TOPLEFT", x, y)
+	b:SetHitRectInsets(0, -(width - 22), 0, 0)
+	b.label = Label(parent, "GameFontHighlightSmall", x + 28, y - 4, width - 28)
+	b.label:SetText(text)
+	b:SetScript("OnClick", function(self) fn(self:GetChecked()) end)
+	return b
+end
+
 local function Movable(frame, key, x, y)
 	frame:SetMovable(true)
 	frame:SetClampedToScreen(true)
@@ -75,6 +86,10 @@ local function RecordingText(status)
 	if status.recordingState == "gap" then return L["Recording paused after a position gap. Save the partial trail or discard it."] end
 	if status.recordingState == "full" then return L["The recording is full. Save the partial trail or discard it."] end
 	return L["Recording: %s (%d points)"]:format(status.recording, status.recorded or 0)
+end
+
+local function RouteName()
+	return (panel.name:GetText() or ""):match("^%s*(.-)%s*$")
 end
 
 local function StopOrDiscard()
@@ -178,8 +193,23 @@ local function Refresh()
 		panel.save:SetEnabled(status.recording and true or false)
 		panel.save:SetText((status.recordingState == "gap" or status.recordingState == "full") and L["Save partial"] or L["Save route"])
 		panel.stop:SetText(status.recording and L["Discard recording"] or L["Stop GPS"])
+		panel.stop:SetEnabled(status.active or status.state == "faction-stop" or status.recording and true or false)
+		panel.guide:SetEnabled(not status.recording)
+		panel.roads:SetChecked(mod.GPSRoadsShown and mod.GPSRoadsShown() or false)
+		panel.roads:SetEnabled(type(mod.GPSSetRoadsShown) == "function")
+		panel.tracker:SetChecked(mod.db.gpsShowTracker ~= false)
+		local name = RouteName()
+		local saved = mod.db.gpsRoutes and mod.db.gpsRoutes[name] ~= nil
+		panel.record:SetEnabled(not status.recording and name ~= "" and not saved)
+		panel.routes:SetEnabled(not status.recording and #mod.GPSList() > 0)
+		panel.follow:SetEnabled(not status.recording and saved)
+		panel.delete:SetEnabled(not status.recording and saved)
+		panel.mode:SetEnabled(not status.recording and saved)
+		if status.recording then panel.name:ClearFocus() panel.name:Disable() else panel.name:Enable() end
 	end
 end
+
+mod.GPSRefreshPanel = Refresh
 
 function mod.GPSTrackerEnabled() return mod.db and mod.db.gpsShowTracker ~= false or false end
 
@@ -218,56 +248,98 @@ local function BuildHUD()
 	hud:Hide()
 end
 
-local function CycleRoute()
+local function SelectRoute(name)
+	panel.name:SetText(name)
+	panel.name:ClearFocus()
+	Refresh()
+end
+
+local function ChooseRoute(self)
 	local names = mod.GPSList()
 	if #names == 0 then return Result(nil, L["No saved GPS routes. Record a route first."]) end
-	local current = panel.name:GetText()
+	if MenuUtil and type(MenuUtil.CreateContextMenu) == "function" then
+		MenuUtil.CreateContextMenu(self, function(_, root)
+			for _, name in ipairs(names) do
+				local route = name
+				root:CreateButton(route, function() SelectRoute(route) end)
+			end
+		end)
+		return
+	end
+	-- Older clients can still select every route without typing its name.
+	local current = RouteName()
 	local nextIndex = 1
 	for i, name in ipairs(names) do if name == current then nextIndex = i % #names + 1 break end end
-	panel.name:SetText(names[nextIndex])
-	panel.name:ClearFocus()
+	SelectRoute(names[nextIndex])
 end
+
+StaticPopupDialogs.OPENMAP_GPS_DELETE = {
+	text = L["Delete GPS route \"%s\"?"],
+	button1 = L["Delete"], button2 = CANCEL,
+	OnAccept = function(_, name)
+		if Result(mod.GPSDelete(name)) and panel and RouteName() == name then panel.name:SetText("") end
+		Refresh()
+	end,
+	timeout = 0, whileDead = true, hideOnEscape = true,
+}
 
 local function BuildPanel()
 	panel = CreateFrame("Frame", "OpenMapGPSPanel", UIParent)
+	panel:Hide()
 	panel:SetFrameStrata("DIALOG")
 	local top = ns.Look:Window(panel, L["GPS navigation"])
-	panel:SetSize(360, 262 + top)
+	panel:SetSize(420, 464 + top)
 	Movable(panel, "gpsPanelAt", 0, 0)
 	local y = -math.max(top, 24) - 12
-	local help = Label(panel, "GameFontHighlightSmall", 18, y, 324)
-	help:SetText(L["Alt-click the map for GPS. Record roads you walk to use them for future journeys."])
-	Button(panel, L["Guide to waypoint"], 158, 18, y - 42, function() Waypoint() Refresh() end)
-	panel.stop = Button(panel, L["Stop GPS"], 158, 184, y - 42, function() StopOrDiscard() Refresh() end)
+	local help = Label(panel, "GameFontHighlightSmall", 18, y, 384)
+	help:SetText(L["Record roads you walk, then save them for future GPS journeys."])
+	panel.roads = Check(panel, L["Road network"], 18, y - 42, 384, function(on)
+		if mod.GPSSetRoadsShown then mod.GPSSetRoadsShown(on) end
+		Refresh()
+	end)
+	panel.tracker = Check(panel, L["GPS tracker"], 18, y - 68, 384, function(on) mod.GPSSetTrackerShown(on) end)
+	panel.guide = Button(panel, L["Guide to waypoint"], 186, 18, y - 102, function() Waypoint() Refresh() end)
+	panel.stop = Button(panel, L["Stop GPS"], 186, 216, y - 102, function() StopOrDiscard() Refresh() end)
+	panel.nameLabel = Label(panel, "GameFontNormalSmall", 18, y - 142, 384)
+	panel.nameLabel:SetText(L["Route name"])
 	panel.name = CreateFrame("EditBox", nil, panel, "InputBoxTemplate")
-	panel.name:SetSize(242, 24)
-	panel.name:SetPoint("TOPLEFT", 24, y - 80)
+	panel.name:SetSize(180, 24)
+	panel.name:SetPoint("TOPLEFT", 24, y - 164)
 	panel.name:SetAutoFocus(false)
-	panel.name:SetMaxLetters(64)
+	panel.name:SetMaxLetters(80)
+	panel.name:SetScript("OnTextChanged", Refresh)
 	panel.name:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
 	panel.name:SetScript("OnEnterPressed", function(self) self:ClearFocus() end)
-	Button(panel, L["Routes"], 66, 276, y - 80, CycleRoute)
-	Button(panel, L["Record"], 100, 18, y - 114, function()
-		Result(mod.GPSRecord(panel.name:GetText()))
+	panel.routes = Button(panel, L["Saved routes"], 186, 216, y - 164, ChooseRoute)
+	panel.record = Button(panel, L["Record"], 186, 18, y - 198, function()
+		if Result(mod.GPSRecord(panel.name:GetText())) then panel.name:SetText(mod.GPSStatus().recording) end
 		panel.name:ClearFocus()
 		Refresh()
 	end)
-	panel.save = Button(panel, L["Save route"], 100, 130, y - 114, function()
+	panel.save = Button(panel, L["Save route"], 186, 216, y - 198, function()
 		local state = mod.GPSStatus().recordingState
 		Result(mod.GPSSave(state == "gap" or state == "full"))
 		Refresh()
 	end)
-	panel.mode = Button(panel, MODE_NAMES[mode], 100, 242, y - 114, function()
+	panel.playbackLabel = Label(panel, "GameFontNormalSmall", 18, y - 238, 384)
+	panel.playbackLabel:SetText(L["Playback"])
+	panel.mode = Button(panel, MODE_NAMES[mode], 186, 18, y - 260, function()
 		for i, value in ipairs(MODES) do if value == mode then mode = MODES[i % #MODES + 1] break end end
 		panel.mode:SetText(MODE_NAMES[mode])
 	end)
-	Button(panel, L["Follow saved route"], 324, 18, y - 146, function()
-		Result(mod.GPSPlay(panel.name:GetText(), mode))
+	panel.follow = Button(panel, L["Follow saved route"], 186, 216, y - 260, function()
+		Result(mod.GPSPlay(RouteName(), mode))
 		panel.name:ClearFocus()
 		Refresh()
 	end)
-	panel.status = Label(panel, "GameFontHighlightSmall", 18, y - 182, 324)
-	panel.message = Label(panel, "GameFontRedSmall", 18, y - 210, 324)
+	panel.delete = Button(panel, L["Delete"], 186, 216, y - 294, function()
+		local name = RouteName()
+		if mod.db.gpsRoutes[name] then StaticPopup_Show("OPENMAP_GPS_DELETE", name, nil, name) end
+	end)
+	panel.status = Label(panel, "GameFontHighlightSmall", 18, y - 334, 384)
+	panel.status:SetHeight(64)
+	panel.message = Label(panel, "GameFontRedSmall", 18, y - 410, 384)
+	panel.message:SetHeight(32)
 	panel:Hide()
 	if mod.padRoots then mod.padRoots[#mod.padRoots + 1] = panel end
 end

@@ -1,6 +1,6 @@
 # GPS road-network validation
 
-Candidate: **v0.8.10-gps.8**, Forever Maps dataset **2.0.166**, separate addon **OpenMapGPS**
+Candidate: **v0.8.10-gps.9**, Forever Maps dataset **2.0.166**, separate addon **OpenMapGPS**
 (display name **OpenMap - GPS**).
 This is an offline-verified test build. No live game-client verification is claimed.
 
@@ -35,21 +35,28 @@ This is an offline-verified test build. No live game-client verification is clai
 
 - All six loader modes, navigation and controller-waypoint checks pass for Forever and Retail.
   Existing focused tests also pass. The consolidated local run has 44 successful invocations.
-- Nine GPS core and ten full-addon integration tests preserve recording, playback modes,
+- Nine GPS core and twelve full-addon integration tests preserve recording, playback modes,
   partial-save handling, arrival, rerouting and external waypoint ownership.
 - Tracker visibility tests exercise the actual Hide button, commands and full options table,
   confirming that TomTom waypoints, route drawing, recorded-road rerouting, arrival and recording
   continue while hidden. The preference persists through profile initialization and later routes;
   Stop still stops. A before/after out-of-game layout preview used actual Lua control positions.
+- The map menu's actual GPS navigation action opens controls that are tested through their real
+  button callbacks without slash commands: road/tracker toggles, named recording, save/partial
+  save/discard, saved-route selection, playback modes, following, stopping and confirmed deletion.
+  Deletion captures the chosen route so later edits cannot delete a different recording.
 - Twelve bundled full-addon integration tests pass on Forever (ten plus two source-only skips on
   Retail). They exercise actual road data, recorded extensions, Brill's upper platform, Zephras,
   faction border stops with a persistent HUD, resuming the original target after changing the
   faction option, and ghost routing through otherwise restricted paths.
-- Six road-overlay, eight stitched route-view and fourteen native-map tests cover solid green
+- Eleven road-overlay, eight stitched route-view and sixteen native-map tests cover solid green
   line geometry, actual waypoint/destination nodes, clipping, view caching, player-head movement,
   completed segment removal and reuse of drawing regions. Both route renderers retain all bends
-  for valid routes within a 25,000-point budget; the optional network views still use at most
-  800 markers on each canvas. Unprojectable points and continent gaps do not become shortcuts.
+  for valid routes within a 25,000-point budget. Optional network views add exact bundled-node
+  and saved-sample markers, with separate budgets of 500 nodes and 800 road-link dots per canvas.
+  View caching invalidates after save/delete or profile replacement. Isolated and special nodes
+  remain visible without unsafe straight links. Unprojectable points and continent gaps do not
+  become shortcuts.
 - Eight package-transform and sixteen coexistence/settings tests check both clients. The original and
   GPS addon load in the same Lua runtime without sharing saved variables, API, commands, frames,
   bindings or message prefixes. Original-first loading leaves GPS dormant. Explicit Group metadata

@@ -162,6 +162,10 @@ local function SamplePoint(sample)
 	return p
 end
 
+-- Overlay views use the same saved-sample projection and revision as routing.
+function mod.GPSRecordedPoint(sample) return SamplePoint(sample) end
+function mod.GPSRoadsRevision() return roadsRevision end
+
 local function Notify()
 	if mod.OnGPSChanged then mod.OnGPSChanged() end
 end

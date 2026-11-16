@@ -17,6 +17,8 @@ class GPSRouteViewTests(unittest.TestCase):
         self.lua = lua = LuaRuntime(unpack_returned_tuples=True)
         lua.execute("""
             mod={defaults={},db={}}
+            StaticPopupDialogs={}
+            CANCEL="Cancel"
             ns={L=setmetatable({},{__index=function(_,key)return key end}),Safe={}}
             function ns:GetModule()return mod end
             function ns.Safe.Value(v)

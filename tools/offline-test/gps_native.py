@@ -353,13 +353,19 @@ class NativeGPSRouteTests(unittest.TestCase):
             mod.GPSDrawNative(status)
             local network=FRAMES[before+1]
             local stats=mod.GPSNativeStats()
-            assert(stats.networkShown and stats.networkDrawn>10 and not stats.shown and stats.drawn==0)
+            assert(stats.networkShown and stats.networkDrawn>10 and stats.networkNodesDrawn==6
+                and not stats.shown and stats.drawn==0)
             assert(network:GetParent()==canvas)
             for _,region in ipairs(FRAMES) do
                 if region:GetParent()==network and region:GetObjectType()=='Texture' and region:IsShown() then
                     local _,_,_,x,y=region:GetPoint()
-                    assert(x>=0 and x<=1000 and (y==-50 or y==-100),
-                        'native network invented a floor/stair link or escaped the map')
+                    assert(x>=0 and x<=1000,'native network escaped the map')
+                    if region:GetWidth()==3 then
+                        assert(y==-50 or y==-100,'native network invented a floor/stair link')
+                    else
+                        assert(region:GetWidth()==6 and (x==100 or x==900),
+                            'actual node marker does not match a source node')
+                    end
                 end
             end
             local projected=projections
@@ -387,6 +393,7 @@ class NativeGPSRouteTests(unittest.TestCase):
             local stats=mod.GPSNativeStats()
             assert(stats.shown and stats.drawn==2 and stats.pooled==2 and stats.lines==1)
             assert(stats.networkShown and stats.networkDrawn>600 and stats.networkPooled<=800)
+            assert(stats.networkNodesDrawn==500 and stats.networkNodesPooled==500)
             local allocated=#FRAMES
             status.index=2 mod.GPSDrawNative(status)
             assert(#FRAMES==allocated,'native network allocated regions on route-step change')
@@ -397,6 +404,89 @@ class NativeGPSRouteTests(unittest.TestCase):
             assert(#FRAMES==allocated)
             host=947 mod.GPSDrawNative(status)
             assert(not mod.GPSNativeStats().shown and not mod.GPSNativeStats().networkShown)
+        ''')
+
+    def test_real_network_nodes_include_isolated_points_and_ignore_other_native_layers(self):
+        self.check('''
+            mod.GPSRoadsShown=function()return true end
+            status.active=false
+            ns.GPSRoadData={networks={[2991]={nodes={
+                [1]={wx=123,wy=247,links={}},
+                [2]={wx=321,wy=765,layer=2665,links={}},
+                [3]={wx=1500,wy=200,links={}}
+            }}}}
+            local before=#FRAMES
+            mod.GPSDrawNative(status)
+            local owner=FRAMES[before+1]
+            local stats=mod.GPSNativeStats()
+            assert(stats.networkShown and stats.networkDrawn==0 and stats.networkNodesDrawn==1)
+            local count=0
+            for _,region in ipairs(FRAMES)do
+                if region:GetParent()==owner and region:GetObjectType()=='Texture'and region:IsShown()then
+                    count=count+1
+                    local _,_,_,x,y=region:GetPoint()
+                    assert(x==123 and y==-123.5 and region:GetWidth()==6)
+                    assert(region.color[1]==1 and region.color[2]==.8 and region.color[3]==.35)
+                end
+            end
+            assert(count==1,'isolated source node did not have an actual marker')
+            scale=2 mod.GPSDrawNative(status)
+            for _,region in ipairs(FRAMES)do
+                if region:GetParent()==owner and region:GetObjectType()=='Texture'and region:IsShown()then
+                    assert(region:GetWidth()==3,'source node marker grew with zoom')
+                end
+            end
+        ''')
+
+    def test_saved_trail_nodes_and_links_refresh_after_save_delete_without_touching_navigation(self):
+        self.check('''
+            mod.GPSRoadsShown=function()return true end
+            local revision=0
+            mod.GPSRoadsRevision=function()return revision end
+            mod.GPSRecordedPoint=function(sample)return sample.valid~=false and sample or nil end
+            ns.GPSRoadData={networks={[2991]={nodes={}}}}
+            mod.db.gpsRoutes={Trail={points={
+                {cont=2991,wx=100,wy=100},
+                {cont=2991,wx=150,wy=100},
+                {valid=false},
+                {cont=2991,wx=200,wy=100},
+                {cont=2991,wx=250,wy=100,piece='other floor'},
+                {cont=2991,wx=800,wy=100,piece='other floor'},
+                {cont=0,wx=500,wy=100},
+                {cont=2991,wx=300,wy=100}
+            }}}
+            mod.GPSDrawNative(status)
+            local before=mod.GPSNativeStats()
+            assert(before.shown and before.drawn==2 and before.lines==1)
+            assert(before.networkNodesDrawn==6 and before.networkDrawn>1)
+            local owner
+            for _,frame in ipairs(FRAMES)do
+                if frame:GetObjectType()=='Frame'and frame:GetParent()==canvas
+                    and frame:GetFrameLevel()==canvas:GetFrameLevel()+9 then owner=frame end
+            end
+            for _,region in ipairs(FRAMES)do
+                if region:GetParent()==owner and region:GetObjectType()=='Texture'and region:IsShown()then
+                    local _,_,_,x,y=region:GetPoint()
+                    if region:GetWidth()==3 then
+                        assert(x>=100 and x<=150 and y==-50,'saved display bridged a gap or floor')
+                    else
+                        assert(region:GetWidth()==7 and region.color[1]==1 and region.color[2]==.45)
+                    end
+                end
+            end
+            local projected=projections
+            mod.GPSDrawNative(status)
+            assert(projections==projected and mod.GPSNativeStats().networkRedraws==before.networkRedraws)
+            mod.db.gpsRoutes.Trail=nil revision=revision+1
+            mod.GPSDrawNative(status)
+            local after=mod.GPSNativeStats()
+            assert(not after.networkShown and after.networkNodesDrawn==0 and after.networkDrawn==0)
+            assert(after.shown and after.redraws==before.redraws and after.lines==1,
+                'deleting a saved road disturbed active navigation')
+            mod.db.gpsRoutes={New={points={{cont=2991,wx=200,wy=200},{cont=2991,wx=250,wy=200}}}}
+            mod.GPSDrawNative(status)
+            assert(mod.GPSNativeStats().networkShown and mod.GPSNativeStats().networkNodesDrawn==2,
+                'profile replacement did not invalidate the saved-road display')
         ''')
 
 

@@ -1,6 +1,6 @@
 # GPS road-network validation
 
-Candidate: **v0.8.10-gps.7**, Forever Maps dataset **2.0.166**, separate addon **OpenMapGPS**
+Candidate: **v0.8.10-gps.8**, Forever Maps dataset **2.0.166**, separate addon **OpenMapGPS**
 (display name **OpenMap - GPS**).
 This is an offline-verified test build. No live game-client verification is claimed.
 
@@ -35,8 +35,12 @@ This is an offline-verified test build. No live game-client verification is clai
 
 - All six loader modes, navigation and controller-waypoint checks pass for Forever and Retail.
   Existing focused tests also pass. The consolidated local run has 44 successful invocations.
-- Nine GPS core and seven original integration tests preserve recording, playback modes,
+- Nine GPS core and ten full-addon integration tests preserve recording, playback modes,
   partial-save handling, arrival, rerouting and external waypoint ownership.
+- Tracker visibility tests exercise the actual Hide button, commands and full options table,
+  confirming that TomTom waypoints, route drawing, recorded-road rerouting, arrival and recording
+  continue while hidden. The preference persists through profile initialization and later routes;
+  Stop still stops. A before/after out-of-game layout preview used actual Lua control positions.
 - Twelve bundled full-addon integration tests pass on Forever (ten plus two source-only skips on
   Retail). They exercise actual road data, recorded extensions, Brill's upper platform, Zephras,
   faction border stops with a persistent HUD, resuming the original target after changing the

@@ -71,6 +71,10 @@
 
 ## Integration and parity
 
+- Keep tracker visibility separate from GPS navigation. Hiding the custom window must not stop
+  the update ticker, clear a waypoint, remove TomTom guidance or hide the map route. Store the
+  preference under a GPS-specific key so settings import preserves it. Provide an explicit Hide
+  button and menu/command restoration; do not infer a preference just from TomTom being loaded.
 - Give the GPS package explicit `Group: OpenMapGPS` metadata. Forever's AddOn List automatically
   groups similar addon names/dependencies unless Group is overridden; making the group exactly
   its own addon folder creates an independent entry. Keep optional original-first load ordering

@@ -177,6 +177,140 @@ class GPSIntegrationTests(unittest.TestCase):
             assert(not gpsmod.GPSStatus().recording)
         ''')
 
+    def test_hiding_tracker_keeps_tomtom_waypoints_route_progress_and_arrival(self):
+        self.lua.execute(r'''
+            -- Only map drawing regions are simulated. Core, GPS, Nav and the
+            -- tracker callbacks still run through the complete addon.
+            DRAW={}
+            local S=testns.MapStitch
+            S.IsBuilt=function()return true end
+            S.PinSet=function(key)
+                if not DRAW[key]then DRAW[key]={frame=CreateFrame('Frame'),pins={},lines={}}end
+                return DRAW[key]
+            end
+            S.ClearPinSet=function(set)
+                for _,pin in ipairs(set.pins)do pin:Hide()end
+                for _,line in ipairs(set.lines)do line:Hide()end
+                set.pins,set.lines={},{}
+            end
+            S.AddPin=function(set,u,v,look)
+                local pin=CreateFrame('Button',nil,set.frame)
+                pin.u,pin.v,pin.look=u,v,look
+                set.pins[#set.pins+1]=pin
+                return pin
+            end
+            S.MovePin=function(_,pin,u,v)pin.u,pin.v=u,v end
+            S.AddLine=function(set)
+                local line=set.frame:CreateLine(nil,'ARTWORK')
+                set.lines[#set.lines+1]=line
+                return line
+            end
+            local added,removed={},{}
+            TomTom={}
+            function TomTom:AddWaypoint(map,x,y,options)
+                local handle={map=map,x=x,y=y,title=options.title}
+                added[#added+1]=handle
+                return handle
+            end
+            function TomTom:RemoveWaypoint(handle)removed[#removed+1]=handle end
+            gpsmod.db.gpsRoutes['Tracker road']={points={
+                {900001,.2,.2},{900001,.3,.2},{900001,.4,.2}
+            }}
+            assert(gpsmod.GPSPlay('Tracker road','once'))
+            TickGPS()
+            assert(OpenMapGPSGuide:IsShown()and WAYPOINT.position.x==.3)
+            local route,waypoint,updates,lines=gpsmod.GPSStatus().route,WAYPOINT,#added,DRAW.gps.lines
+            assert(#DRAW.gps.lines>0,'active GPS route was not drawn')
+            local hide
+            for _,frame in ipairs(FRAMES)do
+                if frame:GetParent()==OpenMapGPSGuide and frame:GetText()=='Hide'and frame:GetScript('OnClick')then hide=frame end
+            end
+            assert(hide,'tracker has no Hide control')
+            -- The frame stub preserves SetPoint's short-form arguments.
+            local _,hx,hy=hide:GetPoint()
+            local _,sx,sy=OpenMapGPSGuide.stop:GetPoint()
+            assert(hx+hide:GetWidth()<sx and hy==sy,'Hide and Stop overlap')
+            hide:GetScript('OnClick')(hide)
+            assert(not OpenMapGPSGuide:IsShown()and not gpsmod.GPSTrackerEnabled())
+            assert(gpsmod.GPSStatus().active and gpsmod.GPSStatus().route==route)
+            assert(WAYPOINT==waypoint and #added==updates and DRAW.gps.lines==lines and #lines>0)
+            PX=.3 TickGPS()
+            assert(gpsmod.GPSStatus().active and gpsmod.GPSStatus().index==3)
+            assert(WAYPOINT.position.x==.4 and added[#added].x==.4 and #added>updates)
+            assert(not OpenMapGPSGuide:IsShown()and #DRAW.gps.lines>0)
+            PX=.4 TickGPS()
+            assert(gpsmod.GPSStatus().state=='arrived'and WAYPOINT==nil)
+            assert(#removed==#added and #DRAW.gps.lines==0)
+            assert(#gpsmod.db.gpsRoutes['Tracker road'].points==3)
+        ''')
+
+    def test_tracker_commands_and_options_restore_without_changing_navigation(self):
+        self.lua.execute(r'''
+            SlashCmdList.OPENMAP('gps go 900001 40 20')
+            local route,waypoint=gpsmod.GPSStatus().route,WAYPOINT
+            local notifications,refreshes=0,0
+            local notify,refresh=testns.NotifyOptions,gpsmod.RefreshPanel
+            testns.NotifyOptions=function(...)notifications=notifications+1 if notify then notify(...)end end
+            gpsmod.RefreshPanel=function(self,...)refreshes=refreshes+1 if refresh then refresh(self,...)end end
+            SlashCmdList.OPENMAP('gps tracker OFF')
+            assert(not OpenMapGPSGuide:IsShown()and gpsmod.db.gpsShowTracker==false)
+            assert(gpsmod.GPSStatus().active and gpsmod.GPSStatus().route==route and WAYPOINT==waypoint)
+            TickGPS()assert(not OpenMapGPSGuide:IsShown())
+            SlashCmdList.OPENMAP('gps tracker ON')
+            assert(OpenMapGPSGuide:IsShown()and gpsmod.GPSStatus().active and WAYPOINT==waypoint)
+            SlashCmdList.OPENMAP('gps tracker')
+            assert(not OpenMapGPSGuide:IsShown())
+            local options=gpsmod:Options()
+            assert(options.gpsShowTracker.name=='GPS tracker'and not options.gpsShowTracker.get({'gpsShowTracker'}))
+            options.gpsShowTracker.set({'gpsShowTracker'},true)
+            assert(OpenMapGPSGuide:IsShown()and gpsmod.GPSStatus().route==route and WAYPOINT==waypoint)
+            assert(notifications==4 and refreshes==4,'visibility changes did not refresh settings controls')
+            OpenMapGPSGuide.stop:GetScript('OnClick')(OpenMapGPSGuide.stop)
+            assert(not gpsmod.GPSStatus().active and gpsmod.GPSStatus().state=='stopped'and WAYPOINT==nil)
+        ''')
+
+    def test_hidden_preference_survives_new_journeys_recording_and_profile_initialization(self):
+        self.lua.execute(r'''
+            SlashCmdList.OPENMAP('gps tracker off')
+            gpsmod.db.gpsUseRoads=false
+            gpsmod.db.gpsRoutes['Reroute road']={points={
+                {900001,.2,.2},{900001,.3,.2},{900001,.4,.2}
+            }}
+            assert(gpsmod.GPSStart(900001,.4,.2))
+            TickGPS()assert(not OpenMapGPSGuide:IsShown()and gpsmod.GPSStatus().active)
+            MISSING=true TickGPS()
+            assert(gpsmod.GPSStatus().state=='waiting'and not OpenMapGPSGuide:IsShown())
+            MISSING=false
+            gpsmod.GPSStop()
+            assert(gpsmod.GPSStart(900001,.5,.2))
+            assert(not OpenMapGPSGuide:IsShown())
+            gpsmod.GPSStop()
+            assert(gpsmod.GPSStart(900001,.4,.2))
+            local road=gpsmod.GPSStatus().route
+            assert(gpsmod.GPSStatus().state=='recorded')
+            PY=.28 TickGPS()
+            assert(gpsmod.GPSStatus().active and gpsmod.GPSStatus().route~=road)
+            assert(not OpenMapGPSGuide:IsShown(),'rerouting restored a hidden tracker')
+            gpsmod.GPSStop()
+            PY=.2
+            SlashCmdList.OPENMAP('gps record Hidden walk')
+            PX=.22 TickGPS()
+            assert(gpsmod.GPSStatus().recording=='Hidden walk'and gpsmod.GPSStatus().recorded==2)
+            assert(not OpenMapGPSGuide:IsShown())
+            SlashCmdList.OPENMAP('gps tracker on')
+            assert(OpenMapGPSGuide:IsShown()and gpsmod.GPSStatus().recording=='Hidden walk')
+            OpenMapGPSGuide.hide:GetScript('OnClick')(OpenMapGPSGuide.hide)
+            assert(not OpenMapGPSGuide:IsShown()and gpsmod.GPSStatus().recording=='Hidden walk')
+            SlashCmdList.OPENMAP('gps save')
+            assert(#gpsmod.db.gpsRoutes['Hidden walk'].points==2)
+            -- InitDB is the real profile-load/default-fill path used after reload.
+            local saved=OpenMapDB.worldmap
+            testns:InitDB()
+            assert(gpsmod.db==saved and gpsmod.defaults.gpsShowTracker==true and gpsmod.db.gpsShowTracker==false)
+            assert(gpsmod.GPSStart(900001,.5,.2))
+            assert(not OpenMapGPSGuide:IsShown())
+        ''')
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -342,6 +342,11 @@ local function Rows()
 	rows[#rows + 1] = optRow(L["Caves underground"], "underground", Icon("Trade_Mining"))
 	-- the rest
 	rows[#rows + 1] = { L["Moving about"], tab = "more" }
+	if mod.GPSSetTrackerShown then
+		rows[#rows + 1] = row(L["GPS tracker"], "gpsShowTracker", Icon("INV_Misc_Map_01"),
+			function() return db.gpsShowTracker ~= false end,
+			function(on) mod.GPSSetTrackerShown(on) end)
+	end
 	if options.mapRightClick then
 		rows[#rows + 1] = row(L["Right-click opens location menu"], "mapRightClick", Icon("INV_Misc_Map_01"),
 			function() return db.mapRightClick == "menu" end,

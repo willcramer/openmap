@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## v0.8.10-gps.8 (2026-11-16)
+
+### Improved
+
+- **GPS tracker visibility:** hide the guidance window while navigation, route drawing and
+  TomTom continue. A saved preference and tracker on/off commands restore or hide it.
+
 ## v0.8.10-gps.7 (2026-11-16)
 
 ### Improved

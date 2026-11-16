@@ -574,7 +574,7 @@
  "GPS route not found.": "未找到GPS路线。",
  "GPS stopped before the other faction's roads.": "GPS已在其他阵营的道路前停止。",
  "GPS stopped.": "GPS已停止。",
- "GPS: waypoint, go <mapID> <x> <y>, stop, record <name>, save, savepartial, cancelrecord, follow [once/reverse/loop/pingpong] <name>, list, delete <name>, status.": "GPS命令：waypoint, go <mapID> <x> <y>, stop, record <name>, save, savepartial, cancelrecord, follow [once/reverse/loop/pingpong] <name>, list, delete <name>, status.",
+ "GPS: waypoint, tracker <on/off>, go <mapID> <x> <y>, stop, record <name>, save, savepartial, cancelrecord, follow [once/reverse/loop/pingpong] <name>, list, delete <name>, status.": "GPS命令：waypoint, tracker <on/off>, go <mapID> <x> <y>, stop, record <name>, save, savepartial, cancelrecord, follow [once/reverse/loop/pingpong] <name>, list, delete <name>, status.",
  "Give the route a name of up to 80 characters.": "请为路线输入不超过80个字符的名称。",
  "Go down the stairs to the next landing.": "下楼梯，前往下一处平台。",
  "Go up the stairs to the next landing.": "上楼梯，前往下一处平台。",
@@ -647,5 +647,6 @@
  "Add note": "添加备注",
  "Go Here": "前往此处",
  "Original OpenMap is active. Disable it in the AddOns list and enable OpenMap - GPS, then reload.": "原版 OpenMap 已启用。请在插件列表中禁用它并启用 OpenMap - GPS，然后重新加载界面。",
- "Right-click opens location menu": "右键点击打开位置菜单"
+ "Right-click opens location menu": "右键点击打开位置菜单",
+ "GPS tracker": "GPS 导航窗口"
 }

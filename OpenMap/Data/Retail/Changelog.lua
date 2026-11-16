@@ -4,6 +4,9 @@
 local _, ns = ...
 
 ns.MapChangelog = {
+	{ version = "v0.8.10-gps.8", date = "2026-11-16", heads = { [1] = "Improved", }, items = {
+		"|cff6e2c0aGPS tracker visibility:|r hide the guidance window while navigation, route drawing and TomTom continue. A saved preference and tracker on/off commands restore or hide it.",
+	} },
 	{ version = "v0.8.10-gps.7", date = "2026-11-16", heads = { [1] = "Improved", }, items = {
 		"|cff6e2c0aOpenMap - GPS:|r updated the custom addon's display name.",
 		"|cff6e2c0aContext menu by default:|r right-click opens the location menu on new and existing profiles. Later choices of Zoom out remain saved.",
@@ -22,8 +25,5 @@ ns.MapChangelog = {
 	} },
 	{ version = "v0.8.10-gps.3", date = "2026-11-16", heads = { [1] = "Improved", }, items = {
 		"|cff6e2c0aGPS integration:|r shared floor-aware routing and native-map drawing infrastructure; user recordings and the separate addon package remain supported. Forever's supplied road data is loaded only by the Forever client and is not included in the Retail package.",
-	} },
-	{ version = "v0.8.10-gps.2", date = "2026-11-16", heads = { [1] = "Improved", }, items = {
-		"|cff6e2c0aSeparate OpenMapGPS package:|r independent settings and commands; safe standby beside the original. /omgps use gps and /omgps use original switch maps with a UI reload.",
 	} },
 }

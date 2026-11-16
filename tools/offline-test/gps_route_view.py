@@ -16,7 +16,7 @@ class GPSRouteViewTests(unittest.TestCase):
     def setUp(self):
         self.lua = lua = LuaRuntime(unpack_returned_tuples=True)
         lua.execute("""
-            mod={db={}}
+            mod={defaults={},db={}}
             ns={L=setmetatable({},{__index=function(_,key)return key end}),Safe={}}
             function ns:GetModule()return mod end
             function ns.Safe.Value(v)

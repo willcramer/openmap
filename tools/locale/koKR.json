@@ -574,7 +574,7 @@
  "GPS route not found.": "GPS 경로를 찾을 수 없습니다.",
  "GPS stopped before the other faction's roads.": "다른 진영의 도로에 진입하기 전에 GPS를 멈췄습니다.",
  "GPS stopped.": "GPS를 멈췄습니다.",
- "GPS: waypoint, go <mapID> <x> <y>, stop, record <name>, save, savepartial, cancelrecord, follow [once/reverse/loop/pingpong] <name>, list, delete <name>, status.": "GPS 명령어: waypoint, go <mapID> <x> <y>, stop, record <name>, save, savepartial, cancelrecord, follow [once/reverse/loop/pingpong] <name>, list, delete <name>, status.",
+ "GPS: waypoint, tracker <on/off>, go <mapID> <x> <y>, stop, record <name>, save, savepartial, cancelrecord, follow [once/reverse/loop/pingpong] <name>, list, delete <name>, status.": "GPS 명령어: waypoint, tracker <on/off>, go <mapID> <x> <y>, stop, record <name>, save, savepartial, cancelrecord, follow [once/reverse/loop/pingpong] <name>, list, delete <name>, status.",
  "Give the route a name of up to 80 characters.": "경로 이름을 80자 이내로 입력하세요.",
  "Go down the stairs to the next landing.": "계단을 내려가 다음 층계참으로 이동하세요.",
  "Go up the stairs to the next landing.": "계단을 올라가 다음 층계참으로 이동하세요.",
@@ -647,5 +647,6 @@
  "Add note": "메모 추가",
  "Go Here": "여기로 이동",
  "Original OpenMap is active. Disable it in the AddOns list and enable OpenMap - GPS, then reload.": "기존 OpenMap이 활성화되어 있습니다. 애드온 목록에서 비활성화하고 OpenMap - GPS를 활성화한 후 인터페이스를 다시 불러오세요.",
- "Right-click opens location menu": "오른쪽 클릭으로 위치 메뉴 열기"
+ "Right-click opens location menu": "오른쪽 클릭으로 위치 메뉴 열기",
+ "GPS tracker": "GPS 안내창"
 }

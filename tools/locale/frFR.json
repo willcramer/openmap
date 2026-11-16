@@ -574,7 +574,7 @@
  "GPS route not found.": "Itinéraire GPS introuvable.",
  "GPS stopped before the other faction's roads.": "Le GPS s’est arrêté avant les routes de l’autre faction.",
  "GPS stopped.": "GPS arrêté.",
- "GPS: waypoint, go <mapID> <x> <y>, stop, record <name>, save, savepartial, cancelrecord, follow [once/reverse/loop/pingpong] <name>, list, delete <name>, status.": "Commandes GPS : waypoint, go <mapID> <x> <y>, stop, record <name>, save, savepartial, cancelrecord, follow [once/reverse/loop/pingpong] <name>, list, delete <name>, status.",
+ "GPS: waypoint, tracker <on/off>, go <mapID> <x> <y>, stop, record <name>, save, savepartial, cancelrecord, follow [once/reverse/loop/pingpong] <name>, list, delete <name>, status.": "Commandes GPS : waypoint, tracker <on/off>, go <mapID> <x> <y>, stop, record <name>, save, savepartial, cancelrecord, follow [once/reverse/loop/pingpong] <name>, list, delete <name>, status.",
  "Give the route a name of up to 80 characters.": "Donnez à l’itinéraire un nom de 80 caractères maximum.",
  "Go down the stairs to the next landing.": "Descendez l’escalier jusqu’au prochain palier.",
  "Go up the stairs to the next landing.": "Montez l’escalier jusqu’au prochain palier.",
@@ -647,5 +647,6 @@
  "Add note": "Ajouter une note",
  "Go Here": "Aller ici",
  "Original OpenMap is active. Disable it in the AddOns list and enable OpenMap - GPS, then reload.": "L’OpenMap d’origine est actif. Désactivez-le dans la liste des AddOns, activez OpenMap - GPS, puis rechargez l’interface.",
- "Right-click opens location menu": "Le clic droit ouvre le menu du lieu"
+ "Right-click opens location menu": "Le clic droit ouvre le menu du lieu",
+ "GPS tracker": "Panneau GPS"
 }

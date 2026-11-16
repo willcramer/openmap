@@ -4,6 +4,9 @@
 local _, ns = ...
 
 ns.MapChangelog = {
+	{ version = "v0.8.10-gps.8", date = "2026-11-16", heads = { [1] = "Improved", }, items = {
+		"|cff6e2c0aHide the GPS tracker:|r the custom guidance window has a Hide button. Navigation, the map route and TomTom waypoint updates continue while it is hidden. Restore it with the GPS tracker setting or /omgps gps tracker on; off hides it. The visibility choice stays saved.",
+	} },
 	{ version = "v0.8.10-gps.7", date = "2026-11-16", heads = { [1] = "Improved", }, items = {
 		"|cff6e2c0aOpenMap - GPS:|r renamed the custom build in the AddOn List and its status messages.",
 		"|cff6e2c0aRight-click menu by default:|r new and existing profiles start with the location menu. You can still select Zoom out; that choice persists after this one-time default update.",
@@ -23,8 +26,5 @@ ns.MapChangelog = {
 	{ version = "v0.8.10-gps.3", date = "2026-11-16", heads = { [1] = "New", }, items = {
 		"|cff6e2c0aBundled road network:|r all 8,944 Forever Maps 2.0.166 road nodes and associated room/floor metadata, used with author permission. Independent routing preserves one-way drops, faction restrictions, no-start roads, stairs and intermediate landings, elevators and swimming. Room inference respects portal crossings and Undercity's separate surface and underground layers.",
 		"|cff6e2c0aRoad integration:|r user recordings extend the graph; pins and search continue to start GPS. Road network can be shown in the map menu, and routing preferences are in Options. Zephras Isle has route drawing on its native maps. The separate OpenMapGPS package and reload switching remain.",
-	} },
-	{ version = "v0.8.10-gps.2", date = "2026-11-16", heads = { [1] = "Improved", }, items = {
-		"|cff6e2c0aInstall beside the original:|r the separate OpenMapGPS package uses its own folder, settings, commands, frames, bindings and API. With both enabled, GPS stays in standby. /omgps use gps and /omgps use original switch the active map with a UI reload.",
 	} },
 }

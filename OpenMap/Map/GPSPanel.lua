@@ -1,11 +1,12 @@
 --------------------------------------------------------------------------------
--- GPS controls and guidance stay on screen when the map closes. The green path
+-- GPS guidance keeps updating when the map closes or its tracker is hidden. The green path
 -- shares the map's line/pin pools; only its leading anchor moves with the player.
 --------------------------------------------------------------------------------
 
 local _, ns = ...
 local mod = ns:GetModule("worldmap")
 local S, L, Safe = ns.MapStitch, ns.L, ns.Safe
+mod.defaults.gpsShowTracker = true
 local panel, hud, ticker, trail
 local drawnRoute, drawnIndex, drawnActive, drawnCount
 local playerPin, playerLine, firstPoint
@@ -155,7 +156,8 @@ local function Refresh()
 	if mod.GPSDrawNative then mod.GPSDrawNative(status) end
 	if mod.GPSRefreshRoadView then mod.GPSRefreshRoadView() end
 	if hud then
-		hud:SetShown(status.active or status.state == "faction-stop" or status.recording ~= nil and status.recording ~= false)
+		hud:SetShown(mod.db.gpsShowTracker ~= false and (status.active or status.state == "faction-stop"
+			or status.recording ~= nil and status.recording ~= false))
 		hud.title:SetText(status.recording and L["Recording: %s"]:format(status.recording) or status.title or L["GPS"])
 		hud.instruction:SetText(status.recording and RecordingText(status) or status.instruction or "")
 		hud.stop:SetText(status.recording and L["Discard"] or L["Stop"])
@@ -179,6 +181,24 @@ local function Refresh()
 	end
 end
 
+function mod.GPSTrackerEnabled() return mod.db and mod.db.gpsShowTracker ~= false or false end
+
+function mod.GPSSetTrackerShown(shown)
+	if not mod.db then return false end
+	mod.db.gpsShowTracker = shown and true or false
+	-- Visibility never changes the route, waypoint, recording or update ticker.
+	Refresh()
+	if mod.RefreshPanel then mod:RefreshPanel() end
+	if ns.NotifyOptions then ns.NotifyOptions() end
+	return true
+end
+
+function mod:GPSTrackerOptions(opts, get, off)
+	opts.gpsShowTracker = { type = "toggle", name = L["GPS tracker"], order = 35.05,
+		get = get, disabled = off,
+		set = function(_, value) mod.GPSSetTrackerShown(value) end }
+end
+
 local function BuildHUD()
 	hud = CreateFrame("Frame", "OpenMapGPSGuide", UIParent)
 	hud:SetSize(330, 124)
@@ -193,6 +213,7 @@ local function BuildHUD()
 	hud.title:SetWordWrap(false)
 	hud.instruction = Label(hud, "GameFontHighlightSmall", 72, -35, 242)
 	hud.distance = Label(hud, "GameFontNormalSmall", 72, -82, 242)
+	hud.hide = Button(hud, L["Hide"], 66, 178, -94, function() mod.GPSSetTrackerShown(false) end)
 	hud.stop = Button(hud, L["Stop"], 66, 252, -94, function() StopOrDiscard() Refresh() end)
 	hud:Hide()
 end
@@ -305,6 +326,11 @@ function mod:GPSCommand(rest)
 	local command, args = rest:match("^(%S+)%s*(.*)$")
 	command = command and command:lower() or "panel"
 	if command == "panel" then self:ToggleGPS()
+	elseif command == "tracker" then
+		local value = args:lower()
+		if value == "on" then mod.GPSSetTrackerShown(true)
+		elseif value == "off" then mod.GPSSetTrackerShown(false)
+		elseif value == "" or value == "toggle" then mod.GPSSetTrackerShown(not mod.GPSTrackerEnabled()) end
 	elseif command == "roads" and mod.GPSSetRoadsShown then
 		mod.GPSSetRoadsShown(args == "on" or args ~= "off" and not mod.GPSRoadsShown())
 	elseif command == "waypoint" then Waypoint()
@@ -335,7 +361,7 @@ function mod:GPSCommand(rest)
 			if roads.nodes > 0 then ns:Print(L["Road network: %d nodes (%s)"]:format(roads.nodes, roads.version or "")) end
 		end
 	else
-		ns:Print(L["GPS: waypoint, go <mapID> <x> <y>, stop, record <name>, save, savepartial, cancelrecord, follow [once/reverse/loop/pingpong] <name>, list, delete <name>, status."])
+		ns:Print(L["GPS: waypoint, tracker <on/off>, go <mapID> <x> <y>, stop, record <name>, save, savepartial, cancelrecord, follow [once/reverse/loop/pingpong] <name>, list, delete <name>, status."])
 	end
 	Refresh()
 end

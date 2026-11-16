@@ -574,7 +574,7 @@
  "GPS route not found.": "Маршрут GPS не найден.",
  "GPS stopped before the other faction's roads.": "GPS остановлен перед дорогами другой фракции.",
  "GPS stopped.": "GPS остановлен.",
- "GPS: waypoint, go <mapID> <x> <y>, stop, record <name>, save, savepartial, cancelrecord, follow [once/reverse/loop/pingpong] <name>, list, delete <name>, status.": "Команды GPS: waypoint, go <mapID> <x> <y>, stop, record <name>, save, savepartial, cancelrecord, follow [once/reverse/loop/pingpong] <name>, list, delete <name>, status.",
+ "GPS: waypoint, tracker <on/off>, go <mapID> <x> <y>, stop, record <name>, save, savepartial, cancelrecord, follow [once/reverse/loop/pingpong] <name>, list, delete <name>, status.": "Команды GPS: waypoint, tracker <on/off>, go <mapID> <x> <y>, stop, record <name>, save, savepartial, cancelrecord, follow [once/reverse/loop/pingpong] <name>, list, delete <name>, status.",
  "Give the route a name of up to 80 characters.": "Назовите маршрут, не более 80 символов.",
  "Go down the stairs to the next landing.": "Спуститесь по лестнице к следующей площадке.",
  "Go up the stairs to the next landing.": "Поднимитесь по лестнице к следующей площадке.",
@@ -647,5 +647,6 @@
  "Add note": "Добавить заметку",
  "Go Here": "Идти сюда",
  "Original OpenMap is active. Disable it in the AddOns list and enable OpenMap - GPS, then reload.": "Оригинальный OpenMap активен. Отключите его в списке модификаций, включите OpenMap - GPS и перезагрузите интерфейс.",
- "Right-click opens location menu": "Правый щелчок открывает меню места"
+ "Right-click opens location menu": "Правый щелчок открывает меню места",
+ "GPS tracker": "Панель GPS"
 }

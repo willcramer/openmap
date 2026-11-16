@@ -574,7 +574,7 @@
  "GPS route not found.": "No se encontró la ruta GPS.",
  "GPS stopped before the other faction's roads.": "GPS se detuvo antes de los caminos de la otra facción.",
  "GPS stopped.": "GPS detenido.",
- "GPS: waypoint, go <mapID> <x> <y>, stop, record <name>, save, savepartial, cancelrecord, follow [once/reverse/loop/pingpong] <name>, list, delete <name>, status.": "Comandos GPS: waypoint, go <mapID> <x> <y>, stop, record <name>, save, savepartial, cancelrecord, follow [once/reverse/loop/pingpong] <name>, list, delete <name>, status.",
+ "GPS: waypoint, tracker <on/off>, go <mapID> <x> <y>, stop, record <name>, save, savepartial, cancelrecord, follow [once/reverse/loop/pingpong] <name>, list, delete <name>, status.": "Comandos GPS: waypoint, tracker <on/off>, go <mapID> <x> <y>, stop, record <name>, save, savepartial, cancelrecord, follow [once/reverse/loop/pingpong] <name>, list, delete <name>, status.",
  "Give the route a name of up to 80 characters.": "Pon a la ruta un nombre de hasta 80 caracteres.",
  "Go down the stairs to the next landing.": "Baja las escaleras hasta el siguiente rellano.",
  "Go up the stairs to the next landing.": "Sube las escaleras hasta el siguiente rellano.",
@@ -647,5 +647,6 @@
  "Add note": "Agregar nota",
  "Go Here": "Ir aquí",
  "Original OpenMap is active. Disable it in the AddOns list and enable OpenMap - GPS, then reload.": "El OpenMap original está activo. Desactívalo en la lista de AddOns, activa OpenMap - GPS y recarga la interfaz.",
- "Right-click opens location menu": "Clic derecho abre el menú de ubicación"
+ "Right-click opens location menu": "Clic derecho abre el menú de ubicación",
+ "GPS tracker": "Panel GPS"
 }

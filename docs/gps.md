@@ -10,7 +10,7 @@ routing implementation or art is included. See the [data notice](../OpenMap/Data
 
 ## Install
 
-Use **OpenMapGPS-v0.8.10-gps.7-forever.zip**, the separate-addon build. The older gps.1 ZIP
+Use **OpenMapGPS-v0.8.10-gps.8-forever.zip**, the separate-addon build. The older gps.1 ZIP
 used the original addon's folder and should not be used for a side-by-side install.
 If you already installed gps.1 into `OpenMap`, reinstall the official OpenMap there first.
 
@@ -78,6 +78,16 @@ nodes. The destination has a larger marker. Passed sections disappear as guidanc
 rerouting replaces the remaining line. Line width and node size stay steady while zooming.
 This drawing works on the stitched map and controller view and on Zephras's native map.
 
+### Hide the custom tracker while using TomTom
+
+Press **Hide** on the guidance window, or run `/omgps gps tracker off`. Navigation, the green
+map route and TomTom waypoint updates continue. The choice remains saved for later journeys
+and reloads. The Stop button still stops navigation; Hide only changes the window's visibility.
+
+Restore it with `/omgps gps tracker on`, or open `/omgps` → **More** → **Moving about** and
+enable **GPS tracker**. The same preference is available in the full GPS options. TomTom is
+optional; tracker visibility can be selected independently of whether it is installed.
+
 ## Record a road or farming route
 
 Start a recording with `/omgps gps record Elwynn road`, walk the road, then use
@@ -104,6 +114,7 @@ Commands:
 | `/omgps gps list` | List saved route names |
 | `/omgps gps delete Elwynn road` | Delete saved route |
 | `/omgps gps stop` | Stop navigation; recording is separate |
+| `/omgps gps tracker off` | Hide only the custom tracker; use `on` to show it again |
 | `/omgps gps status` | Print current status |
 | `/omgps gps roads on` | Show the bundled road network on the stitched map (`off` hides it) |
 

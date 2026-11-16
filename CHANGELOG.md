@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+## v0.8.10-gps.8 (2026-11-16)
+
+### Improved
+
+- **Hide the GPS tracker:** the custom guidance window has a Hide button. Navigation, the map
+  route and TomTom waypoint updates continue while it is hidden. Restore it with the GPS tracker
+  setting or `/omgps gps tracker on`; `off` hides it. The visibility choice stays saved.
+
 ## v0.8.10-gps.7 (2026-11-16)
 
 ### Improved

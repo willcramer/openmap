@@ -1,6 +1,6 @@
 # GPS test build validation — 2026-11-16
 
-Base: upstream OpenMap `9ebb7d3` (v0.8.9). Custom package: `v0.8.10-gps.1`.
+Base: upstream OpenMap `9ebb7d3` (v0.8.9). Custom package: `v0.8.10-gps.2`.
 
 ## Passed locally
 
@@ -16,6 +16,12 @@ Base: upstream OpenMap `9ebb7d3` (v0.8.9). Custom package: `v0.8.10-gps.1`.
   map-closed HUD/arrival, mixed-case route names, external waypoint takeover, missing/secret
   positions, idempotent initialization and HUD recording discard.
 - Map click tests: ten passed, including Alt-click GPS and Alt-drag suppression.
+- Separate packaging: seven tests check both clients' metadata, saved-variable names, commands,
+  bindings, paths, preserved library/art bytes, and compilation/dormant guards for every own Lua file.
+- Coexistence: seven tests per client load the original and transformed GPS in one Lua runtime.
+  Original globals/API/settings/commands/bindings remain unchanged while GPS is dormant. GPS alone
+  has independent settings/API/media paths; switching enables the requested addon then reloads.
+  Combat and missing-original cases leave the working addon enabled.
 - Python tools compile successfully (an existing invalid-escape warning in `caves.py` is unrelated).
 
 The consolidated local run contained 32 successful check invocations. GPS core/integration were

@@ -4,6 +4,9 @@
 local _, ns = ...
 
 ns.MapChangelog = {
+	{ version = "v0.8.10-gps.2", date = "2026-11-16", heads = { [1] = "Improved", }, items = {
+		"|cff6e2c0aSeparate OpenMapGPS package:|r independent settings and commands; safe standby beside the original. /omgps use gps and /omgps use original switch maps with a UI reload.",
+	} },
 	{ version = "v0.8.10-gps.1", date = "2026-11-16", heads = { [1] = "New", }, items = {
 		"|cff6e2c0aCustom GPS test build:|r live directions, walking-trail recording and replay, and routing over saved trails. Alt-click the map, Shift-click a search result or use a pin's GPS button. No bundled road network or transport planning; unrecorded locations use direct guidance. By willcramer.",
 	} },
@@ -29,12 +32,5 @@ ns.MapChangelog = {
 		"|cff6e2c0aOpenMap's map with a controller|r (the game's Gamepad UI; a test, off until you turn it on in Options: \"OpenMap's map with the Gamepad UI (test)\"): the seamless map with the Gamepad UI on, where OpenMap leaves the world map to Blizzard. OpenMap draws its map over Blizzard's, so the controller's buttons keep working and B closes the map. The left stick moves the cursor (at the edge it pans), the right stick zooms about it, A zooms in or presses what's under the cursor, X zooms out or closes what's open, and pressing the left stick puts the waypoint there. Off (the default): Blizzard's map with the Gamepad UI, as before. If you play with a controller, try it and tell us how it goes (#57). By FlyingPenguin98.",
 		"|cff6e2c0aReopen the map on your zone|r (the menu's More tab, Reopen map: \"Center on your zone\"): the map opens on the whole zone you're in, in the middle, wherever you stand in it (#143).",
 		"|cff6e2c0a\"Darken unexplored areas\" keeps its soft edges up close|r: once the minimap's detail shows, the shade was hard-edged rectangles; it now has each unexplored area's own shape, as further out (#101, #129).",
-	} },
-	{ version = "v0.8.4", date = "2026-11-11", heads = { [1] = "Improved", [2] = "Fixed", }, items = {
-		"|cff6e2c0aYour party and raid get a gold-bordered dot|r on the stitched map, everywhere, so they can't be mistaken for a guild member's dot. Someone the game won't place is shown faintly in the middle of their zone, with \"Somewhere in\" on the tooltip. By KonigTX.",
-		"|cff6e2c0a\"Your arrow\" off also hides the yellow location ping|r when the world map opens or changes zones. Turning it on again restores the normal arrow and ping; party markers stay visible (#78). By Luquatic.",
-		"|cff6e2c0a\"Party and raid members\" off means off|r: Blizzard's own blips for your group are hidden too, not only OpenMap's dots (#77, found by Luquatic).",
-		"|cff6e2c0aDragging the map no longer zooms into a zone or city|r: a drag that came back near where it started counted as a click and zoomed into what was under the cursor, Ironforge from parts of Dun Morogh most of all (#37, #64).",
-		"|cff6e2c0aGuild markers clear when a guildmate joins your group|r: their shared-location dot or zone badge entry could stay when the guild roster and the party spelled the character's name differently. By puschie286.",
 	} },
 }

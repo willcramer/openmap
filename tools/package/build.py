@@ -7,7 +7,7 @@
 # the client's changelog: CHANGELOG.md, CHANGELOG-retail.md). The release workflow runs it for every
 # client (.github/workflows/release.yml), and curseforge.py uploads what it writes (docs/releasing.md).
 #
-# usage: python -P tools/package/build.py <version> [--client=forever|retail] [--dirty] [--no-tests]
+# usage: python -P tools/package/build.py <version> [--client=forever|retail] [--variant=gps] [--dirty] [--no-tests]
 #   <version>: as the changelogs head it, e.g. v0.5.0-beta
 #   --client: which client's zip (forever if not given)
 #   --dirty: allow uncommitted changes under OpenMap/ (the zip still takes the committed files)
@@ -17,10 +17,15 @@ ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 DIST = os.path.join(ROOT, "dist")
 sys.path.insert(0, os.path.join(ROOT, "tools"))
 import clients
+from package.variant import BOOTSTRAP, gps_transform
 client = next((a.split("=", 1)[1] for a in sys.argv[1:] if a.startswith("--client=")), "forever").lower()
 if client not in clients.CLIENTS:
     sys.exit("--client: one of " + ", ".join(sorted(clients.CLIENTS)))
 CLIENT = clients.CLIENTS[client]
+variant = next((a.split("=", 1)[1] for a in sys.argv[1:] if a.startswith("--variant=")), "normal").lower()
+if variant not in ("normal", "gps"):
+    sys.exit("--variant: normal or gps")
+addon = "OpenMapGPS" if variant == "gps" else "OpenMap"
 args = [a for a in sys.argv[1:] if not a.startswith("--")]
 if len(args) != 1:
     sys.exit(__doc__ or "usage: python -P tools/package/build.py <version> [--dirty] [--no-tests]")
@@ -47,7 +52,7 @@ if dirty and "--dirty" not in sys.argv:
 
 if "--no-tests" not in sys.argv:
     checks = [["-P", "tools/offline-test/lint.py"]] + [["tools/offline-test/run.py", m_] for m_ in ("plain", "combat", "secret", "pad", "padmap")]
-    checks += [["-P", "tools/offline-test/" + name + ".py"] for name in ("gps", "gps_integration")]
+    checks += [["-P", "tools/offline-test/" + name + ".py"] for name in ("gps", "gps_integration", "gps_package", "variant")]
     for c in checks:
         r = subprocess.run([sys.executable] + c, cwd=ROOT, capture_output=True, text=True,
                            env=dict(os.environ, OPENMAP_CLIENT=client))
@@ -62,9 +67,13 @@ others = [c for n, c in clients.CLIENTS.items() if n != client]
 skip = ["OpenMap/" + c["toc"] for c in others]
 skip_dirs = [d % c["folder"] for c in others for d in ("OpenMap/Data/%s/", "OpenMap/Media/Textures/%s/")]
 files = sorted(f for f in files if f and f not in skip and not any(f.startswith(d) for d in skip_dirs))
+if variant == "gps" and BOOTSTRAP not in files:
+    sys.exit(BOOTSTRAP + " must be committed before building the GPS variant")
+if variant == "normal":
+    files = [f for f in files if f != BOOTSTRAP]
 TOC = "OpenMap/" + CLIENT["toc"]
 os.makedirs(DIST, exist_ok=True)
-out = os.path.join(DIST, "OpenMap-%s-%s.zip" % (version, client))
+out = os.path.join(DIST, "%s-%s-%s.zip" % (addon, version, client))
 toc_seen = False
 with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED, compresslevel=9) as z:
     for f in files:
@@ -73,13 +82,16 @@ with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED, compresslevel=9) as z:
             assert b"@project-version@" in data, "the toc has no @project-version@"
             data = data.replace(b"@project-version@", version.encode())
             toc_seen = True
-        info = zipfile.ZipInfo(f, date_time=(2026, 1, 1, 0, 0, 0))
+        target = f
+        if variant == "gps":
+            target, data = gps_transform(f, data, TOC)
+        info = zipfile.ZipInfo(target, date_time=(2026, 1, 1, 0, 0, 0))
         info.compress_type = zipfile.ZIP_DEFLATED
         info.external_attr = 0o644 << 16
         z.writestr(info, data)
 if not toc_seen:
     sys.exit(TOC + " isn't committed")
-NOTES = os.path.join(DIST, "OpenMap-%s-%s-changelog.md" % (version, client))
+NOTES = os.path.join(DIST, "%s-%s-%s-changelog.md" % (addon, version, client))
 with open(NOTES, "w", encoding="utf-8", newline="\n") as f:
     f.write(notes)
 head = git("rev-parse", "--short", "HEAD").decode().strip()

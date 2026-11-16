@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## v0.8.10-gps.2 (2026-11-16)
+
+### Improved
+
+- **Separate OpenMapGPS package:** independent settings and commands; safe standby beside
+  the original. `/omgps use gps` and `/omgps use original` switch maps with a UI reload.
+
 ## v0.8.10-gps.1 (2026-11-16)
 
 ### New

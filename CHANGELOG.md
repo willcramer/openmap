@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+## v0.8.10-gps.2 (2026-11-16)
+
+### Improved
+
+- **Install beside the original:** the separate OpenMapGPS package uses its own folder,
+  settings, commands, frames, bindings and API. With both enabled, GPS stays in standby.
+  `/omgps use gps` and `/omgps use original` switch the active map with a UI reload.
+
 ## v0.8.10-gps.1 (2026-11-16)
 
 ### New

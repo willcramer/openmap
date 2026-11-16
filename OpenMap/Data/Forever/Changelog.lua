@@ -4,6 +4,9 @@
 local _, ns = ...
 
 ns.MapChangelog = {
+	{ version = "v0.8.10-gps.2", date = "2026-11-16", heads = { [1] = "Improved", }, items = {
+		"|cff6e2c0aInstall beside the original:|r the separate OpenMapGPS package uses its own folder, settings, commands, frames, bindings and API. With both enabled, GPS stays in standby. /omgps use gps and /omgps use original switch the active map with a UI reload.",
+	} },
 	{ version = "v0.8.10-gps.1", date = "2026-11-16", heads = { [1] = "New", }, items = {
 		"|cff6e2c0aCustom GPS test build:|r Alt-click the map, Shift-click a search result or press a map pin's GPS button for live directions with the map closed. Record walking trails and replay them once, in reverse, on a loop or back and forth. Saved trails supply a road network with turn guidance and rerouting. Locations without connected recorded roads use explicitly labeled direct guidance; transport itinerary planning and a bundled road network are not included. By willcramer.",
 	} },
@@ -40,16 +43,5 @@ ns.MapChangelog = {
 	{ version = "v0.8.6", date = "2026-11-12", heads = { [1] = "Improved", [2] = "Fixed", }, items = {
 		"|cff6e2c0aIcons stay shown while zooming|r: \"Fade icons while zooming\" is now off for everyone, as zooming is smooth enough with them shown; turn it on again in the menu's On the map tab if you prefer it.",
 		"|cff6e2c0aQuestie's icons show again with Questie 12.8|r: Questie 12.8 brings its map icons a new way (its own module, with a new name), which OpenMap didn't know, so they were left off the map; and each icon Questie drew again sank under the map's art, so they faded away one by one. Older Questie versions work as before (#18). With bv101rj. Questie 12.8 hides its objective icons (mobs to kill, items to loot) until you turn them on: /questie, Icon Options, Objectives.",
-	} },
-	{ version = "v0.8.5", date = "2026-11-12", heads = { [1] = "New", [4] = "Fixed", }, items = {
-		"|cff6e2c0aOpenMap's map with a controller|r (the game's Gamepad UI; a test, off until you turn it on in Options: \"OpenMap's map with the Gamepad UI (test)\"): the seamless map with the Gamepad UI on, where OpenMap leaves the world map to Blizzard. OpenMap draws its map over Blizzard's and leaves Blizzard's map as it is, so the controller's buttons keep working and closing the map with B is no longer blocked. The left stick moves the cursor (at the edge it pans), the right stick zooms about it, A zooms into a zone or presses the icon or button under the cursor, X zooms out or closes what's open, and pressing the left stick puts the waypoint there. On it: dungeons, boats, flight masters and their routes, your pins and the waypoint, your party, Questie's icons (with their tooltips), townsfolk and mob paths, other addons' icons (TomTom, gatherers), dungeon maps with their bosses, quests and loot, and the OpenMap menu with search, Find me, map pins, the quill (A puts the pen down, A lifts it) and Report a problem. Questie's icons no longer slow the map down there either. The D-pad's right opens the quest log, as on Blizzard's map. Off (the default): Blizzard's map with the Gamepad UI, as before. If you play with a controller, try it and tell us how it goes (#57). By FlyingPenguin98.",
-		"|cff6e2c0aWoW Forever's newest dungeons on the map|r: Krol'dok Stronghold, Alcaz Prison, Blackmaw Hold and Shaper's Terrace have their entrance pins (#142), and they and The Drowned City list their bosses. By puschie286.",
-		"|cff6e2c0aReopen the map on your zone|r (the menu's More tab, Reopen map: \"Center on your zone\"): the map opens on the whole zone you're in, in the middle, wherever you stand in it (#143).",
-		"|cff6e2c0aRagefire Chasm shows with \"Only places you've found\"|r once you've found Orgrimmar: an entrance inside a city is found with the city, whose own map has nothing to explore (#113).",
-		"|cff6e2c0aThe Drowned City's map opens inside it|r: opening the map in one of WoW Forever's own dungeons that the game's tables didn't list yet (The Drowned City, Krol'dok Stronghold, Shaper's Terrace) showed the world map instead of its drawn map. With puschie286.",
-		"|cff6e2c0a\"Darken unexplored areas\" keeps its soft edges up close|r: once the minimap's detail shows, the shade was hard-edged rectangles, and it changed as the minimap came in; it now has each unexplored area's own shape, as further out (#101, #129).",
-		"|cff6e2c0aCave maps whole|r: Blizzard's cave maps showed only the parts their pale floors give away, cut off along a straight line near the page's foot (Maraudon's entrance, Wailing Caverns', Night Web's Hollow ...); the caves' own rooms now say where they are, as was meant (#141).",
-		"|cff6e2c0aNo white diamonds at cave mouths|r: one of the game's own cave minimap pictures has a white block baked in over its tunnel's mouth, which showed up close at two caves in the Hinterlands (and one in Kalimdor); OpenMap now draws a mended copy (#114).",
-		"|cff6e2c0a/openmap forgetflights|r forgets the flight paths OpenMap remembers as learned for the character, for one counted wrongly (route planners read the list); the next flight master's map learns the real ones again (#153).",
 	} },
 }

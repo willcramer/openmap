@@ -8,14 +8,28 @@ No Forever Maps source, road data or art is included.
 
 ## Install
 
-1. Quit WoW and back up your current `Interface/AddOns/OpenMap` folder and OpenMap saved variables.
-2. Extract the Forever ZIP into your WoW Forever client's `Interface/AddOns` folder. The result
-   must be `Interface/AddOns/OpenMap/OpenMap.toc`, without an extra nested directory.
-3. Enable OpenMap on the character selection screen, log in, and enter `/console scriptErrors 1`.
-4. Type `/openmap gps`, or open the map's OpenMap menu and choose GPS.
+Use **OpenMapGPS-v0.8.10-gps.2-forever.zip**, the separate-addon build. The older gps.1 ZIP
+used the original addon's folder and should not be used for a side-by-side install.
+If you already installed gps.1 into `OpenMap`, reinstall the official OpenMap there first.
 
-The custom build replaces OpenMap; install only one copy. Other world map addons should be
-disabled for the first test. TomTom is optional. The build retains OpenMap's normal map and pins.
+1. Quit WoW. Leave your existing `Interface/AddOns/OpenMap` folder in place.
+2. Extract the Forever GPS ZIP into `Interface/AddOns`. The new folder must be
+   `Interface/AddOns/OpenMapGPS`, containing `OpenMapGPS.toc`.
+3. Enable **OpenMap GPS Test** in the AddOns list. You can leave the original enabled too:
+   the GPS addon stays in standby and the original controls the map.
+4. Enter `/omgps use gps` to test the GPS build. It disables the original for your current
+   character and reloads the UI. `/omgps use original` enables the original and reloads again;
+   GPS stays enabled in standby so you can switch back with the same command.
+
+Switch outside combat. You can always switch manually through the AddOns list and reload.
+The GPS build has independent `OpenMapGPSDB` and `OpenMapGPSCharDB` saved variables, its own
+named frames, key bindings, addon-message prefixes and public API (`OpenMapGPSAPI`). It does not
+read, copy or overwrite the original's settings. Its commands are `/openmapgps` and `/omgps`;
+the original retains `/openmap` and `/omap`.
+
+For example, `/omgps gps` opens the GPS controls, `/omgps gps record Elwynn road` starts a
+recording, and `/omgps gps save` saves it. `/console scriptErrors 1` enables error reports.
+TomTom is optional. The test build retains OpenMap's normal map and pins.
 
 ## First navigation
 
@@ -25,12 +39,12 @@ disabled for the first test. TomTom is optional. The build retains OpenMap's nor
 - Or set a waypoint normally and use the GPS controls to navigate to it.
 
 The arrow continues updating with the map closed. Stop GPS from its controls or with
-`/openmap gps stop`. The player still walks, boards vessels and operates the game normally.
+`/omgps gps stop`. The player still walks, boards vessels and operates the game normally.
 
 ## Record a road or farming route
 
-Start a recording with `/openmap gps record Elwynn road`, walk the road, then use
-`/openmap gps save`. Record another road starting at an existing junction to expand your network.
+Start a recording with `/omgps gps record Elwynn road`, walk the road, then use
+`/omgps gps save`. Record another road starting at an existing junction to expand your network.
 Routes are stored in OpenMap's account saved variables, while active guidance is temporary.
 Save before reloading or logging out: an unfinished recording is temporary too. Playback must
 start within 100 yards of its first point (the last point for reverse playback). The road planner
@@ -42,18 +56,18 @@ Commands:
 
 | Command | Action |
 | --- | --- |
-| `/openmap gps` | Open controls |
-| `/openmap gps waypoint` | Guide to the current waypoint |
-| `/openmap gps go 1429 42 65` | Guide to normalized map coordinates given as percentages |
-| `/openmap gps record Elwynn road` | Start recording |
-| `/openmap gps save` | Save recording |
-| `/openmap gps savepartial` | Explicitly save the recorded section before a detected gap |
-| `/openmap gps cancelrecord` | Discard unfinished recording |
-| `/openmap gps follow reverse Elwynn road` | Replay; modes: `once`, `reverse`, `loop`, `pingpong` |
-| `/openmap gps list` | List saved route names |
-| `/openmap gps delete Elwynn road` | Delete saved route |
-| `/openmap gps stop` | Stop navigation; recording is separate |
-| `/openmap gps status` | Print current status |
+| `/omgps gps` | Open controls |
+| `/omgps gps waypoint` | Guide to the current waypoint |
+| `/omgps gps go 1429 42 65` | Guide to normalized map coordinates given as percentages |
+| `/omgps gps record Elwynn road` | Start recording |
+| `/omgps gps save` | Save recording |
+| `/omgps gps savepartial` | Explicitly save the recorded section before a detected gap |
+| `/omgps gps cancelrecord` | Discard unfinished recording |
+| `/omgps gps follow reverse Elwynn road` | Replay; modes: `once`, `reverse`, `loop`, `pingpong` |
+| `/omgps gps list` | List saved route names |
+| `/omgps gps delete Elwynn road` | Delete saved route |
+| `/omgps gps stop` | Stop navigation; recording is separate |
+| `/omgps gps status` | Print current status |
 
 Flights or teleports interrupt road recording. The controls offer Save partial or Discard recording
 rather than adding the jump as a walkable road. Loops must end within 100 yards of their start;

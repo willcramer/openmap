@@ -105,8 +105,11 @@ boot:SetScript("OnEvent", function(self, event, name)
 			end)
 			Settings.RegisterAddOnCategory(Settings.RegisterCanvasLayoutCategory(panel, "OpenMap"))
 		end
-		SLASH_OPENMAP1, SLASH_OPENMAP2 = "/openmap", "/omap"
-		SlashCmdList.OPENMAP = Slash
+		if ns.ConfigureSlash then ns.ConfigureSlash(Slash)
+		else
+			SLASH_OPENMAP1, SLASH_OPENMAP2 = "/openmap", "/omap"
+			SlashCmdList.OPENMAP = Slash
+		end
 		self:UnregisterEvent("PLAYER_LOGIN")
 	end
 end)

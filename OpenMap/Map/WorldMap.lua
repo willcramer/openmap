@@ -1050,28 +1050,47 @@ local function PathTo()
 	return ok and started and true or false
 end
 
--- a left press that wandered off and came back isn't a click: Blizzard's test only compares where it
+-- A press that wandered off and came back isn't a click: Blizzard's test only compares where it
 -- went down with where it came up (about 4 pixels), so a drag back and forth over the map, or a slow
 -- one that ends near its start, zoomed into the zone or city under the cursor (#37, #64)
-local press = { moved = false }
+local press = { LeftButton = { moved = false }, RightButton = { moved = false } }
 local PRESS_SLOP_SQ = 20          -- (Blizzard's own click distance, squared: MAX_DIST_FOR_CLICK_SQ)
 local function PressDown(_, button)
-	if button ~= "LeftButton" then return end
-	press.x, press.y = sc:GetCursorPosition()
-	press.moved = false
+	local state = press[button]
+	if not state then return end
+	state.x, state.y = sc:GetCursorPosition()
+	state.moved = false
 end
 local function PressTrack()
-	if press.moved or not press.x or not sc.mouseButtonInfo.LeftButton.down then return end
-	local x, y = sc:GetCursorPosition()
-	local dx, dy = x - press.x, y - press.y
-	if dx * dx + dy * dy > PRESS_SLOP_SQ then press.moved = true end
+	for button, state in pairs(press) do
+		local info = sc.mouseButtonInfo[button]
+		if not state.moved and state.x and info and info.down then
+			local x, y = sc:GetCursorPosition()
+			local dx, dy = x - state.x, y - state.y
+			if dx * dx + dy * dy > PRESS_SLOP_SQ then state.moved = true end
+		end
+	end
 end
-local function WasDrag() return press.moved end
+local function WasDrag(button)
+	local state = press[button or "LeftButton"]
+	return state and state.moved or false
+end
 
 local function OnCanvasClick(from, button)
 	-- NeedRoll draws over a world-map host: a click must not select a zone underneath it.
 	if mod.instanceWorldHidden then return true end
 	if not active then return false end
+	if from and button == "RightButton" and WasDrag(button) then return true end
+	-- Controller X still zooms out. The menu is a mouse action, and tools keep
+	-- their own right-click behavior while drawing, dropping a pin or in a dungeon.
+	if from and button == "RightButton" and mod.db.mapRightClick == "menu" and mod.OpenLocationMenu
+		and not (mod.IsSketching and mod:IsSketching())
+		and not (mod.PinMode and mod.PinMode())
+		and not (mod.DungeonViewShown and mod.DungeonViewShown()) then
+		local cu, cv = mod.CursorWorld()
+		mod.OpenLocationMenu(cu, cv, sc)
+		return true
+	end
 	if button == "LeftButton" and mod.GPSGoWorld and IsAltKeyDown() and not WasDrag() then
 		mod.GPSGoWorld(mod.CursorWorld())
 		return true
@@ -1808,6 +1827,7 @@ function mod:Options()
 	}
 	if mod.ExtraOptions then mod:ExtraOptions(opts, get, set, off) end
 	if mod.NavOptions then mod:NavOptions(opts, get, set, off) end
+	if mod.ContextMenuOptions then mod:ContextMenuOptions(opts, get, set, off) end
 	if mod.GPSOptions then mod:GPSOptions(opts, get, off) end
 	if mod.PinOptions then mod:PinOptions(opts, get, set, off) end
 	if mod.FriendsOptions then mod:FriendsOptions(opts, get, set, off) end

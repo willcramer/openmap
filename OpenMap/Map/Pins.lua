@@ -628,10 +628,10 @@ end
 
 -- a new pin where the map was clicked: followed, and its card open for a note (your pins shown
 -- again if they were hidden: else it would be dropped out of sight)
-function mod.AddPin(mapID, x, y)
+function mod.AddPin(mapID, x, y, follow)
 	if mod.db.pinsHidden then mod.SetPinsHidden(false) end
 	local p = Add(mapID, x, y, "")
-	if mod.db.pinsFollowNew ~= false then Follow(p) end
+	if follow ~= false and mod.db.pinsFollowNew ~= false then Follow(p) end
 	fresh[p] = true
 	mod.RefreshPins()
 	Edit(p)

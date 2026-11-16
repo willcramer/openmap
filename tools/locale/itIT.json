@@ -638,5 +638,14 @@
  "Warn": "Avvisa",
  "You have arrived.": "Hai raggiunto la destinazione.",
  "Map settings copied to GPS.": "Impostazioni della mappa copiate in GPS.",
- "Map settings could not be copied.": "Impossibile copiare le impostazioni della mappa."
+ "Map settings could not be copied.": "Impossibile copiare le impostazioni della mappa.",
+ "Right-click on the map": "Clic destro sulla mappa",
+ "Zoom out": "Riduci zoom",
+ "Open location menu": "Apri menu della posizione",
+ "Choose whether right-click zooms out or opens waypoint, note and GPS actions.": "Scegli se il clic destro riduce lo zoom o apre le azioni per punto di passaggio, nota e GPS.",
+ "Place waypoint": "Imposta punto di passaggio",
+ "Add note": "Aggiungi nota",
+ "Go Here": "Vai qui",
+ "Original OpenMap is active. Disable it in the AddOns list and enable OpenMap GPS Test, then reload.": "L’OpenMap originale è attivo. Disattivalo nell’elenco degli addon, attiva OpenMap GPS Test e ricarica l’interfaccia.",
+ "Right-click opens location menu": "Il clic destro apre il menu della posizione"
 }

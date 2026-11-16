@@ -22,7 +22,7 @@ OpenMap stitches every zone map into one continuous map. Scroll out of Elwynn an
 - **Getting around.** Search for a zone, city, dungeon or flight master; a "Find me" button (or middle-click the map); choose how the map reopens; party and raid members are shown across the whole map. Or take your own arrow off the map and find your way old-school.
 - **Custom GPS test build:** live directions, recorded roads and reusable routes. Alt-click the map,
   Shift-click a search result, or use a pin's GPS button. The separate `OpenMapGPS` package installs
-  beside the original; `/omgps use gps` and `/omgps use original` switch maps with a reload.
+  beside the original as its own AddOn List entry; enable the map you want there and reload.
   `/omgps gps` opens the GPS controls. The Forever build includes 8,944 road nodes and associated
   room/floor data from Forever Maps, used with its author's permission.
   See [GPS setup and testing](docs/gps.md) for coverage and limits.

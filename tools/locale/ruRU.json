@@ -638,5 +638,14 @@
  "Warn": "Предупреждать",
  "You have arrived.": "Вы прибыли к цели.",
  "Map settings copied to GPS.": "Настройки карты скопированы в GPS.",
- "Map settings could not be copied.": "Не удалось скопировать настройки карты."
+ "Map settings could not be copied.": "Не удалось скопировать настройки карты.",
+ "Right-click on the map": "Правый щелчок по карте",
+ "Zoom out": "Отдалить",
+ "Open location menu": "Открыть меню места",
+ "Choose whether right-click zooms out or opens waypoint, note and GPS actions.": "Выберите, отдаляет ли правый щелчок карту или открывает действия для путевой точки, заметки и GPS.",
+ "Place waypoint": "Поставить путевую точку",
+ "Add note": "Добавить заметку",
+ "Go Here": "Идти сюда",
+ "Original OpenMap is active. Disable it in the AddOns list and enable OpenMap GPS Test, then reload.": "Оригинальный OpenMap активен. Отключите его в списке модификаций, включите OpenMap GPS Test и перезагрузите интерфейс.",
+ "Right-click opens location menu": "Правый щелчок открывает меню места"
 }

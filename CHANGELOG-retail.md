@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+## v0.8.10-gps.6 (2026-11-16)
+
+### Improved
+
+- **Independent GPS entry:** OpenMap GPS Test has its own AddOn List group; choose it manually
+  in AddOns. The quick-switch commands have been removed.
+- **Right-click location menu:** choose Zoom out or Open location menu in Options. The menu can
+  place a waypoint, add a note or start GPS at the clicked location.
+
 ## v0.8.10-gps.5 (2026-11-16)
 
 ### Improved

@@ -34,7 +34,14 @@ def gps_transform(path, data, toc):
         boot = False
         for line in text.splitlines():
             if line.startswith("## Title:"):
-                line = "## Title: |cffe6b85cOpenMap GPS Test|r"
+                lines.append("## Title: |cffe6b85cOpenMap GPS Test|r")
+                # Forever's AddonList uses Group to override C++'s automatic
+                # grouping of similarly named/dependent addons. It must match
+                # this addon's folder name, not its displayed title.
+                lines.append("## Group: OpenMapGPS")
+                continue
+            elif line.startswith("## Group:"):
+                continue
             elif line.startswith("## X-Curse-Project-ID:"):
                 continue
             elif line.startswith("## X-Website:"):

@@ -42,6 +42,7 @@ jobs:
       - run: python -P tools/offline-test/gps_roads.py
       - run: python -P tools/offline-test/gps_road_view.py
       - run: python -P tools/offline-test/gps_route_view.py
+      - run: python -P tools/offline-test/context_menu.py
       - run: python -P tools/offline-test/gps_native.py
       - run: python -P tools/offline-test/gps_bundled_integration.py
       - run: python -P tools/offline-test/gps_vertical.py

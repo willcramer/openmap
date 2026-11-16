@@ -76,11 +76,13 @@ AI coding agents: read [AGENTS.md](../AGENTS.md) too.
 ## Clients
 
 The custom GPS build can be packaged separately with
-`python -P tools/package/build.py v0.8.10-gps.5 --client=forever --variant=gps`.
+`python -P tools/package/build.py v0.8.10-gps.6 --client=forever --variant=gps`.
 `tools/package/variant.py` rewrites only the archive's addon identity; source and normal packages
 remain OpenMap. The variant's `BootGPS.lua` runs first and keeps all map code dormant while
-the original is loaded. Its switch command changes addon enable state and reloads; it never
-tries to remove existing map hooks at runtime. Libraries and art bytes are preserved.
+the original is loaded. Explicit `Group: OpenMapGPS` prevents the AddOn List from nesting it under
+the original, while the optional dependency keeps original-first load ordering. Select the active
+map in the AddOns list; there are no quick-switch commands. The explicit settings-import command
+still uses an internal reload handoff. Libraries and art bytes are preserved.
 
 OpenMap is built for more than one game client, each with its own map data and textures and
 one shared Lua codebase (`tools/clients.py` lists them, with their builds and products):

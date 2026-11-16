@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+## v0.8.10-gps.6 (2026-11-16)
+
+### Improved
+
+- **Independent AddOn List entry:** OpenMap GPS Test now has its own group. Choose the active
+  map through the AddOns list; `/omgps use gps` and `/omgps use original` have been removed.
+- **Right-click choice:** Options' Right-click on the map can keep Zoom out or open a location
+  menu with Place waypoint, Add note and Go Here. The menu remembers where you clicked. Notes
+  open the existing pin editor without replacing your active GPS waypoint.
+
 ## v0.8.10-gps.5 (2026-11-16)
 
 ### Improved

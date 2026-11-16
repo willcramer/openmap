@@ -106,6 +106,7 @@ Map\GPSNative.lua
 Map\GPSPanel.lua
 Map\Combat.lua
 Map\Pins.lua
+Map\ContextMenu.lua
 Map\Friends.lua
 Map\News.lua
 Map\Window.lua

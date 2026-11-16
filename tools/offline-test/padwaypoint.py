@@ -328,10 +328,11 @@ class PadMouseGPSInputTests(unittest.TestCase):
         self.lua.execute(STUB)
         self.lua.execute('''
             mx, my, alt = 600, 350, false
-            gpsCalls = {}
+            gpsCalls, menuCalls = {}, {}
             function GetCursorPosition() return mx, my end
             function IsAltKeyDown() return alt end
             function mod.GPSGoWorld(u,v) gpsCalls[#gpsCalls+1]={u,v} return true end
+            function mod.OpenLocationMenu(u,v,owner)menuCalls[#menuCalls+1]={u,v,owner}return true end
             function C_Map.GetMapInfo(id) return {mapType=Enum.UIMapType.Zone} end
             function S.ArtSize() return 1000,500 end
             function S.Stitched() return true end
@@ -425,6 +426,82 @@ class PadMouseGPSInputTests(unittest.TestCase):
             mod.GPSGoWorld=nil
             MouseClick()
             assert(#gpsCalls==0 and mod.Animating())
+        ''')
+
+    def test_right_click_menu_uses_actual_mouse_coordinates_and_view_owner(self):
+        self.lua.execute('''
+            mod.db.mapRightClick='menu'
+            MouseClick('RightButton')
+            assert(#menuCalls==1 and #gpsCalls==0 and not mod.Animating())
+            assert(math.abs(menuCalls[1][1]-.6)<1e-8 and math.abs(menuCalls[1][2]-.4)<1e-8)
+            assert(menuCalls[1][3]==mouseView)
+        ''')
+
+    def test_right_drag_out_and_back_does_not_pan_zoom_or_open_menu(self):
+        self.lua.execute('''
+            mod.db.mapRightClick='menu'
+            local u,v,zoom=mod.ViewNow()
+            MouseDown('RightButton')
+            mx=660 Tick()
+            mx=600 Tick()
+            MouseUp('RightButton')
+            local afterU,afterV,afterZoom=mod.ViewNow()
+            assert(afterU==u and afterV==v and afterZoom==zoom)
+            assert(#menuCalls==0 and #gpsCalls==0 and not mod.Animating())
+        ''')
+
+    def test_right_release_far_from_press_is_not_a_click_even_before_update(self):
+        self.lua.execute('''
+            mod.db.mapRightClick='menu'
+            MouseDown('RightButton')mx=660 MouseUp('RightButton')
+            assert(#menuCalls==0 and not mod.Animating())
+            MouseUp('RightButton')
+            assert(#menuCalls==0 and not mod.Animating())
+        ''')
+
+    def test_controller_x_remains_zoom_out_when_mouse_menu_is_enabled(self):
+        self.lua.execute('''
+            mod.db.mapRightClick='menu'
+            mod.ShowNow(.5,.5,2)
+            WorldMapFrame:NavigateToParentMap()
+            assert(#menuCalls==0 and mod.Animating())
+            Settle()
+            local _,_,zoom=mod.ViewNow()
+            assert(zoom<2)
+        ''')
+
+    def test_active_tools_and_dungeon_view_keep_their_right_click_behavior(self):
+        self.lua.execute('''
+            mod.db.mapRightClick='menu'
+            mod.IsSketching=function()return true end
+            local stopped=0
+            mod.ToggleSketch=function(_,on)assert(on==false)stopped=stopped+1 end
+            MouseClick('RightButton')
+            assert(stopped==1 and #menuCalls==0)
+            mod.IsSketching=nil
+            mod.PinMode=function()return true end
+            MouseClick('RightButton')
+            assert(#menuCalls==0)
+            mod.PinMode=nil
+            mod.DungeonViewShown=function()return true end
+            local closed=0
+            mod.CloseDungeonView=function()closed=closed+1 end
+            MouseClick('RightButton')
+            assert(closed==1 and #menuCalls==0)
+        ''')
+
+    def test_menu_disabled_or_unavailable_keeps_existing_mouse_zoom(self):
+        self.lua.execute('''
+            mod.db.mapRightClick='zoom'
+            MouseClick()
+            Settle()
+            MouseClick('RightButton')
+            assert(#menuCalls==0 and mod.Animating())
+            Settle()
+            mod.db.mapRightClick='menu'
+            mod.OpenLocationMenu=nil
+            MouseClick('RightButton')
+            assert(#menuCalls==0 and mod.Animating())
         ''')
 
 

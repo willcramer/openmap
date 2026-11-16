@@ -638,5 +638,14 @@
  "Warn": "警告",
  "You have arrived.": "你已到达目的地。",
  "Map settings copied to GPS.": "地图设置已复制到 GPS。",
- "Map settings could not be copied.": "无法复制地图设置。"
+ "Map settings could not be copied.": "无法复制地图设置。",
+ "Right-click on the map": "右键点击地图",
+ "Zoom out": "缩小",
+ "Open location menu": "打开位置菜单",
+ "Choose whether right-click zooms out or opens waypoint, note and GPS actions.": "选择右键点击是缩小地图，还是打开路径点、备注和 GPS 操作菜单。",
+ "Place waypoint": "设置路径点",
+ "Add note": "添加备注",
+ "Go Here": "前往此处",
+ "Original OpenMap is active. Disable it in the AddOns list and enable OpenMap GPS Test, then reload.": "原版 OpenMap 已启用。请在插件列表中禁用它并启用 OpenMap GPS Test，然后重新加载界面。",
+ "Right-click opens location menu": "右键点击打开位置菜单"
 }

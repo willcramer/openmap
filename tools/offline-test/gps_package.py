@@ -28,15 +28,26 @@ class GPSPackageTests(unittest.TestCase):
                 name, text = self.transform(path, (ROOT / path).read_text(), path)
                 self.assertEqual(name, "OpenMapGPS/" + toc.replace("OpenMap", "OpenMapGPS"))
                 self.assertIn("## Title: |cffe6b85cOpenMap GPS Test|r", text)
+                # AddonList's Group override makes this its own parent row,
+                # despite the similar name and optional load-order dependency.
+                self.assertEqual(re.findall(r"^## Group: (.+)$", text, re.M), ["OpenMapGPS"])
                 self.assertIn("## SavedVariables: OpenMapGPSDB\n", text)
                 self.assertIn("## SavedVariablesPerCharacter: OpenMapGPSCharDB\n", text)
                 self.assertIn("## OptionalDeps: OpenMap, ", text)
+                self.assertNotRegex(text, r"(?m)^## (?:Dependencies|RequiredDeps):.*\bOpenMap\b")
                 self.assertNotIn("X-Curse-Project-ID", text)
                 self.assertIn("## X-Website: https://github.com/willcramer/openmap", text)
                 files = [line for line in text.splitlines() if line.strip() and not line.startswith("#")]
                 self.assertEqual(files[0], "BootGPS.lua")
                 self.assertEqual(files.count("BootGPS.lua"), 1)
                 self.assertIn("OpenMapGPSIcon", text)
+
+    def test_explicit_group_replaces_inherited_group_without_changing_category(self):
+        source = "## Title: OpenMap\n## Group: OpenMap\n## Category: Map\n## OptionalDeps: Questie\nCore.lua\n"
+        _, text = self.transform("OpenMap/OpenMap.toc", source)
+        self.assertEqual(re.findall(r"^## Group: (.+)$", text, re.M), ["OpenMapGPS"])
+        self.assertIn("## Category: Map\n", text)
+        self.assertIn("## OptionalDeps: OpenMap, Questie\n", text)
 
     def test_runtime_names_saved_variables_slashes_and_paths_are_isolated(self):
         _, core = self.transform("OpenMap/Core.lua", (ROOT / "OpenMap/Core.lua").read_text())

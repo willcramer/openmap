@@ -4,6 +4,10 @@
 local _, ns = ...
 
 ns.MapChangelog = {
+	{ version = "v0.8.10-gps.6", date = "2026-11-16", heads = { [1] = "Improved", }, items = {
+		"|cff6e2c0aIndependent GPS entry:|r OpenMap GPS Test has its own AddOn List group; choose it manually in AddOns. The quick-switch commands have been removed.",
+		"|cff6e2c0aRight-click location menu:|r choose Zoom out or Open location menu in Options. The menu can place a waypoint, add a note or start GPS at the clicked location.",
+	} },
 	{ version = "v0.8.10-gps.5", date = "2026-11-16", heads = { [1] = "Improved", }, items = {
 		"|cff6e2c0aGPS route drawing:|r a solid green line follows the remaining waypoints from your current position, with distinct waypoint and destination nodes. It keeps its width while zooming.",
 		"|cff6e2c0aSettings import:|r /omgps sync settings copies shared OpenMap preferences through the original's live profile and returns to GPS, preserving GPS-specific settings and recordings.",
@@ -20,16 +24,5 @@ ns.MapChangelog = {
 	} },
 	{ version = "v0.8.10-gps.1", date = "2026-11-16", heads = { [1] = "New", }, items = {
 		"|cff6e2c0aCustom GPS test build:|r live directions, walking-trail recording and replay, and routing over saved trails. Alt-click the map, Shift-click a search result or use a pin's GPS button. No bundled road network or transport planning; unrecorded locations use direct guidance. By willcramer.",
-	} },
-	{ version = "v0.8.9", date = "2026-11-14", heads = { [1] = "New", [3] = "Improved", [4] = "Fixed", }, items = {
-		"|cff6e2c0aHide world markers in instances|r (the menu's On the map tab, and Options; off unless turned on): in dungeons, raids and battlegrounds, OpenMap's friends, guild, transport and all-zone quest markers step aside. With Dungeon maps off and another addon's dungeon map shown over the world (NeedRoll's), the world under it stops answering the mouse, and a right-click brings the world map back, at the dungeon's outdoor entrance (#232). By HonzoNebro.",
-		"|cff6e2c0aPin options|r (OpenMap's options, Moving about and Sharing): - |cff6e2c0aFollow new pins|r: on by default, as before. Off, a pin you drop doesn't become the waypoint, so addons that route to it (Shortest Path Forever) are left alone; the pin's Follow still sets it. - |cff6e2c0aSend new pins to group|r: a pin you drop goes to your party or raid once its card is closed. - |cff6e2c0aAuto-add group's pins|r: pins your party or raid shares are added without asking. By diegodiaz1256.",
-		"|cff6e2c0aThe controller view's switch in the map's menu too|r: \"OpenMap's map with the Gamepad UI (test)\" is under The map in OpenMap's menu as well as in Options (it was only in Esc > Options > AddOns, and a player took it for gone).",
-		"|cff6e2c0aOne arrow for you, not two|r: where OpenMap draws your arrow itself (the map underneath can't place you), Blizzard's arrow now steps aside, so the two no longer show a little apart (#229).",
-		"|cff6e2c0aQuests from the tracker open on their details|r: the first click on a tracked quest opened the map on the quest list; it shows the quest's text now (#224).",
-		"|cff6e2c0aThe map cooler on your graphics card|r: OpenMap's \"Map frame rate cap\" is now 60 by default (and set to 60 once for everyone): a still map was drawn as fast as the card could go (#233). Turn it off in Options if you'd rather.",
-		"|cff6e2c0aFade while moving fades while you steer with the mouse|r: the hidden cursor's last place over the map held it solid, so it hardly ever faded (#69).",
-		"|cff6e2c0aResizing the window keeps it where it is|r: it could jump to the screen's bottom left (#241).",
-		"|cff6e2c0aCity names in your language|r: Thunder Bluff's and Darnassus' name banners showed in English on other languages' clients; the zone map's own banner, in the client's language, is shown there now (#47).",
 	} },
 }

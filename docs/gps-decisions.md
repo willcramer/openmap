@@ -71,6 +71,17 @@
 
 ## Integration and parity
 
+- Give the GPS package explicit `Group: OpenMapGPS` metadata. Forever's AddOn List automatically
+  groups similar addon names/dependencies unless Group is overridden; making the group exactly
+  its own addon folder creates an independent entry. Keep optional original-first load ordering
+  to avoid two map implementations running together. Remove the user-facing quick-switch
+  commands; manual AddOns selection now chooses the map. Settings import retains its internal
+  temporary handoff because it must read the original live profile safely.
+- Keep right-click zoom as the default and offer a location menu as a preference, both in the
+  full options and the map menu's More tab. Capture the clicked map/coordinates before opening
+  the menu, not when selecting a row after the cursor has moved. Use the game's native menu
+  lifecycle for Escape, outside clicks and owner hiding. A note opens the pin editor without
+  replacing the waypoint; the three actions must remain distinct.
 - Draw the active journey as a solid green line through every remaining route point, with actual
   waypoint nodes and a larger destination. Reuse OpenMap's existing screen-sized line/pin pools.
   Update only the player connector while moving; rebuilding the whole route every tick was
@@ -92,7 +103,7 @@
 - Add Alt-click to the controller view's separate mouse handler using that view's actual mouse
   coordinates. Keep ordinary right-click zoom and existing tools; the reference's Go Here context
   menu is not implemented by this input fix.
-- Keep the isolated `OpenMapGPS` addon identity and standby/switching behavior from gps.2.
+- Keep the isolated `OpenMapGPS` addon identity and safe standby behavior from gps.2.
   Original OpenMap settings, commands and named frames stay separate.
 - Continue supporting existing pins, search, recorded routes and map-closed guidance. Imported
   data is read-only; user recordings remain separately saved.

@@ -28,8 +28,8 @@ local function Switch(target)
 		Print(L["Use the AddOns list to enable one map addon, then reload."])
 		return false
 	end
-	-- Keep the small GPS switch command loaded in standby when using the original.
-	-- OptionalDeps in the variant toc makes the original load first in that case.
+	-- This handoff is private to the explicit settings-import round trip.
+	-- Ordinary addon selection is controlled through the game's AddOns list.
 	local ok = pcall(function()
 		addons.EnableAddOn("OpenMapGPS", character)
 		if target == "gps" then addons.DisableAddOn("OpenMap", character)
@@ -132,11 +132,9 @@ end
 
 local function Command(text)
 	local command = (text or ""):match("^%s*(.-)%s*$"):lower()
-	if command == "use gps" then Switch("gps")
-	elseif command == "use original" then Switch("original")
-	elseif command == "sync settings" then SyncSettings()
+	if command == "sync settings" then SyncSettings()
 	elseif ns.variantDormant then
-		Print(L["Original OpenMap is active. /omgps use gps switches to the GPS build and reloads; /omgps use original switches back."])
+		Print(L["Original OpenMap is active. Disable it in the AddOns list and enable OpenMap GPS Test, then reload."])
 	elseif dispatch then dispatch(text)
 	else Print(L["OpenMap GPS is still loading."]) end
 end

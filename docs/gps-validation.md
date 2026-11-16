@@ -1,6 +1,6 @@
 # GPS road-network validation
 
-Candidate: **v0.8.10-gps.5**, Forever Maps dataset **2.0.166**, separate addon **OpenMapGPS**.
+Candidate: **v0.8.10-gps.6**, Forever Maps dataset **2.0.166**, separate addon **OpenMapGPS**.
 This is an offline-verified test build. No live game-client verification is claimed.
 
 ## Data and routing
@@ -33,7 +33,7 @@ This is an offline-verified test build. No live game-client verification is clai
 ## OpenMap integration and installation
 
 - All six loader modes, navigation and controller-waypoint checks pass for Forever and Retail.
-  Existing focused tests also pass. The consolidated local run has 43 successful invocations.
+  Existing focused tests also pass. The consolidated local run has 44 successful invocations.
 - Nine GPS core and seven original integration tests preserve recording, playback modes,
   partial-save handling, arrival, rerouting and external waypoint ownership.
 - Twelve bundled full-addon integration tests pass on Forever (ten plus two source-only skips on
@@ -45,10 +45,11 @@ This is an offline-verified test build. No live game-client verification is clai
   completed segment removal and reuse of drawing regions. Both route renderers retain all bends
   for valid routes within a 25,000-point budget; the optional network views still use at most
   800 markers on each canvas. Unprojectable points and continent gaps do not become shortcuts.
-- Seven package-transform and sixteen coexistence/switch/settings tests check both clients. The original and
+- Eight package-transform and sixteen coexistence/settings tests check both clients. The original and
   GPS addon load in the same Lua runtime without sharing saved variables, API, commands, frames,
-  bindings or message prefixes. Original-first loading leaves GPS dormant. Switching changes
-  character enable state and reloads; combat and missing-original cases leave the working addon on.
+  bindings or message prefixes. Original-first loading leaves GPS dormant. Explicit Group metadata
+  gives GPS its own AddOn List entry. Quick-switch commands are absent and do not change enable
+  state or reload; manual selection is through AddOns. Only settings import uses an internal handoff.
 - Six settings-import cases cover the active-GPS-to-original-to-GPS reload round trip, deep-copy
   isolation, supported preference fields, preserving GPS recordings/options/user data, missing
   original/combat/save failures and consuming failed requests without a login loop. Shared
@@ -57,12 +58,14 @@ This is an offline-verified test build. No live game-client verification is clai
   enable changes. gps.4 uses the GUID and saves before reloading, matching the Forever AddOns UI.
   Regression tests model pending/committed GUID-specific states and rebuild the Lua runtime from
   the committed selection to check GPS activation and switching back to original standby.
-- Seven additional mouse-input cases exercise the complete controller view's actual mouse scripts:
-  Alt-click at the mouse rather than controller cursor, drag suppression, ordinary zoom, and
-  drawing/pin/dungeon tools. All 24 controller-waypoint/input tests pass.
+- Eighteen press tests and thirty controller-waypoint/input tests cover Alt-click GPS, right-click
+  menu selection, independent right-drag suppression, ordinary zoom, controller zoom buttons and
+  drawing/pin/dungeon tools. Twelve context-menu tests cover captured target coordinates, the
+  three actions, stale callback revocation, Escape/outside/owner-hide behavior, native Zephras
+  input and note-only pin creation without replacing an active waypoint.
 - Python tools compile; Lua lint passes. New output is generated through its importer, changelog
   builder or locale builder. The package builder reruns the routing and coexistence checks.
-- All 96 GPS strings have translations in each of the ten supported locales. Placeholder and
+- New GPS/context-menu strings have translations in each of the ten supported locales. Placeholder and
   command checks report zero problems. Six pre-existing unrelated strings remain untranslated.
   Standby/bootstrap messages can fall back to English before active locale tables are loaded.
 

@@ -116,17 +116,16 @@ class VariantTests(unittest.TestCase):
             assert(type(SlashCmdList.OPENMAPGPS) == 'function')
         """)
 
-    def test_dormant_switch_to_gps_changes_enable_state_then_reloads(self):
+    def test_removed_quick_switch_commands_do_not_change_dormant_selection(self):
         self.load()
         self.load(gps=True)
         self.login()
         self.lua.execute("""
             SlashCmdList.OPENMAPGPS('use gps')
-            assert(#addonChanges == 2)
-            assert(addonChanges[1] == 'enable:OpenMapGPS' and addonChanges[2] == 'disable:OpenMap')
-            assert(reloads == 1)
-            assert(saves == 1 and committed.OpenMap == false and committed.OpenMapGPS == true)
-            assert(gpsNS.variantDormant, 'switch tried to hot-swap map hooks before reload')
+            SlashCmdList.OPENMAPGPS('use original')
+            assert(#addonChanges==0 and reloads==0 and saves==0)
+            assert(committed.OpenMap and committed.OpenMapGPS and gpsNS.variantDormant)
+            assert(LOG[#LOG]:find('Disable it in the AddOns list',1,true))
         """)
 
     def test_active_variant_has_separate_saved_state_api_commands_and_media(self):
@@ -151,32 +150,38 @@ class VariantTests(unittest.TestCase):
             assert(#LOG > before, 'GPS slash callback lost during Init')
         """)
 
-    def test_active_variant_switches_back_while_retaining_standby_command(self):
+    def test_removed_quick_switch_commands_do_not_change_active_selection(self):
         self.load(gps=True)
         self.login()
         self.lua.execute("""
+            forwarded={}
+            gpsNS.ConfigureSlash(function(text)forwarded[#forwarded+1]=text end)
             SlashCmdList.OPENMAPGPS('use original')
-            assert(#addonChanges == 2 and addonChanges[1] == 'enable:OpenMapGPS')
-            assert(addonChanges[2] == 'enable:OpenMap' and reloads == 1)
-            assert(saves == 1 and committed.OpenMap == true and committed.OpenMapGPS == true)
+            SlashCmdList.OPENMAPGPS('use gps')
+            assert(#addonChanges==0 and reloads==0 and saves==0)
+            assert(forwarded[1]=='use original' and forwarded[2]=='use gps',
+                'bootstrap still intercepts a removed quick-switch command')
+            assert(not gpsNS.variantDormant and OpenMapGPSAPI)
         """)
 
-    def test_switch_refuses_combat_without_changing_addon_state(self):
+    def test_settings_handoff_refuses_combat_without_changing_addon_state(self):
         self.load(gps=True)
         self.login()
         self.lua.execute("""
             IN_COMBAT = true
-            SlashCmdList.OPENMAPGPS('use original')
+            SlashCmdList.OPENMAPGPS('sync settings')
             assert(#addonChanges == 0 and reloads == 0)
         """)
 
-    def test_missing_original_does_not_disable_the_working_variant(self):
+    def test_gps_runs_without_the_original_installed_or_enabled(self):
+        self.lua.execute("originalExists=false; committed.OpenMap=false; pending.OpenMap=false")
         self.load(gps=True)
         self.login()
         self.lua.execute("""
-            originalExists = false
-            SlashCmdList.OPENMAPGPS('use original')
+            assert(not gpsNS.variantDormant and OpenMapGPSAPI)
+            SlashCmdList.OPENMAPGPS('gps status')
             assert(#addonChanges == 0 and reloads == 0)
+            assert(not committed.OpenMap and committed.OpenMapGPS)
         """)
 
     def test_dormant_key_bindings_are_safe_without_variant_map_functions(self):
@@ -187,24 +192,21 @@ class VariantTests(unittest.TestCase):
             self.lua.execute(body)
         self.lua.execute("assert(#ERRORS == 0, ERRORS[1])")
 
-    def test_switch_survives_reload_into_gps_then_original_standby(self):
+    def test_manual_addon_selection_controls_gps_and_original_standby(self):
         self.load()
         self.load(gps=True)
         self.login()
-        self.lua.execute("SlashCmdList.OPENMAPGPS('use gps')")
-        enabled = self.lua.globals().committed
-        self.assertFalse(enabled.OpenMap)
-        self.assertTrue(enabled.OpenMapGPS)
+        self.lua.execute("assert(gpsNS.variantDormant and reloads==0 and saves==0)")
 
-        # Reload reconstructs addon loading from the saved GUID-specific list.
+        # Reconstruct a reload after the user chooses GPS in the AddOns list.
         self.setUp()
         self.lua.execute("pending.OpenMap=false; committed.OpenMap=false")
         self.load(gps=True)
         self.login()
         self.lua.execute("""
             assert(not gpsNS.variantDormant and OpenMapGPSAPI)
-            SlashCmdList.OPENMAPGPS('use original')
-            assert(committed.OpenMap and committed.OpenMapGPS)
+            assert(not committed.OpenMap and committed.OpenMapGPS)
+            assert(reloads==0 and saves==0)
         """)
 
         self.setUp()
@@ -213,25 +215,25 @@ class VariantTests(unittest.TestCase):
         self.login()
         self.lua.execute("assert(gpsNS.variantDormant and OpenMapAPI)")
 
-    def test_missing_character_guid_or_save_api_does_not_reload(self):
+    def test_missing_character_guid_or_save_api_prevents_settings_handoff(self):
         self.load(gps=True)
         self.login()
         self.lua.execute("""
             UnitGUID=function() return nil end
-            SlashCmdList.OPENMAPGPS('use gps')
+            SlashCmdList.OPENMAPGPS('sync settings')
             assert(#addonChanges==0 and saves==0 and reloads==0)
             UnitGUID=function() return 'Player-1-0001' end
             C_AddOns.SaveAddOns=nil
-            SlashCmdList.OPENMAPGPS('use gps')
+            SlashCmdList.OPENMAPGPS('sync settings')
             assert(#addonChanges==0 and saves==0 and reloads==0)
         """)
 
-    def test_failed_save_does_not_claim_a_reload_will_switch_addons(self):
+    def test_failed_save_does_not_reload_the_settings_handoff(self):
         self.load(gps=True)
         self.login()
         self.lua.execute("""
             C_AddOns.SaveAddOns=function() error('save failed') end
-            SlashCmdList.OPENMAPGPS('use gps')
+            SlashCmdList.OPENMAPGPS('sync settings')
             assert(reloads==0 and saves==0 and committed.OpenMap==true)
         """)
 

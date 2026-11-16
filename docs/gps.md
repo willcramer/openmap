@@ -10,27 +10,26 @@ routing implementation or art is included. See the [data notice](../OpenMap/Data
 
 ## Install
 
-Use **OpenMapGPS-v0.8.10-gps.5-forever.zip**, the separate-addon build. The older gps.1 ZIP
+Use **OpenMapGPS-v0.8.10-gps.6-forever.zip**, the separate-addon build. The older gps.1 ZIP
 used the original addon's folder and should not be used for a side-by-side install.
 If you already installed gps.1 into `OpenMap`, reinstall the official OpenMap there first.
 
 1. Quit WoW. Leave your existing `Interface/AddOns/OpenMap` folder in place.
 2. Extract the Forever GPS ZIP into `Interface/AddOns`. The new folder must be
    `Interface/AddOns/OpenMapGPS`, containing `OpenMapGPS.toc`.
-3. Enable **OpenMap GPS Test** in the AddOns list. You can leave the original enabled too:
-   the GPS addon stays in standby and the original controls the map.
-4. Enter `/omgps use gps` to test the GPS build. It disables the original for your current
-   character and reloads the UI. `/omgps use original` enables the original and reloads again;
-   GPS stays enabled in standby so you can switch back with the same command.
+3. Restart the client after updating to refresh its AddOn List metadata. **OpenMap GPS Test** has
+   its own entry, rather than being nested under OpenMap.
+4. In AddOns, enable **OpenMap GPS Test** and disable original **OpenMap**, then reload. To use
+   the original again, enable it and disable GPS Test in that same list.
 
-Switch outside combat. You can always switch manually through the AddOns list and reload.
-If updating from gps.3, first `/reload` to load the corrected switcher, then run `/omgps use gps`.
-If a GPS command says Original OpenMap is active, GPS is in standby and its map controls are not
-running. The gps.3 switcher could reload without actually switching the current character;
-gps.4 saves the GUID-specific selection before reloading.
+The quick-switch commands were removed in gps.6. Both entries are independently selectable.
+If both are enabled, the original loads first and GPS remains in standby to avoid duplicate map
+implementations. A message that Original OpenMap is active means you must select GPS in AddOns.
+The original is an optional load-order dependency, not a required addon; GPS runs on its own.
 The GPS build has independent `OpenMapGPSDB` and `OpenMapGPSCharDB` saved variables, its own
-named frames, key bindings, addon-message prefixes and public API (`OpenMapGPSAPI`). It does not
-read, copy or overwrite the original's settings. Its commands are `/openmapgps` and `/omgps`;
+named frames, key bindings, addon-message prefixes and public API (`OpenMapGPSAPI`). Settings stay
+separate; the original's preferences are read only by the explicit import command below.
+Its commands are `/openmapgps` and `/omgps`;
 the original retains `/openmap` and `/omap`.
 
 For example, `/omgps gps` opens the GPS controls, `/omgps gps record Elwynn road` starts a
@@ -56,9 +55,18 @@ not a shared saved-variable store or automatic ongoing synchronization.
 - Open one of your map pins and press GPS.
 - Or set a waypoint normally and use the GPS controls to navigate to it.
 
-Ordinary right-click retains OpenMap's zoom-out action. This build does not have a right-click
-Go Here context menu. Alt-left-click empty terrain; click an existing OpenMap pin normally and
-press GPS in its card. Controller-view mouse input supports the same Alt-click shortcut.
+Right-click zooms out by default. To use the location menu, open `/omgps`, choose **More**, and
+enable **Right-click opens location menu** under **Moving about**. The full option **Right-click
+on the map** also offers **Zoom out** and **Open location menu**. Changes take effect immediately.
+
+Right-click empty terrain to choose **Place waypoint**, **Add note** or **Go Here**. The action
+uses the location where you opened the menu, even if you move the cursor afterward. Add note opens
+the existing pin editor without changing your current waypoint or stopping GPS. Go Here starts
+GPS navigation to that location. The same behavior is supported by the controller view's mouse
+and native Zephras maps; controller zoom buttons retain their existing behavior.
+
+Alt-left-click remains a shortcut. Click an existing OpenMap pin normally and press GPS in its
+card. Drawing tools, pin placement modes and dungeon overlays keep their own input behavior.
 
 The arrow continues updating with the map closed. Stop GPS from its controls or with
 `/omgps gps stop`. The player still walks, boards vessels and operates the game normally.
@@ -165,8 +173,12 @@ GPS must not replace that addon's destination.
    that the route does not finish until you reach the indicated floor. Test Brill's upper platform
    when possible, and the Ruins above Undercity separately from the city below.
 10. Check a faction border: stop before the enemy road, then enable Allow enemy roads to resume.
-    Test a Zephras waypoint on its native map. Switch back with `/omgps use original`, confirm the
-    original settings and map, and switch to GPS again.
+    Test a Zephras waypoint on its native map. Select the original in AddOns, confirm its settings
+    and map, then select GPS Test again. Confirm neither quick-switch command changes addon state.
+11. Toggle Right-click opens location menu. Check zoom-out when off and all three actions when on.
+    Move the cursor after opening the menu and confirm the action still uses the original point.
+    While navigating, add a note and confirm the GPS destination stays intact. Test Escape and
+    clicking outside the menu, map close/reopen, and the native/controller map when available.
 
 Offline tests cover the Lua logic and stubbed client behavior. Arrow alignment, actual protected
 API behavior, terrain, and the live window layout still require this game-client test.

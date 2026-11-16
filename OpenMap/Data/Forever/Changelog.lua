@@ -4,6 +4,10 @@
 local _, ns = ...
 
 ns.MapChangelog = {
+	{ version = "v0.8.10-gps.6", date = "2026-11-16", heads = { [1] = "Improved", }, items = {
+		"|cff6e2c0aIndependent AddOn List entry:|r OpenMap GPS Test now has its own group. Choose the active map through the AddOns list; /omgps use gps and /omgps use original have been removed.",
+		"|cff6e2c0aRight-click choice:|r Options' Right-click on the map can keep Zoom out or open a location menu with Place waypoint, Add note and Go Here. The menu remembers where you clicked. Notes open the existing pin editor without replacing your active GPS waypoint.",
+	} },
 	{ version = "v0.8.10-gps.5", date = "2026-11-16", heads = { [1] = "Improved", }, items = {
 		"|cff6e2c0aGreen GPS route:|r a continuous line joins the remaining waypoint nodes, with a larger destination marker. Its leading segment follows your current position. The line keeps its width while zooming and works on the stitched map, controller view and native Zephras maps.",
 		"|cff6e2c0aImport original map settings:|r /omgps sync settings copies relevant appearance, window, filter and control preferences from original OpenMap, then returns to GPS. It switches through the original with UI reloads to read its live profile. GPS routes and GPS-specific options, recordings and map-pin data remain separate.",
@@ -21,27 +25,5 @@ ns.MapChangelog = {
 	} },
 	{ version = "v0.8.10-gps.1", date = "2026-11-16", heads = { [1] = "New", }, items = {
 		"|cff6e2c0aCustom GPS test build:|r Alt-click the map, Shift-click a search result or press a map pin's GPS button for live directions with the map closed. Record walking trails and replay them once, in reverse, on a loop or back and forth. Saved trails supply a road network with turn guidance and rerouting. Locations without connected recorded roads use explicitly labeled direct guidance; transport itinerary planning and a bundled road network are not included. By willcramer.",
-	} },
-	{ version = "v0.8.9", date = "2026-11-14", heads = { [1] = "New", [4] = "Improved", [9] = "Fixed", }, items = {
-		"|cff6e2c0aHide world markers in instances|r (the menu's On the map tab, and Options; off unless turned on): in dungeons, raids and battlegrounds, OpenMap's friends, guild, transport and all-zone quest markers step aside. With Dungeon maps off and another addon's dungeon map shown over the world (NeedRoll's), the world under it stops answering the mouse, and a right-click brings the world map back, at the dungeon's outdoor entrance (#232). By HonzoNebro.",
-		"|cff6e2c0aPin options|r (OpenMap's options, Moving about and Sharing): - |cff6e2c0aFollow new pins|r: on by default, as before. Off, a pin you drop doesn't become the waypoint, so addons that route to it (Shortest Path Forever) are left alone; the pin's Follow still sets it. - |cff6e2c0aSend new pins to group|r: a pin you drop goes to your party or raid once its card is closed. - |cff6e2c0aAuto-add group's pins|r: pins your party or raid shares are added without asking. By diegodiaz1256.",
-		"|cff6e2c0aA map of Blackmaw Hold|r, drawn by Santiago Reyes: all six of its floors, from Blackmaw Grove and the Festering Grotto down to the Depths of Forbidden Magic (the floor list at the top of the dungeon's map, or its arrows). (New textures: restart the game.)",
-		"|cff6e2c0aCity of Dalaran's map is Santiago Reyes's updated version, with the Underbelly|r, where the dungeon starts, as a second floor (#220). Opened inside the dungeon, the map shows the floor you're on.",
-		"|cff6e2c0aShaper's Terrace's map is Santiago Reyes's final version, with the Prismatic Talus|r as a second floor.",
-		"|cff6e2c0aThe controller view's switch in the map's menu too|r: \"OpenMap's map with the Gamepad UI (test)\" is under The map in OpenMap's menu as well as in Options (it was only in Esc > Options > AddOns, and a player took it for gone).",
-		"|cff6e2c0aQuestie's quest icons in front|r: a \"!\" or \"?\" is no longer hidden under a flight master or a dungeon's icon; Questie's townsfolk stay under OpenMap's icons (#92).",
-		"|cff6e2c0aA word about MapUtils|r: with MapUtils on, OpenMap says once in chat that the two both change the map's zoom, which made the map and Blizzard's quest areas jump while zooming (#160).",
-		"|cff6e2c0aOne arrow for you, not two|r: where OpenMap draws your arrow itself (the map underneath can't place you), Blizzard's arrow now steps aside, so the two no longer show a little apart (#229).",
-		"|cff6e2c0aQuests from the tracker open on their details|r: the first click on a tracked quest opened the map on the quest list; it shows the quest's text now (#224).",
-		"|cff6e2c0aThe map cooler on your graphics card|r: OpenMap's \"Map frame rate cap\" is now 60 by default (and set to 60 once for everyone): a still map was drawn as fast as the card could go (#233). Turn it off in Options if you'd rather.",
-		"|cff6e2c0aFade while moving fades while you steer with the mouse|r: the hidden cursor's last place over the map held it solid, so it hardly ever faded (#69).",
-		"|cff6e2c0aResizing the window keeps it where it is|r: it could jump to the screen's bottom left (#241).",
-		"|cff6e2c0aNighthaven's flight master shows for druids only|r, as only druids can fly from it (#222).",
-		"|cff6e2c0aThe controller view takes the mouse too|r (OpenMap's map with the Gamepad UI): the wheel zooms, a drag pans, and a click works as A (left) or X (right) (#234).",
-		"|cff6e2c0aCity names in your language|r: Thunder Bluff's and Darnassus' name banners showed in English on other languages' clients; the zone map's own banner, in the client's language, is shown there now (#47).",
-		"|cff6e2c0aYour quests' icons show in the controller view|r (Options' \"OpenMap's map with the Gamepad UI\"): there were none, and no tooltips. Every quest in your log is now OpenMap's icon there, at any zoom, in every zone (with \"Quests from every zone\" off: the zone Blizzard's map is on); A tracks the quest and zooms to it. The \"!\" of quests you can start in that zone are there too, with the quest's name on the tooltip. The shaded quest areas aren't on it yet (#225). By k4m1.",
-		"|cff6e2c0aZygor's map line stays thick on the stitched map|r: Zygor's route line (and its dots and waypoint icons) shrank to a thin grey line zoomed in and grew far too wide zoomed out, as Zygor sizes them for Blizzard's zoom range; they now stay the same size on screen at every zoom (#218). By rogeriocamorim.",
-		"|cff6e2c0aGilneas shows on every language's client|r: on the Russian and Latin American Spanish clients Gilneas was a solid green square, as the game doesn't have its map's art in those languages (as with the dungeon and cave maps before v0.8.5). OpenMap now brings those tiles itself (#152). Found and tested by XaksFlaX. (New textures: restart the game.)",
-		"|cff6e2c0aDungeon level ranges|r: the dungeons' levels on the map are now the ones the game's Group Finder gives (each Scarlet Monastery and Dire Maul wing its own); they were an old level each, five levels wide, and some were far off: Razorfen Kraul showed 24-29 for a dungeon of 29-38 (#201). By ConfusionOrb221.",
 	} },
 }

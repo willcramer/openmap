@@ -10,7 +10,7 @@ routing implementation or art is included. See the [data notice](../OpenMap/Data
 
 ## Install
 
-Use **OpenMapGPS-v0.8.10-gps.4-forever.zip**, the separate-addon build. The older gps.1 ZIP
+Use **OpenMapGPS-v0.8.10-gps.5-forever.zip**, the separate-addon build. The older gps.1 ZIP
 used the original addon's folder and should not be used for a side-by-side install.
 If you already installed gps.1 into `OpenMap`, reinstall the official OpenMap there first.
 
@@ -37,6 +37,18 @@ For example, `/omgps gps` opens the GPS controls, `/omgps gps record Elwynn road
 recording, and `/omgps gps save` saves it. `/console scriptErrors 1` enables error reports.
 TomTom is optional. The test build retains OpenMap's normal map and pins.
 
+### Copy the original's preferences
+
+After updating, `/reload` once, then run `/omgps sync settings` outside combat. GPS switches to
+original OpenMap, copies shared display/window/filter/control preferences from its live profile,
+and switches back to GPS. This involves two automatic UI reloads. The completion message confirms
+when the copy has actually happened; installing the update alone does not copy settings.
+
+The original's profile is read, not edited. GPS routing options, recorded trails, HUD positions,
+pins and drawings are preserved. Temporary navigation state, performance reports, cached flight
+data and other addon-specific records are not imported. This is a one-time copy when requested,
+not a shared saved-variable store or automatic ongoing synchronization.
+
 ## First navigation
 
 - Alt-left-click a destination on the map.
@@ -50,6 +62,11 @@ press GPS in its card. Controller-view mouse input supports the same Alt-click s
 
 The arrow continues updating with the map closed. Stop GPS from its controls or with
 `/omgps gps stop`. The player still walks, boards vessels and operates the game normally.
+
+While navigating, a solid green line connects your current position to the remaining waypoint
+nodes. The destination has a larger marker. Passed sections disappear as guidance advances;
+rerouting replaces the remaining line. Line width and node size stay steady while zooming.
+This drawing works on the stitched map and controller view and on Zephras's native map.
 
 ## Record a road or farming route
 

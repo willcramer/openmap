@@ -76,7 +76,7 @@ AI coding agents: read [AGENTS.md](../AGENTS.md) too.
 ## Clients
 
 The custom GPS build can be packaged separately with
-`python -P tools/package/build.py v0.8.10-gps.4 --client=forever --variant=gps`.
+`python -P tools/package/build.py v0.8.10-gps.5 --client=forever --variant=gps`.
 `tools/package/variant.py` rewrites only the archive's addon identity; source and normal packages
 remain OpenMap. The variant's `BootGPS.lua` runs first and keeps all map code dormant while
 the original is loaded. Its switch command changes addon enable state and reloads; it never

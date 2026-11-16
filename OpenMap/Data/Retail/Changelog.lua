@@ -4,6 +4,10 @@
 local _, ns = ...
 
 ns.MapChangelog = {
+	{ version = "v0.8.10-gps.5", date = "2026-11-16", heads = { [1] = "Improved", }, items = {
+		"|cff6e2c0aGPS route drawing:|r a solid green line follows the remaining waypoints from your current position, with distinct waypoint and destination nodes. It keeps its width while zooming.",
+		"|cff6e2c0aSettings import:|r /omgps sync settings copies shared OpenMap preferences through the original's live profile and returns to GPS, preserving GPS-specific settings and recordings.",
+	} },
 	{ version = "v0.8.10-gps.4", date = "2026-11-16", heads = { [1] = "Fixed", }, items = {
 		"|cff6e2c0aGPS addon switching:|r save the current character's addon selection before reloading so /omgps use gps activates GPS and /omgps use original restores the original.",
 		"|cff6e2c0aController-view mouse input:|r Alt-click starts GPS without changing ordinary zoom or active drawing/pin tools.",
@@ -27,9 +31,5 @@ ns.MapChangelog = {
 		"|cff6e2c0aFade while moving fades while you steer with the mouse|r: the hidden cursor's last place over the map held it solid, so it hardly ever faded (#69).",
 		"|cff6e2c0aResizing the window keeps it where it is|r: it could jump to the screen's bottom left (#241).",
 		"|cff6e2c0aCity names in your language|r: Thunder Bluff's and Darnassus' name banners showed in English on other languages' clients; the zone map's own banner, in the client's language, is shown there now (#47).",
-	} },
-	{ version = "v0.8.8", date = "2026-11-13", heads = { [1] = "Fixed", }, items = {
-		"|cff6e2c0aParty and raid markers stay steady|r: one marker per member, moving smoothly. OpenMap's ring now follows Blizzard's own dot where the game places a member, instead of a second dot of its own that lagged behind it; elsewhere OpenMap's dot keeps its highlight and tooltip as it moves. The ring is now a thin gold edge (the wide one round a dark gap read as a target: #158, #170). By puschie286.",
-		"|cff6e2c0aFriends on the map: your own faction only.|r Your place is only shared with, and shown from, players of your own faction: Battle.net friends on the other faction no longer see where you are, nor you them (a player's report: it let Horde and Alliance find each other for PvP).",
 	} },
 }

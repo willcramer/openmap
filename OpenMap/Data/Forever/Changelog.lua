@@ -4,6 +4,10 @@
 local _, ns = ...
 
 ns.MapChangelog = {
+	{ version = "v0.8.10-gps.5", date = "2026-11-16", heads = { [1] = "Improved", }, items = {
+		"|cff6e2c0aGreen GPS route:|r a continuous line joins the remaining waypoint nodes, with a larger destination marker. Its leading segment follows your current position. The line keeps its width while zooming and works on the stitched map, controller view and native Zephras maps.",
+		"|cff6e2c0aImport original map settings:|r /omgps sync settings copies relevant appearance, window, filter and control preferences from original OpenMap, then returns to GPS. It switches through the original with UI reloads to read its live profile. GPS routes and GPS-specific options, recordings and map-pin data remain separate.",
+	} },
 	{ version = "v0.8.10-gps.4", date = "2026-11-16", heads = { [1] = "Fixed", }, items = {
 		"|cff6e2c0aSwitching to GPS:|r target the current character's addon selection and save it before reloading. The original no longer remains active after /omgps use gps because of an override written for the wrong character identifier. Switching back still keeps GPS in standby.",
 		"|cff6e2c0aAlt-click with the controller view:|r mouse clicks now start GPS at the mouse position. Dragging, ordinary zoom and active drawing/pin tools keep their existing behavior.",
@@ -39,10 +43,5 @@ ns.MapChangelog = {
 		"|cff6e2c0aZygor's map line stays thick on the stitched map|r: Zygor's route line (and its dots and waypoint icons) shrank to a thin grey line zoomed in and grew far too wide zoomed out, as Zygor sizes them for Blizzard's zoom range; they now stay the same size on screen at every zoom (#218). By rogeriocamorim.",
 		"|cff6e2c0aGilneas shows on every language's client|r: on the Russian and Latin American Spanish clients Gilneas was a solid green square, as the game doesn't have its map's art in those languages (as with the dungeon and cave maps before v0.8.5). OpenMap now brings those tiles itself (#152). Found and tested by XaksFlaX. (New textures: restart the game.)",
 		"|cff6e2c0aDungeon level ranges|r: the dungeons' levels on the map are now the ones the game's Group Finder gives (each Scarlet Monastery and Dire Maul wing its own); they were an old level each, five levels wide, and some were far off: Razorfen Kraul showed 24-29 for a dungeon of 29-38 (#201). By ConfusionOrb221.",
-	} },
-	{ version = "v0.8.8", date = "2026-11-13", heads = { [1] = "Fixed", }, items = {
-		"|cff6e2c0aParty and raid markers stay steady|r: one marker per member, moving smoothly. OpenMap's ring now follows Blizzard's own dot where the game places a member, instead of a second dot of its own that lagged behind it; elsewhere OpenMap's dot keeps its highlight and tooltip as it moves. The ring is now a thin gold edge (the wide one round a dark gap read as a target: #158, #170). By puschie286.",
-		"|cff6e2c0aFriends on the map: your own faction only.|r Your place is only shared with, and shown from, players of your own faction: Battle.net friends on the other faction no longer see where you are, nor you them (a player's report: it let Horde and Alliance find each other for PvP).",
-		"|cff6e2c0aFriends in another realm group show on the map|r: a friend on CAMWOW US1 and one on US2 (or EU4 and EU5) never saw each other with \"Share where you are\" on (#164, #167).",
 	} },
 }

@@ -3,11 +3,15 @@
 local _, ns = ...
 local mod = ns:GetModule("worldmap")
 local Safe = ns.Safe
-local MAX_DOTS = 300
+local MAX_POINTS = 25000
+local STYLE = { color = { 0.15, 1, 0.25 }, thickness = 3, nodeSize = 7, targetSize = 10 }
 local NATIVE = { [2521] = 2991, [2665] = 2991 }
 local map, root, canvas
 local dots, drawn, redraws = {}, 0, 0
+local lines, lineDrawn, head, headShown, headUpdates = {}, 0, nil, false, 0
+local headTarget, headPoint
 local lastRoute, lastIndex, lastMap, lastWidth, lastHeight, lastScale, lastCount
+local lastStyle, lastPlayerX, lastPlayerY, lastPlayerCont, lastPlayerLayer, lastPlayerFloor
 local networkRoot, networkCanvas, networkData, networkMap, networkWidth, networkHeight, networkScale
 local networkDots, networkDrawn, networkRedraws = {}, 0, 0
 local NETWORK_LIMIT = 800
@@ -23,7 +27,7 @@ end
 
 local function Hide()
 	if root then root:Hide() end
-	drawn, lastRoute = 0, nil
+	drawn, lineDrawn, headShown, lastRoute = 0, 0, false, nil
 end
 
 local function HideNetwork()
@@ -66,6 +70,7 @@ local function Attach(nextCanvas)
 	if not root then
 		root = CreateFrame("Frame", nil, nextCanvas)
 		root:EnableMouse(false)
+		root:SetClipsChildren(true)
 	end
 	if canvas ~= nextCanvas then
 		canvas, lastRoute = nextCanvas, nil
@@ -74,6 +79,64 @@ local function Attach(nextCanvas)
 		root:SetAllPoints(canvas)
 		root:SetFrameLevel(canvas:GetFrameLevel() + 10)
 	end
+end
+
+local function RouteLine(line, first, last, width, height, scale, style)
+	line:ClearAllPoints()
+	line:SetStartPoint("TOPLEFT", root, first[1] * width, -first[2] * height)
+	line:SetEndPoint("TOPLEFT", root, last[1] * width, -last[2] * height)
+	line:SetThickness(style.thickness / scale)
+	line:SetColorTexture(1, 1, 1, 1)
+	line:SetVertexColor(style.color[1], style.color[2], style.color[3], 1)
+	line:Show()
+end
+
+local function Nonzero(first, last)
+	return first and last and (math.abs(first[1] - last[1]) > 0.0000001 or math.abs(first[2] - last[2]) > 0.0000001)
+end
+
+local function RouteNode(point, target, width, height, scale, style)
+	if not point or point[1] < 0 or point[1] > 1 or point[2] < 0 or point[2] > 1 then return end
+	drawn = drawn + 1
+	local dot = dots[drawn]
+	if not dot then
+		dot = root:CreateTexture(nil, "OVERLAY", nil, 1)
+		if C_Texture and C_Texture.GetAtlasInfo and C_Texture.GetAtlasInfo("WhiteCircle-RaidBlips") then
+			dot:SetAtlas("WhiteCircle-RaidBlips")
+		else dot:SetTexture("Interface\\Buttons\\WHITE8X8") end
+		dots[drawn] = dot
+	end
+	dot:ClearAllPoints()
+	dot:SetPoint("CENTER", root, "TOPLEFT", point[1] * width, -point[2] * height)
+	local size = (target and style.targetSize or style.nodeSize) / scale
+	dot:SetSize(size, size)
+	dot:SetVertexColor(style.color[1], style.color[2], style.color[3], 1)
+	dot:Show()
+end
+
+local function Head(status, host, continent, width, height, scale, style, changed)
+	local player = type(status.player) == "table" and status.player
+	local wx, wy = Number(player and player.wx), Number(player and player.wy)
+	local cont = Number(player and player.cont)
+	local layer = player and Safe.Value(player.layer)
+	if type(layer) ~= "number" and type(layer) ~= "boolean" then layer = nil end
+	local floor = player and headTarget and (player.unknown or player.ambiguous
+		or layer ~= nil and headTarget.layer ~= nil and layer ~= headTarget.layer
+		or mod.GPSOtherFloor and mod.GPSOtherFloor(player, headTarget)) or false
+	if not changed and wx == lastPlayerX and wy == lastPlayerY and cont == lastPlayerCont
+		and layer == lastPlayerLayer and floor == lastPlayerFloor then return end
+	lastPlayerX, lastPlayerY, lastPlayerCont, lastPlayerLayer, lastPlayerFloor = wx, wy, cont, layer, floor
+	headUpdates, headShown = headUpdates + 1, false
+	local point = not floor and player and Project(player, host, continent)
+	if Nonzero(point, headPoint) then
+		local first, last = Clip(point, headPoint)
+		if Nonzero(first, last) then
+			head = head or root:CreateLine(nil, "ARTWORK")
+			RouteLine(head, first, last, width, height, scale, style)
+			headShown = true
+		end
+	end
+	if head and not headShown then head:Hide() end
 end
 
 local function DrawNetwork(nextCanvas, host, continent, width, height, scale)
@@ -182,67 +245,45 @@ function mod.GPSDrawNative(status)
 	if showNetwork then DrawNetwork(nextCanvas, host, continent, width, height, scale) else HideNetwork() end
 	if not active then Hide() return end
 	Attach(nextCanvas)
-	local index = math.max(1, math.floor(Number(status.index) or 1) - 1)
-	if status.route == lastRoute and index == lastIndex and host == lastMap and width == lastWidth
-		and height == lastHeight and scale == lastScale and #status.route == lastCount then
-		root:SetShown(drawn > 0)
-		return
-	end
-	lastRoute, lastIndex, lastMap = status.route, index, host
-	lastWidth, lastHeight, lastScale, lastCount = width, height, scale, #status.route
-	redraws = redraws + 1
-	local segments, previous, first, final, length = {}, nil, nil, nil, 0
-	for i = index, #status.route do
-		local point = Project(status.route[i], host, continent)
-		if point and point[1] >= 0 and point[1] <= 1 and point[2] >= 0 and point[2] <= 1 then
-			first, final = first or point, point
-		end
-		if previous and point then
-			local a, b = Clip(previous, point)
-			if a then
-				local distance = math.sqrt(((b[1] - a[1]) * width) ^ 2 + ((b[2] - a[2]) * height) ^ 2)
-				segments[#segments + 1] = { a, b, distance }
-				first, final, length = first or a, b, length + distance
+	local style = mod.GPSRouteStyle or STYLE
+	local index = math.max(1, math.floor(Number(status.index) or 1))
+	local changed = status.route ~= lastRoute or index ~= lastIndex or host ~= lastMap or width ~= lastWidth
+		or height ~= lastHeight or scale ~= lastScale or #status.route ~= lastCount or style ~= lastStyle
+	if changed then
+		lastRoute, lastIndex, lastMap, lastStyle = status.route, index, host, style
+		lastWidth, lastHeight, lastScale, lastCount = width, height, scale, #status.route
+		redraws, drawn, lineDrawn = redraws + 1, 0, 0
+		headTarget, headPoint = status.route[index], nil
+		local previous
+		-- Preserve every bend. The ceiling exceeds the engine's combined road and
+		-- recording limits; malformed oversized input is truncated, never shortcut.
+		for i = index, math.min(#status.route, index + MAX_POINTS - 1) do
+			local point = Project(status.route[i], host, continent)
+			if i == index then headPoint = point end
+			RouteNode(point, i == #status.route, width, height, scale, style)
+			if Nonzero(previous, point) then
+				local first, last = Clip(previous, point)
+				if Nonzero(first, last) then
+					lineDrawn = lineDrawn + 1
+					local line = lines[lineDrawn] or root:CreateLine(nil, "ARTWORK")
+					lines[lineDrawn] = line
+					RouteLine(line, first, last, width, height, scale, style)
+				end
 			end
+			-- A failed projection breaks the path instead of bridging another floor.
+			previous = point
 		end
-		previous = point
+		for i = drawn + 1, #dots do dots[i]:Hide() end
+		for i = lineDrawn + 1, #lines do lines[i]:Hide() end
 	end
-	drawn = 0
-	local function Dot(point)
-		if not point or drawn >= MAX_DOTS then return end
-		drawn = drawn + 1
-		local dot = dots[drawn]
-		if not dot then
-			dot = root:CreateTexture(nil, "ARTWORK")
-			dot:SetTexture("Interface\\Buttons\\WHITE8X8")
-			dot:SetVertexColor(1, 0.75, 0.15, 0.95)
-			dots[drawn] = dot
-		end
-		dot:ClearAllPoints()
-		dot:SetPoint("CENTER", root, "TOPLEFT", point[1] * width, -point[2] * height)
-		dot:SetSize(5 / scale, 5 / scale)
-		dot:Show()
-	end
-	Dot(first)
-	local spacing = math.max(9 / scale, length / (MAX_DOTS - 2))
-	local carry = spacing
-	for _, segment in ipairs(segments) do
-		local a, b, distance = segment[1], segment[2], segment[3]
-		local along = carry
-		while along < distance and drawn < MAX_DOTS - 1 do
-			local t = along / distance
-			Dot({ a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t })
-			along = along + spacing
-		end
-		carry = along - distance
-	end
-	if final and final ~= first then Dot(final) end
-	for i = drawn + 1, #dots do dots[i]:Hide() end
-	root:SetShown(drawn > 0)
+	Head(status, host, continent, width, height, scale, style, changed)
+	root:SetShown(drawn > 0 or lineDrawn > 0 or headShown)
 end
 
 function mod.GPSNativeStats()
 	return { drawn = drawn, pooled = #dots, redraws = redraws, map = lastMap,
+		lines = lineDrawn + (headShown and 1 or 0), linePooled = #lines + (head and 1 or 0),
+		headShown = headShown, headUpdates = headUpdates, pointLimit = MAX_POINTS,
 		shown = root and root:IsShown() or false, networkDrawn = networkDrawn,
 		networkPooled = #networkDots, networkRedraws = networkRedraws,
 		networkShown = networkRoot and networkRoot:IsShown() or false }

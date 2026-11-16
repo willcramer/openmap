@@ -1,17 +1,22 @@
 --------------------------------------------------------------------------------
--- GPS controls and guidance stay on screen when the map closes. The map trail
--- uses pooled, non-interactive pins, rebuilt only when the route or step changes.
+-- GPS controls and guidance stay on screen when the map closes. The green path
+-- shares the map's line/pin pools; only its leading anchor moves with the player.
 --------------------------------------------------------------------------------
 
 local _, ns = ...
 local mod = ns:GetModule("worldmap")
 local S, L, Safe = ns.MapStitch, ns.L, ns.Safe
 local panel, hud, ticker, trail
-local drawnRoute, drawnIndex, drawnActive
+local drawnRoute, drawnIndex, drawnActive, drawnCount
+local playerPin, playerLine, firstPoint
+local MAX_ROUTE_POINTS = 25000 -- the supplied graph plus all permitted recorded samples and stair steps
 local mode = "once"
 local MODES = { "once", "reverse", "loop", "pingpong" }
 local MODE_NAMES = { once = L["Once"], reverse = L["Reverse"], loop = L["Loop"], pingpong = L["Back and forth"] }
-local DOT = { atlas = "WhiteCircle-RaidBlips", texture = "Interface\\Buttons\\WHITE8X8", size = 5, color = { 1, 0.75, 0.15 } }
+local GREEN = { 0.15, 1, 0.25 }
+local DOT = { atlas = "WhiteCircle-RaidBlips", texture = "Interface\\Buttons\\WHITE8X8", size = 7, color = GREEN }
+local TARGET = { atlas = DOT.atlas, texture = DOT.texture, size = 10, color = GREEN }
+mod.GPSRouteStyle = { color = GREEN, thickness = 3, nodeSize = DOT.size, targetSize = TARGET.size }
 
 local function Button(parent, text, width, x, y, fn)
 	local b = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
@@ -75,55 +80,78 @@ local function StopOrDiscard()
 	if mod.GPSStatus().recording then Result(mod.GPSCancelRecording()) else mod.GPSStop() end
 end
 
-local function Draw(status)
+local function Number(value)
+	value = Safe.Value(value)
+	return type(value) == "number" and value == value and math.abs(value) < math.huge and value or nil
+end
+
+local function Placed(point)
+	return type(point) == "table" and Number(point.u) and Number(point.v) and Number(point.cont)
+end
+
+local function Line(a, b)
+	return S.AddLine(trail, a.u, a.v, b.u, b.v, 3, GREEN[1], GREEN[2], GREEN[3], 1)
+end
+
+function mod.GPSDrawRoute(status)
 	if not S.IsBuilt() then return end
 	if not trail then trail = S.PinSet("gps", 0, 4) end
-	if drawnRoute == status.route and drawnIndex == status.index and drawnActive == status.active then return end
-	drawnRoute, drawnIndex, drawnActive = status.route, status.index, status.active
-	S.ClearPinSet(trail)
-	if not status.active or type(status.route) ~= "table" then return end
-	local points = {}
-	for i = status.index or 1, #status.route do
-		local p = status.route[i]
-		if p.u and p.v then points[#points + 1] = p end
-	end
-	local total = 0
-	for i = 2, #points do
-		local a, b = points[i - 1], points[i]
-		if a.cont == b.cont then total = total + math.sqrt((b.u - a.u) ^ 2 + ((b.v - a.v) * 1.5) ^ 2) end
-	end
-	local spacing = math.max(0.0015, total / 297)
-	local count = 0
-	local function Dot(u, v)
-		if count >= 300 then return end
-		local pin = S.AddPin(trail, u, v, DOT)
-		pin:EnableMouse(false)
-		count = count + 1
-	end
-	local carry = spacing
-	if points[1] then Dot(points[1].u, points[1].v) end
-	for i, p in ipairs(points) do
-		local q = points[i + 1]
-		if q and p.cont == q.cont then
-			local length = math.sqrt((q.u - p.u) ^ 2 + ((q.v - p.v) * 1.5) ^ 2)
-			local along = carry
-			while along < length and count < 299 do
-				local t = along / length
-				Dot(p.u + (q.u - p.u) * t, p.v + (q.v - p.v) * t)
-				along = along + spacing
+	status = status or {}
+	local route = type(status.route) == "table" and status.route or nil
+	local index = math.max(1, math.floor(Number(status.index) or 1))
+	local count = route and #route or 0
+	if drawnRoute ~= route or drawnIndex ~= index or drawnActive ~= status.active or drawnCount ~= count then
+		drawnRoute, drawnIndex, drawnActive, drawnCount = route, index, status.active, count
+		S.ClearPinSet(trail)
+		playerPin, playerLine, firstPoint = nil, nil, nil
+		if status.active and route then
+			local previous
+			for i = index, math.min(count, index + MAX_ROUTE_POINTS - 1) do
+				local point = route[i]
+				if Placed(point) then
+					local pin = S.AddPin(trail, point.u, point.v, i == count and TARGET or DOT)
+					pin:EnableMouse(false)
+					if i == index then firstPoint = point end
+					if previous and previous.cont == point.cont then Line(previous, point) end
+					previous = point
+				else
+					-- An unprojectable waypoint is a break, not permission to join
+					-- its neighbours across a different map or hidden floor.
+					previous = nil
+				end
 			end
-			carry = along - length
-		elseif q then
-			carry = spacing
 		end
 	end
-	if #points > 1 then Dot(points[#points].u, points[#points].v) end
+	if not status.active or not firstPoint then return end
+	local player = status.player
+	local u, v, continent
+	if Placed(player) and not player.unknown and not player.ambiguous
+		and (player.layer == nil or firstPoint.layer == nil or player.layer == firstPoint.layer)
+		and not (mod.GPSOtherFloor and mod.GPSOtherFloor(player, firstPoint)) then
+		u, v, continent = player.u, player.v, player.cont
+	end
+	if not u or continent ~= firstPoint.cont then
+		if playerLine then playerLine:Hide() playerPin:Hide() end
+		return
+	end
+	if not playerPin then
+		playerPin = S.AddPin(trail, u, v, DOT)
+		playerPin:EnableMouse(false)
+		playerLine = Line({ u = u, v = v }, firstPoint)
+		-- Lines remain screen-sized on the view. Move only this pin's existing
+		-- world anchor as the player walks; the remaining road never rebuilds.
+		playerLine:SetStartPoint("CENTER", playerPin)
+	else
+		S.MovePin(trail, playerPin, u, v)
+	end
+	playerPin:Show()
+	playerLine:Show()
 end
 
 local function Refresh()
 	if not mod.GPSStatus then return end
 	local status = mod.GPSStatus()
-	Draw(status)
+	mod.GPSDrawRoute(status)
 	if mod.GPSDrawNative then mod.GPSDrawNative(status) end
 	if mod.GPSRefreshRoadView then mod.GPSRefreshRoadView() end
 	if hud then
@@ -246,7 +274,7 @@ function mod.GPSGoWorld(u, v, title)
 end
 
 function mod:BuildGPSPanel()
-	drawnRoute, drawnIndex, drawnActive = nil, nil, nil
+	drawnRoute, drawnIndex, drawnActive, drawnCount = nil, nil, nil, nil
 	Refresh()
 end
 

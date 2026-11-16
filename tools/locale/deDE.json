@@ -636,5 +636,7 @@
  "Use the AddOns list to enable one map addon, then reload.": "Aktiviert in der AddOn-Liste ein Karten-Addon und ladet dann neu.",
  "Walk farther before saving this route.": "Geht weiter, bevor Ihr diese Route speichert.",
  "Warn": "Warnen",
- "You have arrived.": "Ihr habt Euer Ziel erreicht."
+ "You have arrived.": "Ihr habt Euer Ziel erreicht.",
+ "Map settings copied to GPS.": "Karteneinstellungen nach GPS kopiert.",
+ "Map settings could not be copied.": "Karteneinstellungen konnten nicht kopiert werden."
 }

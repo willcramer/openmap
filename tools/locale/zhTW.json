@@ -636,5 +636,7 @@
  "Use the AddOns list to enable one map addon, then reload.": "請在插件清單中啟用一個地圖插件，然後重載介面。",
  "Walk farther before saving this route.": "請再走一段距離後儲存此路線。",
  "Warn": "警告",
- "You have arrived.": "你已抵達目的地。"
+ "You have arrived.": "你已抵達目的地。",
+ "Map settings copied to GPS.": "地圖設定已複製至 GPS。",
+ "Map settings could not be copied.": "無法複製地圖設定。"
 }

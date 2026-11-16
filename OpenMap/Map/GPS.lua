@@ -184,6 +184,7 @@ local function Stop(state, clear)
 	local ours = SameWaypoint(owned)
 	active, owned = nil, nil
 	status.active, status.state = false, state or "stopped"
+	status.player = nil
 	status.bearing, status.distance, status.remaining = nil, nil, nil
 	status.instruction = L["GPS stopped."]
 	if state ~= "faction-stop" then status.resumeTarget, status.resumeTitle = nil, nil end
@@ -401,6 +402,7 @@ local function Start(route, title, state, mode, target)
 	status.roadSource = state
 	if state ~= "bundled" then status.roadStats = nil end
 	status.active, status.index, status.total = true, 1, #route
+	status.player = active.origin
 	Track()
 	Notify()
 	mod.GPSUpdate()
@@ -569,6 +571,7 @@ end
 
 function mod.GPSUpdate()
 	local player = Player()
+	status.player = active and player or nil
 	-- Room continuity must be observed before a journey starts; entering a
 	-- building with GPS stopped still tells the next journey which floor is ours.
 	if not active and not recording then return end
@@ -589,6 +592,7 @@ function mod.GPSUpdate()
 	if not active then return end
 	if owned and not SameWaypoint(owned) then Stop("stopped", false) return end
 	if not player or Safe.Call(UnitOnTaxi, "player") then
+		status.player = nil
 		status.state, status.instruction, status.bearing = "waiting", L["GPS is waiting for your position."], nil
 		status.distance, status.remaining = nil, nil
 		return
@@ -597,6 +601,7 @@ function mod.GPSUpdate()
 	local route, index = active.route, active.index
 	local p = route[index]
 	if player.cont ~= p.cont then
+		status.player = nil
 		status.state, status.instruction, status.bearing = "waiting", L["Return to the route's continent to continue GPS."], nil
 		status.distance, status.remaining = nil, nil
 		return

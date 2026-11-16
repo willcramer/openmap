@@ -74,12 +74,14 @@ class GPSIntegrationTests(unittest.TestCase):
         self.lua.execute(r'''
             SlashCmdList.OPENMAP("gps go 900001 30 20")
             assert(gpsmod.GPSStatus().active and not WorldMapFrame:IsShown())
+            assert(gpsmod.GPSStatus().player and gpsmod.GPSStatus().player.x == PX)
             assert(WAYPOINT.uiMapID == 900001 and WAYPOINT.position.x == .3)
             TickGPS()
             assert(OpenMapGPSGuide:IsShown())
             PX = .3
             TickGPS()
             assert(not gpsmod.GPSStatus().active and not OpenMapGPSGuide:IsShown())
+            assert(gpsmod.GPSStatus().player == nil)
             assert(WAYPOINT == nil)
         ''')
 
@@ -126,6 +128,7 @@ class GPSIntegrationTests(unittest.TestCase):
             assert(gpsmod.GPSStatus().active)
             assert(gpsmod.GPSStatus().bearing == nil,
                 "a stale arrow remained while the player position was unavailable")
+            assert(gpsmod.GPSStatus().player == nil, 'a stale route-head position survived position loss')
             MISSING = false
             TickGPS()
             assert(gpsmod.GPSStatus().active and gpsmod.GPSStatus().bearing ~= nil)

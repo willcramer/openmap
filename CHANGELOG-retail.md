@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+## v0.8.10-gps.5 (2026-11-16)
+
+### Improved
+
+- **GPS route drawing:** a solid green line follows the remaining waypoints from your current
+  position, with distinct waypoint and destination nodes. It keeps its width while zooming.
+- **Settings import:** `/omgps sync settings` copies shared OpenMap preferences through the
+  original's live profile and returns to GPS, preserving GPS-specific settings and recordings.
+
 ## v0.8.10-gps.4 (2026-11-16)
 
 ### Fixed

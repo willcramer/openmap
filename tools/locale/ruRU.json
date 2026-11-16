@@ -636,5 +636,7 @@
  "Use the AddOns list to enable one map addon, then reload.": "Включите один картографический аддон в списке модификаций и перезагрузите интерфейс.",
  "Walk farther before saving this route.": "Пройдите дальше перед сохранением маршрута.",
  "Warn": "Предупреждать",
- "You have arrived.": "Вы прибыли к цели."
+ "You have arrived.": "Вы прибыли к цели.",
+ "Map settings copied to GPS.": "Настройки карты скопированы в GPS.",
+ "Map settings could not be copied.": "Не удалось скопировать настройки карты."
 }

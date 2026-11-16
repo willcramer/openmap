@@ -71,6 +71,19 @@
 
 ## Integration and parity
 
+- Draw the active journey as a solid green line through every remaining route point, with actual
+  waypoint nodes and a larger destination. Reuse OpenMap's existing screen-sized line/pin pools.
+  Update only the player connector while moving; rebuilding the whole route every tick was
+  rejected because it adds needless layout work. Keep all path bends instead of sampling distant
+  endpoints into shortcuts. Missing projections break the line. The native map uses its own
+  pooled lines with clipped canvas coordinates; optional full-network dots remain separate.
+- Settings synchronization is an explicit one-way snapshot through original OpenMap's live
+  profile. This avoids editing SavedVariables on disk while the game may overwrite them, and
+  captures current unsaved preferences. Read supported original defaults, deep-copy shared
+  preferences, preserve GPS-specific settings/routes/HUD and user data, then return to GPS.
+  Ordinary switching does not import settings. A queued import is consumed before processing
+  so an error cannot cause an endless reload loop. The user must run the sync command after the
+  updated files load; installation by itself does not mean the settings have been copied.
 - A live gps.3 report showed `/omgps use gps` reloading into original OpenMap again. The earlier
   stub incorrectly modeled per-character enable state using a display name, masking the failure.
   Follow the Forever AddOns UI's GUID-based selection and SaveAddOns-before-ReloadUI sequence.

@@ -1,4 +1,4 @@
-"""Native Zephras route marks: own regions, projection, clipping and bounded reuse.
+"""Native Zephras GPS lines and waypoint nodes: projection, clipping and reuse.
 
 Run: python -P tools/offline-test/gps_native.py
 """
@@ -16,6 +16,26 @@ class NativeGPSRouteTests(unittest.TestCase):
         self.lua = LuaRuntime(unpack_returned_tuples=True)
         self.lua.execute((Path(__file__).with_name('stub.lua')).read_text())
         self.lua.execute('''
+            local factory=CreateFrame
+            CreateFrame=function(...)
+                local frame=factory(...)
+                local lineFactory,textureFactory=frame.CreateLine,frame.CreateTexture
+                frame.CreateLine=function(self,...)
+                    local line=lineFactory(self,...)
+                    line.SetStartPoint=function(self,...) self.start={...} end
+                    line.SetEndPoint=function(self,...) self.finish={...} end
+                    line.SetThickness=function(self,n) self.thickness=n end
+                    line.SetColorTexture=function(self,...) self.solid={...} end
+                    line.SetVertexColor=function(self,...) self.color={...} end
+                    return line
+                end
+                frame.CreateTexture=function(self,...)
+                    local texture=textureFactory(self,...)
+                    texture.SetVertexColor=function(self,...) self.color={...} end
+                    return texture
+                end
+                return frame
+            end
             mod = { db = {} }
             ns = { GetModule=function() return mod end, Safe={
                 Value=function(v) if issecretvalue and issecretvalue(v) then return nil end return v end,
@@ -49,7 +69,8 @@ class NativeGPSRouteTests(unittest.TestCase):
             map:SetScript('OnHide',function() hiddenCallbacks=hiddenCallbacks+1 end)
             function nativeRoot()
                 for _, frame in ipairs(FRAMES) do
-                    if frame:GetParent()==canvas and frame~=foreign and frame:GetObjectType()=='Frame' then return frame end
+                    if frame:GetParent()==canvas and frame~=foreign and frame:GetObjectType()=='Frame'
+                        and frame:GetFrameLevel()==canvas:GetFrameLevel()+10 then return frame end
                 end
             end
             function shownDots()
@@ -57,6 +78,15 @@ class NativeGPSRouteTests(unittest.TestCase):
                 local owner=nativeRoot()
                 for _, frame in ipairs(FRAMES) do
                     if frame:GetParent()==owner and frame:GetObjectType()=='Texture' and frame:IsShown() then out[#out+1]=frame end
+                end
+                return out
+            end
+            function shownLines()
+                local out={}
+                for _,frame in ipairs(FRAMES) do
+                    if frame:GetParent()==nativeRoot() and frame:GetObjectType()=='Line' and frame:IsShown() then
+                        out[#out+1]=frame
+                    end
                 end
                 return out
             end
@@ -70,12 +100,18 @@ class NativeGPSRouteTests(unittest.TestCase):
         self.check('''
             mod.GPSDrawNative(status)
             local stats=mod.GPSNativeStats()
-            assert(stats.shown and stats.drawn>2)
+            assert(stats.shown and stats.drawn==2 and stats.lines==1)
             local owner=nativeRoot()
             assert(owner and owner:GetParent()==canvas)
             local first=shownDots()[1]
             local point,relative,corner,x,y=first:GetPoint()
             assert(point=='CENTER' and relative==owner and corner=='TOPLEFT' and x==100 and y==-100)
+            local line=shownLines()[1]
+            assert(line.start[3]==100 and line.start[4]==-100)
+            assert(line.finish[3]==800 and line.finish[4]==-100)
+            assert(line.thickness==3 and line.solid[4]==1)
+            assert(line.color[1]==.15 and line.color[2]==1 and line.color[3]==.25)
+            assert(first:GetWidth()==7 and shownDots()[2]:GetWidth()==10,'waypoint/target nodes not distinct')
             assert(foreign:GetWidth()==37 and foreign:GetHeight()==41,'another addon frame was changed')
             host=2665 mod.GPSDrawNative(status)
             local _,_,_,nx,ny=shownDots()[1]:GetPoint()
@@ -93,10 +129,119 @@ class NativeGPSRouteTests(unittest.TestCase):
             assert(mod.GPSNativeStats().redraws==initial.redraws)
             scale=2 mod.GPSDrawNative(status)
             assert(mod.GPSNativeStats().redraws==initial.redraws+1)
-            assert(shownDots()[1]:GetWidth()==2.5,'marks grew with native canvas zoom')
+            assert(shownDots()[1]:GetWidth()==3.5,'nodes grew with native canvas zoom')
+            assert(shownLines()[1].thickness==1.5,'line grew with native canvas zoom')
             canvas:SetSize(1200,600) mod.GPSDrawNative(status)
             local _,_,_,x,y=shownDots()[1]:GetPoint()
             assert(x==120 and y==-120)
+        ''')
+
+    def test_continuous_lines_follow_each_bend_and_nodes_mark_real_waypoints(self):
+        self.check('''
+            status.route={
+                {cont=2991,map=2521,wx=100,wy=100},
+                {cont=2991,map=2521,wx=400,wy=100},
+                {cont=2991,map=2521,wx=400,wy=600},
+                {cont=2991,map=2521,wx=800,wy=600}
+            }
+            mod.GPSDrawNative(status)
+            assert(mod.GPSNativeStats().drawn==4 and mod.GPSNativeStats().lines==3)
+            local lines=shownLines()
+            assert(lines[1].start[3]==100 and lines[1].finish[3]==400)
+            assert(lines[1].start[4]==-50 and lines[1].finish[4]==-50)
+            assert(lines[2].start[3]==400 and lines[2].finish[3]==400)
+            assert(lines[2].start[4]==-50 and lines[2].finish[4]==-300)
+            assert(lines[3].start[3]==400 and lines[3].finish[3]==800)
+            assert(lines[3].start[4]==-300 and lines[3].finish[4]==-300)
+            local dots=shownDots()
+            for i,dot in ipairs(dots) do
+                local _,_,_,x,y=dot:GetPoint()
+                assert(x==status.route[i].wx and y==-status.route[i].wy/2)
+                assert(dot:GetWidth()==(i==4 and 10 or 7))
+                assert(dot.color[1]==.15 and dot.color[2]==1 and dot.color[3]==.25)
+            end
+        ''')
+
+    def test_player_head_moves_without_reprojecting_the_tail_and_completed_edges_disappear(self):
+        self.check('''
+            status.player={cont=2991,map=2521,wx=50,wy=200}
+            mod.GPSDrawNative(status)
+            local before=mod.GPSNativeStats()
+            assert(before.lines==2 and before.headShown)
+            local allocated,count=#FRAMES,projections
+            status.player.wx=75
+            mod.GPSDrawNative(status)
+            local after=mod.GPSNativeStats()
+            assert(after.redraws==before.redraws and after.headUpdates==before.headUpdates+1)
+            assert(projections==count+1 and #FRAMES==allocated,'moving head rebuilt the tail or allocated regions')
+            local head=shownLines()[2]
+            assert(head.start[3]==75 and head.finish[3]==100)
+            mod.GPSDrawNative(status)
+            assert(projections==count+1 and mod.GPSNativeStats().headUpdates==after.headUpdates)
+            status.index=2
+            mod.GPSDrawNative(status)
+            assert(mod.GPSNativeStats().lines==1 and mod.GPSNativeStats().drawn==1)
+            head=shownLines()[1]
+            assert(head.start[3]==75 and head.finish[3]==800,'a completed route edge remained')
+            status.player=nil
+            mod.GPSDrawNative(status)
+            assert(not mod.GPSNativeStats().headShown and mod.GPSNativeStats().lines==0)
+            assert(mod.GPSNativeStats().drawn==1,'missing player removed the known remaining target')
+            assert(#FRAMES==allocated)
+        ''')
+
+    def test_head_does_not_join_another_continent_or_unconfirmed_floor(self):
+        self.check('''
+            status.player={cont=0,wx=50,wy=200}
+            mod.GPSDrawNative(status)
+            assert(not mod.GPSNativeStats().headShown and mod.GPSNativeStats().lines==1)
+            status.player.cont=2991
+            status.player.ambiguous=true
+            mod.GPSDrawNative(status)
+            assert(not mod.GPSNativeStats().headShown)
+            status.player.ambiguous=nil
+            mod.GPSOtherFloor=function()return true end
+            mod.GPSDrawNative(status)
+            assert(not mod.GPSNativeStats().headShown)
+            mod.GPSOtherFloor=function()return false end
+            mod.GPSDrawNative(status)
+            assert(mod.GPSNativeStats().headShown)
+            status.player.layer=false
+            status.route={
+                {cont=2991,map=2521,wx=100,wy=200,layer=true},
+                {cont=2991,map=2521,wx=800,wy=200,layer=true}
+            }
+            mod.GPSDrawNative(status)
+            assert(not mod.GPSNativeStats().headShown and mod.GPSNativeStats().lines==1)
+        ''')
+
+    def test_projection_gap_breaks_the_line_and_zero_length_edges_are_skipped(self):
+        self.check('''
+            status.route={
+                {cont=2991,map=2521,wx=100,wy=200},
+                {cont=0,map=2521,wx=400,wy=200},
+                {cont=2991,map=2521,wx=800,wy=200},
+                {cont=2991,map=2521,wx=800,wy=200}
+            }
+            mod.GPSDrawNative(status)
+            assert(mod.GPSNativeStats().lines==0 and mod.GPSNativeStats().drawn==3,
+                'projection failure was bridged or zero-length edge was drawn')
+            status.player={cont=2991,map=2521,wx=100,wy=200}
+            mod.GPSDrawNative(status)
+            assert(not mod.GPSNativeStats().headShown,'zero-length player connector was drawn')
+        ''')
+
+    def test_oversized_input_stops_at_the_bound_without_shortcutting_to_the_target(self):
+        self.check('''
+            status.route={}
+            for i=1,25002 do
+                status.route[i]={cont=2991,map=2521,wx=(i%2==0 and 950 or 50),wy=200+(i%5)}
+            end
+            mod.GPSDrawNative(status)
+            local stats=mod.GPSNativeStats()
+            assert(stats.pointLimit==25000 and stats.drawn==25000 and stats.lines==24999)
+            assert(stats.pooled==25000 and stats.linePooled==24999)
+            assert(shownDots()[25000]:GetWidth()==7,'truncated input invented a target shortcut')
         ''')
 
     def test_region_count_is_bounded_and_reused_for_long_routes(self):
@@ -107,10 +252,11 @@ class NativeGPSRouteTests(unittest.TestCase):
             end
             mod.GPSDrawNative(status)
             local initial=mod.GPSNativeStats()
-            assert(initial.drawn<=300 and initial.pooled<=300 and initial.drawn>200)
+            assert(initial.drawn==1000 and initial.pooled==1000 and initial.lines==999,
+                'long route lost waypoint nodes or shortcut its bends')
             local allocated=#FRAMES
             status.index=500 mod.GPSDrawNative(status)
-            assert(mod.GPSNativeStats().pooled<=300 and #FRAMES==allocated)
+            assert(mod.GPSNativeStats().pooled==1000 and mod.GPSNativeStats().lines==500 and #FRAMES==allocated)
             status.route={{cont=2991,map=2521,wx=100,wy=200}}
             status.index=1 mod.GPSDrawNative(status)
             assert(mod.GPSNativeStats().drawn==1 and #shownDots()==1)
@@ -144,11 +290,9 @@ class NativeGPSRouteTests(unittest.TestCase):
                 {cont=2991,map=2521,wx=1500,wy=250}
             }
             mod.GPSDrawNative(status)
-            assert(mod.GPSNativeStats().drawn>2)
-            for _,dot in ipairs(shownDots()) do
-                local _,_,_,x,y=dot:GetPoint()
-                assert(x>=0 and x<=1000 and y<=0 and y>=-500,'native marks escaped map bounds')
-            end
+            assert(mod.GPSNativeStats().drawn==0 and mod.GPSNativeStats().lines==1)
+            local line=shownLines()[1]
+            assert(line.start[3]==0 and line.finish[3]==1000 and line.start[4]==-125)
             status.route={
                 {cont=0,map=2521,wx=100,wy=200},
                 {cont=2991,map=2521,wx=800,wy=200,layer=1458}
@@ -157,12 +301,13 @@ class NativeGPSRouteTests(unittest.TestCase):
             assert(not mod.GPSNativeStats().shown and mod.GPSNativeStats().drawn==0)
         ''')
 
-    def test_short_segments_sample_the_whole_path_and_projection_failures_do_not_bridge(self):
+    def test_short_segments_retain_every_node_and_projection_failures_do_not_bridge(self):
         self.check('''
             status.route={}
             for i=1,100 do status.route[i]={cont=2991,map=2521,wx=100+i,wy=200} end
             mod.GPSDrawNative(status)
-            assert(mod.GPSNativeStats().drawn>5,'short road segments lost all intermediate marks')
+            assert(mod.GPSNativeStats().drawn==100 and mod.GPSNativeStats().lines==99,
+                'short road segments lost intermediate waypoints')
             C_Map.GetMapPosFromWorldPos=function() return 2665,{x=.5,y=.5} end
             status.route={{cont=2991,map=2521,wx=100,wy=200}}
             mod.GPSDrawNative(status)
@@ -240,7 +385,7 @@ class NativeGPSRouteTests(unittest.TestCase):
             ns.GPSRoadData={networks={[2991]={nodes=nodes}}}
             mod.GPSDrawNative(status)
             local stats=mod.GPSNativeStats()
-            assert(stats.shown and stats.drawn>2 and stats.pooled<=300)
+            assert(stats.shown and stats.drawn==2 and stats.pooled==2 and stats.lines==1)
             assert(stats.networkShown and stats.networkDrawn>600 and stats.networkPooled<=800)
             local allocated=#FRAMES
             status.index=2 mod.GPSDrawNative(status)

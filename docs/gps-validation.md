@@ -1,6 +1,6 @@
 # GPS road-network validation
 
-Candidate: **v0.8.10-gps.4**, Forever Maps dataset **2.0.166**, separate addon **OpenMapGPS**.
+Candidate: **v0.8.10-gps.5**, Forever Maps dataset **2.0.166**, separate addon **OpenMapGPS**.
 This is an offline-verified test build. No live game-client verification is claimed.
 
 ## Data and routing
@@ -33,20 +33,26 @@ This is an offline-verified test build. No live game-client verification is clai
 ## OpenMap integration and installation
 
 - All six loader modes, navigation and controller-waypoint checks pass for Forever and Retail.
-  Existing focused tests also pass. The consolidated local run has 42 successful invocations.
+  Existing focused tests also pass. The consolidated local run has 43 successful invocations.
 - Nine GPS core and seven original integration tests preserve recording, playback modes,
   partial-save handling, arrival, rerouting and external waypoint ownership.
 - Twelve bundled full-addon integration tests pass on Forever (ten plus two source-only skips on
   Retail). They exercise actual road data, recorded extensions, Brill's upper platform, Zephras,
   faction border stops with a persistent HUD, resuming the original target after changing the
   faction option, and ghost routing through otherwise restricted paths.
-- Six road-overlay and nine native-map tests cover bounded drawing pools, clipping, view caching,
-  controller geometry, map visibility and coexistence with other map content. Active native routes
-  use at most 300 dots; optional network views use at most 800 markers on each canvas.
-- Seven package-transform and ten coexistence/switch tests check both clients. The original and
+- Six road-overlay, eight stitched route-view and fourteen native-map tests cover solid green
+  line geometry, actual waypoint/destination nodes, clipping, view caching, player-head movement,
+  completed segment removal and reuse of drawing regions. Both route renderers retain all bends
+  for valid routes within a 25,000-point budget; the optional network views still use at most
+  800 markers on each canvas. Unprojectable points and continent gaps do not become shortcuts.
+- Seven package-transform and sixteen coexistence/switch/settings tests check both clients. The original and
   GPS addon load in the same Lua runtime without sharing saved variables, API, commands, frames,
   bindings or message prefixes. Original-first loading leaves GPS dormant. Switching changes
   character enable state and reloads; combat and missing-original cases leave the working addon on.
+- Six settings-import cases cover the active-GPS-to-original-to-GPS reload round trip, deep-copy
+  isolation, supported preference fields, preserving GPS recordings/options/user data, missing
+  original/combat/save failures and consuming failed requests without a login loop. Shared
+  preferences are copied only after the user explicitly invokes `/omgps sync settings`.
 - A live gps.3 report exposed that the switcher used a character name and omitted saving addon
   enable changes. gps.4 uses the GUID and saves before reloading, matching the Forever AddOns UI.
   Regression tests model pending/committed GUID-specific states and rebuild the Lua runtime from
@@ -56,7 +62,7 @@ This is an offline-verified test build. No live game-client verification is clai
   drawing/pin/dungeon tools. All 24 controller-waypoint/input tests pass.
 - Python tools compile; Lua lint passes. New output is generated through its importer, changelog
   builder or locale builder. The package builder reruns the routing and coexistence checks.
-- All 94 GPS strings have translations in each of the ten supported locales. Placeholder and
+- All 96 GPS strings have translations in each of the ten supported locales. Placeholder and
   command checks report zero problems. Six pre-existing unrelated strings remain untranslated.
   Standby/bootstrap messages can fall back to English before active locale tables are loaded.
 
@@ -70,7 +76,10 @@ redistributed as a test dependency. To reproduce locally, set `OPENMAP_ROAD_SOUR
 The live HUD's arrow alignment, UI-scale layout, actual protected/secret API behavior, controller
 interaction, performance and terrain walkability need the acceptance checks in [gps.md](gps.md).
 The stock map-preview renderer needs the game's DB2 tables and texture cache and does not render
-the live HUD or new road overlay; no rendered HUD or in-game screenshot is claimed.
+the live HUD or new road overlay. Before/after drawing previews were instead generated from the
+actual stitched/native Lua drawing commands on a labeled synthetic grid and visually inspected;
+they establish line/node geometry and styling, not terrain or live game rendering. No rendered
+HUD or in-game screenshot is claimed.
 
 The imported network has the coverage and limits of its source beta. Endpoint approaches are
 explicit off-network connectors, not terrain-verified roads. An uncertain overlapping floor is

@@ -235,6 +235,176 @@ class VariantTests(unittest.TestCase):
             assert(reloads==0 and saves==0 and committed.OpenMap==true)
         """)
 
+    def test_dormant_import_copies_preferences_without_aliasing_or_user_data(self):
+        self.load()
+        self.login()
+        self.lua.execute("""
+            sourceDB,sourceChar=OpenMapDB,OpenMapCharDB
+            sourceDB.worldmap.brightness=.45
+            sourceDB.worldmap.darkenColor={.2,.3,.4}
+            sourceDB.worldmap.window={'TOPLEFT','TOPLEFT',31,-44}
+            sourceDB.worldmap.windowScale=1.2
+            sourceDB.worldmap.ctrlClickPin=false
+            sourceDB.worldmap.foundOnly=true
+            sourceDB.worldmap.enabled=false
+            sourceDB.worldmap.pins={list={{note='original pin'}},nextId=2}
+            sourceDB.worldmap.sketch={strokes={{'original stroke'}},nextId=2,tool='marker',ink=3,size=5,mark=9}
+            sourceDB.worldmap.paint={notes={{'original note'}},nextId=2}
+            sourceDB.worldmap.flightTimes={privateMeasurement=30}
+            sourceDB.worldmap.newsSeen='original'
+            sourceDB.worldmap.lastBench={privateSample=1}
+            sourceDB.worldmap.gpsRoutes={originalGPS={points={{1,.1,.1},{1,.2,.2}}}}
+            sourceChar.worldmap.unexploredOwn=true
+            sourceChar.worldmap.unexplored='hide'
+            sourceChar.worldmap.pin={1,.8,.8}
+            sourceChar.worldmap.cvars={privateRestore='original'}
+            sourceChar.worldmap.reports={'original report'}
+            sourceChar.worldmap.flightsKnown={['original flight']=true}
+            OpenMapGPSDB={worldmap={enabled=true,gpsUseRoads=false,gpsGuideAt={'CENTER'},
+                gpsRoutes={GPSWalk={points={{1,.2,.2},{1,.3,.3}}}},
+                pins={list={{note='GPS pin'}},nextId=2},
+                sketch={strokes={{'GPS stroke'}},nextId=2,tool='quill'},
+                paint={notes={{'GPS note'}},nextId=2},flightTimes={GPSMeasurement=12},newsSeen='GPS'}}
+            OpenMapGPSCharDB={worldmap={pin={1,.4,.4},cvars={privateRestore='GPS'},
+                reports={'GPS report'},flightsKnown={['GPS flight']=true}}}
+        """)
+        self.load(gps=True)
+        self.login()
+        self.lua.execute("""
+            SlashCmdList.OPENMAPGPS('sync settings')
+            local target,c=OpenMapGPSDB.worldmap,OpenMapGPSCharDB.worldmap
+            assert(target.brightness==.45 and target.windowScale==1.2 and target.foundOnly)
+            assert(target.window[3]==31 and target.darkenColor[2]==.3 and target.ctrlClickPin==false)
+            assert(target.enabled and target.gpsUseRoads==false and target.gpsGuideAt[1]=='CENTER')
+            assert(target.gpsRoutes.GPSWalk and not target.gpsRoutes.originalGPS)
+            assert(target.pins.list[1].note=='GPS pin' and target.paint.notes[1][1]=='GPS note')
+            assert(target.sketch.strokes[1][1]=='GPS stroke' and target.sketch.nextId==2)
+            assert(target.sketch.tool=='marker' and target.sketch.ink==3 and target.sketch.size==5 and target.sketch.mark==9)
+            assert(target.flightTimes.GPSMeasurement==12 and not target.flightTimes.privateMeasurement)
+            assert(target.newsSeen=='GPS' and target.lastBench==nil)
+            assert(c.unexploredOwn and c.unexplored=='hide')
+            assert(c.pin[2]==.4 and c.cvars.privateRestore=='GPS' and c.reports[1]=='GPS report')
+            assert(c.flightsKnown['GPS flight'] and not c.flightsKnown['original flight'])
+            assert(OpenMapDB==sourceDB and OpenMapCharDB==sourceChar)
+            target.window[3]=99 target.darkenColor[2]=.9
+            assert(sourceDB.worldmap.window[3]==31 and sourceDB.worldmap.darkenColor[2]==.3)
+            assert(sourceDB.worldmap.pins.list[1].note=='original pin')
+            assert(reloads==1 and saves==1 and not committed.OpenMap and committed.OpenMapGPS)
+            assert(OpenMapGPSCharDB.gpsSettingsSyncResult and not OpenMapGPSCharDB.gpsSettingsSyncRequest)
+        """)
+
+    def test_active_sync_roundtrip_preserves_gps_state_and_consumes_request_once(self):
+        def plain(value):
+            if hasattr(value, 'items'):
+                return {key: plain(item) for key, item in value.items()}
+            return value
+
+        def table(value):
+            if isinstance(value, dict):
+                return self.lua.table_from({key: table(item) for key, item in value.items()})
+            return value
+
+        self.lua.execute("committed.OpenMap=false; pending.OpenMap=false")
+        self.load(gps=True)
+        self.login()
+        self.lua.execute("""
+            OpenMapGPSDB.worldmap.gpsRoutes={Keep={points={{1,.1,.1},{1,.2,.2}}}}
+            OpenMapGPSDB.worldmap.gpsAllowEnemy=true
+            OpenMapGPSDB.worldmap.gpsGuideAt={'CENTER','CENTER',80,90}
+            SlashCmdList.OPENMAPGPS('sync settings')
+            assert(committed.OpenMap and committed.OpenMapGPS and reloads==1)
+            assert(OpenMapGPSCharDB.gpsSettingsSyncRequest)
+        """)
+        account = plain(self.lua.globals().OpenMapGPSDB)
+        character = plain(self.lua.globals().OpenMapGPSCharDB)
+        self.setUp()
+        self.lua.globals().OpenMapGPSDB = table(account)
+        self.lua.globals().OpenMapGPSCharDB = table(character)
+        self.load()
+        self.lua.execute("OpenMapDB.worldmap.brightness=.62; OpenMapDB.worldmap.pinsHidden=true")
+        self.load(gps=True)
+        self.login()
+        self.lua.execute("""
+            assert(gpsNS.variantDormant and reloads==1)
+            assert(not committed.OpenMap and committed.OpenMapGPS)
+            assert(not OpenMapGPSCharDB.gpsSettingsSyncRequest and OpenMapGPSCharDB.gpsSettingsSyncResult)
+            assert(OpenMapGPSDB.worldmap.brightness==.62 and OpenMapGPSDB.worldmap.pinsHidden)
+        """)
+        account = plain(self.lua.globals().OpenMapGPSDB)
+        character = plain(self.lua.globals().OpenMapGPSCharDB)
+        self.setUp()
+        self.lua.execute("committed.OpenMap=false; pending.OpenMap=false")
+        self.lua.globals().OpenMapGPSDB = table(account)
+        self.lua.globals().OpenMapGPSCharDB = table(character)
+        self.load(gps=True)
+        self.login()
+        self.lua.execute("""
+            assert(not gpsNS.variantDormant and OpenMapGPSAPI)
+            assert(OpenMapGPSDB.worldmap.brightness==.62 and OpenMapGPSDB.worldmap.pinsHidden)
+            assert(OpenMapGPSDB.worldmap.gpsRoutes.Keep and OpenMapGPSDB.worldmap.gpsAllowEnemy)
+            assert(OpenMapGPSDB.worldmap.gpsGuideAt[3]==80)
+            assert(not OpenMapGPSCharDB.gpsSettingsSyncRequest and not OpenMapGPSCharDB.gpsSettingsSyncResult)
+            assert(reloads==0 and saves==0, 'completed import caused another automatic reload')
+            local announced=false
+            for _,message in ipairs(LOG) do if message:find('Map settings copied to GPS.',1,true) then announced=true end end
+            assert(announced, 'completed import was not announced')
+        """)
+
+    def test_sync_missing_original_or_combat_does_not_queue_or_switch(self):
+        self.load(gps=True)
+        self.login()
+        self.lua.execute("""
+            originalExists=false
+            SlashCmdList.OPENMAPGPS('sync settings')
+            assert(not OpenMapGPSCharDB.gpsSettingsSyncRequest and #addonChanges==0 and reloads==0)
+            originalExists=true IN_COMBAT=true
+            SlashCmdList.OPENMAPGPS('sync settings')
+            assert(not OpenMapGPSCharDB.gpsSettingsSyncRequest and #addonChanges==0 and reloads==0)
+        """)
+
+    def test_failed_handoff_clears_request_without_login_loop(self):
+        self.load(gps=True)
+        self.login()
+        self.lua.execute("""
+            C_AddOns.SaveAddOns=function() error('save failed') end
+            SlashCmdList.OPENMAPGPS('sync settings')
+            assert(not OpenMapGPSCharDB.gpsSettingsSyncRequest and reloads==0)
+            assert(LOG[#LOG]:find('Use the AddOns list',1,true))
+        """)
+
+    def test_failed_import_clears_saved_request_and_leaves_both_settings_unchanged(self):
+        self.load()
+        self.lua.execute("""
+            OpenMapGPSDB={worldmap={brightness=.17,gpsRoutes={Keep={points={}}}}}
+            OpenMapGPSCharDB={gpsSettingsSyncRequest=true,worldmap={unexplored='dim'}}
+            beforeGPS,beforeChar=OpenMapGPSDB,OpenMapGPSCharDB
+            OpenMapDB.worldmap=nil
+        """)
+        self.load(gps=True)
+        self.login()
+        self.lua.execute("""
+            assert(OpenMapGPSDB==beforeGPS and OpenMapGPSCharDB==beforeChar)
+            assert(OpenMapGPSDB.worldmap.brightness==.17 and OpenMapGPSCharDB.worldmap.unexplored=='dim')
+            assert(OpenMapDB.worldmap==nil and not OpenMapGPSCharDB.gpsSettingsSyncRequest)
+            assert(reloads==0 and #addonChanges==0)
+            assert(LOG[#LOG]:find('Map settings could not be copied.',1,true))
+            FireEvent('PLAYER_LOGIN')
+            assert(reloads==0 and #addonChanges==0)
+        """)
+
+    def test_char_override_absence_restores_account_preference(self):
+        self.load()
+        self.lua.execute("""
+            OpenMapGPSDB={worldmap={}}
+            OpenMapGPSCharDB={worldmap={unexplored='hide',unexploredOwn=true}}
+        """)
+        self.load(gps=True)
+        self.login()
+        self.lua.execute("""
+            SlashCmdList.OPENMAPGPS('sync settings')
+            assert(OpenMapGPSCharDB.worldmap.unexploredOwn==nil and OpenMapGPSCharDB.worldmap.unexplored==nil)
+        """)
+
 
 if __name__ == "__main__":
     unittest.main()

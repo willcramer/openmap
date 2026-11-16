@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+## v0.8.10-gps.5 (2026-11-16)
+
+### Improved
+
+- **Green GPS route:** a continuous line joins the remaining waypoint nodes, with a larger
+  destination marker. Its leading segment follows your current position. The line keeps its
+  width while zooming and works on the stitched map, controller view and native Zephras maps.
+- **Import original map settings:** `/omgps sync settings` copies relevant appearance, window,
+  filter and control preferences from original OpenMap, then returns to GPS. It switches through
+  the original with UI reloads to read its live profile. GPS routes and GPS-specific options,
+  recordings and map-pin data remain separate.
+
 ## v0.8.10-gps.4 (2026-11-16)
 
 ### Fixed

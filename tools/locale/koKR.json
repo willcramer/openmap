@@ -636,5 +636,7 @@
  "Use the AddOns list to enable one map addon, then reload.": "애드온 목록에서 지도 애드온 하나를 활성화한 뒤 UI를 다시 불러오세요.",
  "Walk farther before saving this route.": "이 경로를 저장하려면 더 걸어가세요.",
  "Warn": "경고",
- "You have arrived.": "목적지에 도착했습니다."
+ "You have arrived.": "목적지에 도착했습니다.",
+ "Map settings copied to GPS.": "지도 설정을 GPS로 복사했습니다.",
+ "Map settings could not be copied.": "지도 설정을 복사하지 못했습니다."
 }

@@ -1,6 +1,6 @@
 # GPS road-network validation
 
-Candidate: **v0.8.10-gps.11**, Forever Maps dataset **2.0.166**, separate addon **OpenMapGPS**
+Candidate: **v0.8.10-gps.12**, Forever Maps dataset **2.0.166**, separate addon **OpenMapGPS**
 (display name **OpenMap - GPS**).
 This is an offline-verified test build. No live game-client verification is claimed.
 
@@ -34,7 +34,13 @@ This is an offline-verified test build. No live game-client verification is clai
 ## OpenMap integration and installation
 
 - All six loader modes, navigation and controller-waypoint checks pass for Forever and Retail.
-  Existing focused tests also pass. The consolidated local run has 45 successful invocations.
+  Existing focused tests also pass. The consolidated local run has 47 successful invocations,
+  including upstream's new performance and flight-discovery suites.
+- Official OpenMap v0.8.10 (`0f4d2e4b6fe82b9032618fd3b824eaaa5b36dcef`) is merged into the
+  GPS branch. Changelog sections retain both custom history and official release notes; locale
+  sources were merged by English key and regenerated, with no competing translation changes.
+  GPS guidance, road dots and node markers all participate in the shared instance-hide filter,
+  including layers created after the filter first changes.
 - Nine GPS core and thirteen full-addon integration tests preserve recording, playback modes,
   partial-save handling, arrival, rerouting and external waypoint ownership.
 - Tracker visibility tests exercise the actual Hide button, commands and full options table,
@@ -92,6 +98,10 @@ This is an offline-verified test build. No live game-client verification is clai
 - Installation fixtures verify the one new editor module is added safely, a failure after its
   addition rolls back both new and replaced files including timestamps, concurrent GPS edits
   refuse overwrites, and original OpenMap remains unchanged.
+- The upstream merge adds 223 Portuguese zone textures in one new directory, with no removed
+  files. Their decoding and upstream credits are verified. The installer validates the exact
+  addition manifest and supports rolling back the added files and directory along with replaced
+  files and existing parent-directory timestamps.
 - New GPS/context-menu strings have translations in each of the ten supported locales. Placeholder and
   command checks report zero problems. Six pre-existing unrelated strings remain untranslated.
   Standby/bootstrap messages can fall back to English before active locale tables are loaded.

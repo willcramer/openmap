@@ -5,6 +5,8 @@ OpenMap leaves those out. In the controller view (PadView.lua) Blizzard's map is
 and so are its pins: every quest must be OpenMap's icon there (#225), with the "!" of those to start
 in the zone it is on, and a click mustn't open Blizzard's quest log, whose details set the pad's
 buttons from OpenMap's code.
+The zones are read a few a frame (one frame reading them all was a hitch), the icons put up together
+once every zone is in, and nothing is read while the map is closed. The stub runs the frames' OnUpdate.
 (What the icons look like, and where Blizzard's map is, needs the game: the stub has neither.)
 """
 from pathlib import Path
@@ -53,8 +55,14 @@ C_Map = {
 }
 Enum.QuestLineFloorLocation = { Above = 0, Below = 1, Same = 2 }
 C_QuestLine = { GetAvailableQuestLines = function(id) asked[#asked + 1] = id return OFFERS[id] end }
+reads, frameReads, mostReads = 0, 0, 0   -- GetQuestsOnMap calls: all, this frame, the most in one frame
+clock, COST = 0, 0                  -- debugprofilestop's ms, and what each GetQuestsOnMap adds to it
 C_QuestLog = {
-	GetQuestsOnMap = function(id) return QUESTS[id] end,
+	GetQuestsOnMap = function(id)
+		reads, frameReads, clock = reads + 1, frameReads + 1, clock + COST
+		if BOOM == id then error("no such map here") end
+		return QUESTS[id]
+	end,
 	IsComplete = function() return false end,
 	GetTitleForQuestID = function(id) return "Quest " .. id end,
 	GetLogIndexForQuestID = function() end,
@@ -64,12 +72,37 @@ C_QuestLog = {
 C_SuperTrack = { SetSuperTrackedQuestID = function(id) calls[#calls + 1] = "track " .. id end }
 GetCVarBool = function() return questPOI end
 InCombatLockdown = function() return false end
-C_Timer = { After = function() end }
+timers, errors = {}, {}
+C_Timer = { After = function(_, fn) timers[#timers + 1] = fn end }
+function FireTimers() local due = timers timers = {} for _, fn in ipairs(due) do fn() end end
+geterrorhandler = function() return function(e) errors[#errors + 1] = tostring(e) end end
 hooksecurefunc = function() end
 GameTooltip = setmetatable({}, { __index = function(t, k)
 	return function(_, a, ...) if k == "AddLine" or k == "SetText" then tip[#tip + 1] = a end end
 end })
-CreateFrame = function() return setmetatable({}, NOOP) end
+frames = {}                         -- every frame made: their scripts run here, OnUpdate a frame at a time
+CreateFrame = function()
+	local f = setmetatable({ scripts = {}, shown = true }, NOOP)
+	function f:SetScript(k, fn) self.scripts[k] = fn end
+	function f:Show() self.shown = true end
+	function f:Hide() self.shown = false end
+	function f:IsShown() return self.shown end
+	frames[#frames + 1] = f
+	return f
+end
+-- one frame of the game: every shown frame's OnUpdate; whether any ran
+function Frame()
+	frameReads = 0
+	local ran = false
+	for _, f in ipairs(frames) do
+		if f.shown and f.scripts.OnUpdate then f.scripts.OnUpdate(f, 0.016) ran = true end
+	end
+	mostReads = math.max(mostReads, frameReads)
+	return ran
+end
+-- frames until nothing is left running; how many ran
+function Frames() local n = 0 while Frame() do n = n + 1 assert(n < 1000, "still running") end return n end
+function Event(e, ...) for _, f in ipairs(frames) do if f.scripts.OnEvent then f.scripts.OnEvent(f, e, ...) end end end
 QuestMapFrame_ShowQuestDetails = function(id) details[#details + 1] = id end
 
 L = setmetatable({}, { __index = function(_, k) return k end })
@@ -81,17 +114,32 @@ function mod.HostMap() return host end
 function mod.ToWorld(id, x, y) local l, r, t, b = S.Rect(id) return l + x * (r - l), t + y * (b - t) end
 function mod.PadViewOn() return padView end
 
--- Blizzard's map: on ZONE, windowed, its quest log shown
+-- Blizzard's map: on ZONE, windowed, its quest log shown (and the map itself while `shown`)
+shown, hooks = true, {}
 blizz = setmetatable({ QuestLog = setmetatable({}, NOOP) }, NOOP)
 function blizz:GetMapID() return ZONE end
 function blizz:IsMaximized() return false end
-function blizz:IsShown() return true end
+function blizz:IsShown() return shown end
+function blizz:HookScript(k, fn) hooks[k] = hooks[k] or {} table.insert(hooks[k], fn) end
+function Script(k) for _, fn in ipairs(hooks[k] or {}) do fn(blizz) end end
 function blizz.QuestLog:IsShown() return true end
 function blizz:HandleUserActionOpenSidePanel() opened[#opened + 1] = "side panel" end
 
 assert(loadstring(SRC, "Quests.lua"))("OpenMap", ns)
 
-function Refresh() mod:RefreshQuests() end
+-- a refresh, and the frames it takes to read every zone
+function Refresh() mod:RefreshQuests() Frames() end
+-- many stitched zones, a quest in each third (before the first refresh: the zones are read once)
+function ManyZones(n)
+	local list = {}
+	for i = 1, n do
+		local id = 2000 + i
+		list[i] = { mapID = id }
+		RECTS[id] = { 0.5, 0.6, 0.4, 0.5 }
+		if i % 3 == 0 then QUESTS[id] = { { questID = 3000 + i, x = 0.5, y = 0.5 } } end
+	end
+	C_Map.GetMapChildrenInfo = function() return list end
+end
 function Ids() local out = {} for i, p in ipairs(drawn) do out[i] = p.data.id end table.sort(out) return out end
 function OfferIds() local out = {} for i, p in ipairs(offers) do out[i] = p.data.id end table.sort(out) return out end
 """
@@ -281,6 +329,88 @@ class Quests(unittest.TestCase):
     def test_tooltip_on_the_windowed_usual_map_does(self):
         self.usual_map()
         self.assertEqual(self.hint(), "Click: track this quest, zoom to it and show it in the quest log")
+
+    # (every stitched zone's quests in one frame was a hitch: they're read a few a frame)
+
+    def many_zones(self, clock=False):
+        # twenty zones, a quest in each third; with `clock`, each read costs 1.2 ms of debugprofilestop
+        self.usual_map()
+        if clock:
+            self.lua.execute("debugprofilestop = function() return clock end COST = 1.2")
+        self.lua.execute("ManyZones(20)")
+
+    def test_the_zones_are_read_a_few_a_frame(self):
+        self.many_zones()
+        self.lua.execute("mod:RefreshQuests()")
+        self.assertEqual(self.lua.eval("reads"), 1, "more than the host's own quests read in the refresh itself")
+        frames = self.lua.eval("Frames()")
+        self.assertEqual(self.lua.eval("reads"), 21, "each zone read once")
+        self.assertLessEqual(self.lua.eval("mostReads"), 3)
+        self.assertEqual(frames, 7)
+        self.assertEqual(len(self.ids()), 6)
+
+    def test_a_frame_reads_zones_until_its_time_is_spent(self):
+        # 3 ms a frame: the zone that crosses it is the frame's last
+        self.many_zones(clock=True)
+        self.lua.execute("Refresh()")
+        self.assertEqual(self.lua.eval("mostReads"), 3)
+        self.assertEqual(len(self.ids()), 6)
+
+    def test_the_icons_stay_until_every_zone_is_read(self):
+        self.many_zones()
+        self.lua.execute("Refresh()")
+        before = self.ids()
+        self.lua.execute("QUESTS[2001] = { { questID = 999, x = 0.5, y = 0.5 } } mod:RefreshQuests() Frame()")
+        self.assertEqual(self.ids(), before, "cleared, or half drawn, while the zones are read")
+        self.lua.execute("Frames()")
+        self.assertEqual(self.ids(), sorted(before + [999]))
+
+    def test_nothing_is_read_while_the_map_is_closed(self):
+        self.usual_map()
+        self.lua.execute("shown = false Event('QUEST_LOG_UPDATE') FireTimers() Frames()")
+        self.assertEqual(self.lua.eval("reads"), 0)
+        self.lua.execute("shown = true Script('OnShow') FireTimers() Frames()")
+        self.assertEqual(self.ids(), [200], "not read as the map opened")
+
+    def test_closing_the_map_stops_a_reading_and_the_next_opening_reads(self):
+        self.many_zones()
+        self.lua.execute("mod:RefreshQuests() Frame()")
+        read = self.lua.eval("reads")
+        self.lua.execute("shown = false Script('OnHide') Frames()")
+        self.assertEqual(self.lua.eval("reads"), read, "went on reading with the map closed")
+        self.lua.execute("shown = true Script('OnShow') FireTimers() Frames()")
+        self.assertEqual(len(self.ids()), 6)
+
+    def test_a_change_while_reading_is_read_once_the_reading_is_done(self):
+        self.many_zones()
+        self.lua.execute("mod:RefreshQuests() Frame()")   # (zone 2001 read already)
+        self.lua.execute("QUESTS[2001] = { { questID = 999, x = 0.5, y = 0.5 } } Event('QUEST_LOG_UPDATE') FireTimers()")
+        self.lua.execute("Frames()")
+        self.assertNotIn(999, self.ids())
+        self.assertEqual(self.lua.eval("#timers"), 1, "no refresh asked for after the reading")
+        self.lua.execute("FireTimers() Frames()")
+        self.assertIn(999, self.ids())
+
+    def test_a_steady_stream_of_quest_log_updates_cant_hold_the_icons_back(self):
+        self.many_zones()
+        self.lua.execute("mod:RefreshQuests()")
+        for _ in range(10):
+            self.lua.execute("Event('QUEST_LOG_UPDATE') FireTimers() Frame()")
+        self.assertEqual(len(self.ids()), 6)
+
+    def test_a_zone_that_errors_is_said_once_and_the_icons_are_kept(self):
+        self.many_zones()
+        self.lua.execute("Refresh() BOOM = 2010 Refresh()")
+        self.assertEqual(self.lua.eval("#errors"), 1)
+        self.assertEqual(len(self.ids()), 6)
+        self.assertFalse(self.lua.eval("Frame()"), "still reading every frame after the error")
+
+    def test_status_says_what_the_last_reading_cost(self):
+        self.assertIn("not read yet", self.lua.eval("mod.QuestsStatus()"))
+        self.many_zones(clock=True)
+        self.lua.execute("Refresh()")
+        self.assertEqual(self.lua.eval("mod.QuestsStatus()"),
+                         "Quests from every zone: 20 zones read in 24 ms over 7 frames (the longest 3.6 ms).")
 
 
 if __name__ == "__main__":

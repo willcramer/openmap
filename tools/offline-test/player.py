@@ -15,6 +15,7 @@ class PlayerTests(unittest.TestCase):
         self.lua.execute("""
             combat, active, PLAYER_ABOVE, canvasScale = false, true, 8500, 2
             mod = { db = { playerArrow = false } }
+            ns = { Safe = { Finite = function() return true end } }   -- (WoW Forever's: no ns.MapWorld, retail's world)
             S = setmetatable({}, { __index = function() return function() end end })
             sc = { GetFrameLevel = function() return 10 end }
             SET_OPTION = {}

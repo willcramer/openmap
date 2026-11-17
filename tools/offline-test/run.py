@@ -89,6 +89,43 @@ steps = L.eval("""function(ns, scenario)
     local ok, err = pcall(function() return ACR:GetOptionsTable("OpenMap", "dialog", "AceGUI-3.0") end)
     if not ok then ERRORS[#ERRORS + 1] = "options: " .. tostring(err) end
     if ok then WalkOptions(err, {}, {}) end
+    -- a view that isn't one (NaN, infinite: a map 0 px across, #260 #261) never reaches the game's map
+    -- lookups, which error on it as the game's do here, nor the close-up layers
+    do
+        local S, nan, inf = ns.MapStitch, 0 / 0, 1 / 0
+        local real = C_Map.GetMapInfoAtPosition
+        C_Map.GetMapInfoAtPosition = function(id, x, y, ...)
+            if x ~= x or y ~= y or x == inf or y == inf then error("bad argument #2 to 'GetMapInfoAtPosition' (must be a finite number)") end
+            if real then return real(id, x, y, ...) end
+        end
+        local okn, en = pcall(function()
+            assert(#S.ChainAt(nan, nan) == 1 and #S.ChainAt(inf, 0.5) == 1)
+            S.ChainAt(0.5, 0.5)
+            if S.SetView then S.SetView(nan, nan, 0.1, 0.1, 46.58) S.SetView(0.5, 0.5, inf, 0.1, 4) end
+        end)
+        C_Map.GetMapInfoAtPosition = real
+        if not okn then ERRORS[#ERRORS + 1] = "NaN view: " .. tostring(en) end
+    end
+    -- the map's frame rate cap: off by default, the game's own limit kept (a 60 cap held a 144 fps game at
+    -- 60 while the map was open, #273)
+    if (ns.modules.worldmap.db.mapFpsCap or 0) ~= 0 then
+        ERRORS[#ERRORS + 1] = "map frame rate cap: " .. tostring(ns.modules.worldmap.db.mapFpsCap) .. " by default, not the game's own limit"
+    end
+    -- Soften and paper grain: off by default (its blur rests while the map moves: soft each time it stopped)
+    if ns.modules.worldmap.db.soften ~= false then ERRORS[#ERRORS + 1] = "Soften and paper grain on by default" end
+    -- logging out: no NaN or infinite number left in the saved settings, which the game can't read back
+    -- (the whole file lost: every setting reset, #306); the rest kept
+    do
+        local db, cdb = OpenMapDB.worldmap, OpenMapCharDB.worldmap
+        local keepScale = db.windowScale
+        db.windowSize, db.scrubTest, cdb.scrubTest = { 0 / 0, 600 }, { 1 / 0, keep = 3 }, -1 / 0
+        FireEvent("PLAYER_LOGOUT")
+        if db.windowSize[1] ~= nil or db.windowSize[2] ~= 600 or db.scrubTest[1] ~= nil or db.scrubTest.keep ~= 3
+            or cdb.scrubTest ~= nil or db.windowScale ~= keepScale then
+            ERRORS[#ERRORS + 1] = "saved settings: a NaN or infinite number left in them at logout"
+        end
+        db.windowSize, db.scrubTest, cdb.scrubTest = false, nil, nil
+    end
     for _, cmd in ipairs({ "status", "paint", "news", "forgetflights" }) do
         local ok2, e2 = pcall(SlashCmdList.OPENMAP, cmd)
         if not ok2 then ERRORS[#ERRORS + 1] = "slash " .. cmd .. ": " .. tostring(e2) end

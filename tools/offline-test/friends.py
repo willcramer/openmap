@@ -164,6 +164,19 @@ class FriendsTests(unittest.TestCase):
         self.run_(1)
         self.assertEqual(self.lua.eval("Sent('GUILD', 'L0')"), 1)
 
+    def test_off_means_your_place_never_leaves(self):
+        # (#277: turned off where nothing tells Friends.lua at once, a menu row or another addon setting it:
+        # a place already queued, or a friend's hello answered, never carries it)
+        self.run_(8)
+        self.lua.execute("Fire('CHAT_MSG_ADDON', 'OpenMapLoc', 'H2', 'WHISPER', 'Pal')")
+        self.lua.execute("mod.db.friendsShare = true mod.RefreshFriends()")
+        self.lua.execute("mod.db.friendsShare = false")              # (before the queue has gone out)
+        self.lua.execute("Fire('CHAT_MSG_ADDON', 'OpenMapLoc', 'H1', 'WHISPER', 'Pal')")
+        self.run_(30)
+        self.assertEqual(self.lua.eval("Sent('GUILD', 'L1')"), 0)
+        self.assertEqual(self.lua.eval("Sent('WHISPER', 'L1')"), 0)
+        self.assertGreaterEqual(self.lua.eval("Sent('GUILD', 'L0')"), 1)   # (and told you've stopped)
+
     def test_nothing_from_an_instance(self):
         self.lua.execute("mod.db.friendsShare = true mod.RefreshFriends()")
         self.run_(1)

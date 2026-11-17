@@ -39,6 +39,10 @@ class NavigationTests(unittest.TestCase):
             function mod.Glide(u, v, zoom) target = { u, v, zoom } end
             function ns:Print() end
         """)
+        # Core.lua's own Safe.Finite (the views' guard against NaN: #260 #261)
+        core = (ROOT / "Core.lua").read_text(encoding="utf-8")
+        start = core.index("function Safe.Finite(")
+        self.lua.execute("local Safe = ns.Safe\n" + core[start:core.index("\nend\n", start) + 5])
         self.lua.execute((ROOT / "Map/Nav.lua").read_text(encoding="utf-8"),
                          "OpenMap", self.lua.globals().ns)
         self.lua.execute("""
@@ -108,14 +112,23 @@ class NavigationTests(unittest.TestCase):
             assert(mod.SavedView() == .5)
         """)
 
-    def test_unknown_position_and_explicit_quest_map_do_not_restore(self):
+    def test_no_position_reopens_where_you_left_it_but_a_quest_map_never(self):
+        # (inside a dungeon there's nowhere to centre on: the view you left the map at, whatever the choice,
+        # not Blizzard's whole continent each time; a map put up for a quest still shows as Blizzard shows it)
         self.lua.execute("""
-            mod.db.reopenView = 'visible'
-            mod:OnMapHidden()
-            playerU = nil
-            assert(mod.SavedView() == nil)
+            for _, mode in ipairs({ 'visible', 'player', 'zoom', 'inzone' }) do
+                mod.db.reopenView = mode
+                playerU = .5
+                mod:OnMapHidden()
+                playerU = nil
+                local u, v, zoom = mod.SavedView()
+                assert(u == .5 and v == .5 and zoom == 4, mode)
+                assert(mod.SavedView(999) == nil, mode)
+            end
             playerU = .5
-            assert(mod.SavedView(999) == nil)
+            mod.db.reopenView = 'player'
+            local u, v, zoom = mod.SavedView()
+            assert(zoom == 8)                       -- (a position again: centred on you, at your zone's fit)
         """)
 
     def test_always_mode_restores_across_zones_outside_previous_view(self):
@@ -128,6 +141,23 @@ class NavigationTests(unittest.TestCase):
             local u, v, zoom = mod.SavedView(2)
             assert(u == .5 and v == .5 and zoom == 4)
             assert(mod.SavedView(999) == nil)
+        """)
+
+    def test_a_view_that_is_not_one_is_never_reopened(self):
+        # (#260 #261: a NaN view, from a map 0 px across, saved as it closed left it blank on reopening)
+        self.lua.execute("""
+            local F = ns.Safe.Finite
+            assert(F(1, 0, -2.5) and not F(0 / 0) and not F(1 / 0) and not F(-1 / 0) and not F(nil) and not F(1, 0 / 0))
+            mod.db.reopenView = 'always'
+            mod:OnMapHidden()
+            function mod.ViewNow() return 0 / 0, 0 / 0, 46.58 end
+            mod:OnMapHidden()
+            local u, v, zoom = mod.SavedView()
+            assert(u == .5 and v == .5 and zoom == 4)
+            function mod.ViewNow() return .5, .5, 1 / 0 end
+            mod:OnMapHidden()
+            u, v, zoom = mod.SavedView()
+            assert(zoom == 4)
         """)
 
     def test_inzone_mode_opens_on_the_whole_zone(self):

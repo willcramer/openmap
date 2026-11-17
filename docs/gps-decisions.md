@@ -71,6 +71,10 @@
 
 ## Integration and parity
 
+- Merge official upstream main into the GPS branch so shared map fixes remain in the same
+  source tree. Resolve changelog sources by retaining custom notes and upstream releases;
+  merge translations by English key and regenerate Lua. Preserve the package transform and
+  GPS SavedVariables identity, and verify all GPS layers follow upstream visibility filters.
 - Store manual nodes and explicit links separately under GPS-specific saved data, using stable
   references to bundled nodes without mutating the source. Never infer a manual junction from
   proximity. Reuse the existing projection, floor checks, routing and replan lifecycle. Manual

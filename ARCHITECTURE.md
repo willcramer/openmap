@@ -134,6 +134,9 @@ settings they're baked at (colour match and desaturation at their defaults, unex
 not hidden) they're drawn instead of the live zone layers, a few dozen tiles where the live
 layers are hundreds of masked textures, until the view passes the tiles' own pixels; then
 the live layers take over (`Baked.FADE`, in screen px per tile px), tile by tile near the view.
+The tiles carry the art's lettering: they're drawn on an English client, or on one whose language has
+its own set baked from its own art (`MapZones/<locale>/`, `ns.MapZoneArt.locales`: `Baked.lettered`);
+any other client draws the live layers at every zoom.
 Drawn at `1 - (1 - d)^2` for the zone detail's fade `d`, as strong as the live layers stacked.
 The live layers come on at full under the tiles a little before the hand-over (`Baked.WARM`),
 so their files load there, and the tiles fade off them; while their files are still loading

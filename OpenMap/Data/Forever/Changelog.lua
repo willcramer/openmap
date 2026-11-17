@@ -4,6 +4,11 @@
 local _, ns = ...
 
 ns.MapChangelog = {
+	{ version = "v0.8.10-gps.12", date = "2026-11-17", heads = { [1] = "Improved", }, items = {
+		"|cff6e2c0aUpdated OpenMap base:|r merged the official v0.8.10 release, including blank-map and saved settings fixes, combat-safe map behavior, paced loading, rendering improvements, corrected flight-path discovery, dungeon-map controls and Portuguese zone tiles.",
+		"|cff6e2c0aGPS features retained:|r route planning, green map guidance, TomTom waypoint updates, hidden-tracker preferences, manual road editing, recordings, location menus and the computer icon remain available. GPS node markers follow the shared instance visibility rules.",
+		"|cff6e2c0aIndependent installation:|r OpenMap - GPS keeps its own addon identity and saved data. New upstream textures require a full client restart after updating.",
+	} },
 	{ version = "v0.8.10-gps.11", date = "2026-11-17", heads = { [1] = "Improved", }, items = {
 		"|cff6e2c0aGPS icon:|r GPS navigation and its map shortcut use Blizzard's blue handheld-computer icon. The icon is referenced directly from the client.",
 	} },
@@ -21,9 +26,5 @@ ns.MapChangelog = {
 	{ version = "v0.8.10-gps.7", date = "2026-11-16", heads = { [1] = "Improved", }, items = {
 		"|cff6e2c0aOpenMap - GPS:|r renamed the custom build in the AddOn List and its status messages.",
 		"|cff6e2c0aRight-click menu by default:|r new and existing profiles start with the location menu. You can still select Zoom out; that choice persists after this one-time default update.",
-	} },
-	{ version = "v0.8.10-gps.6", date = "2026-11-16", heads = { [1] = "Improved", }, items = {
-		"|cff6e2c0aIndependent AddOn List entry:|r OpenMap GPS Test now has its own group. Choose the active map through the AddOns list; /omgps use gps and /omgps use original have been removed.",
-		"|cff6e2c0aRight-click choice:|r Options' Right-click on the map can keep Zoom out or open a location menu with Place waypoint, Add note and Go Here. The menu remembers where you clicked. Notes open the existing pin editor without replacing your active GPS waypoint.",
 	} },
 }

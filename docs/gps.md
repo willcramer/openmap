@@ -8,16 +8,19 @@ The Forever package includes the 2.0.166 road network and associated room/floor 
 author permission. The importer and routing code are independently implemented; no Forever Maps
 routing implementation or art is included. See the [data notice](../OpenMap/Data/Forever/RoadData-NOTICE.md).
 
+The current GPS build includes official OpenMap **v0.8.10**, merged from upstream main at
+`0f4d2e4b6fe82b9032618fd3b824eaaa5b36dcef`, together with the GPS customizations.
+
 ## Install
 
-Use **OpenMapGPS-v0.8.10-gps.11-forever.zip**, the separate-addon build. The older gps.1 ZIP
+Use **OpenMapGPS-v0.8.10-gps.12-forever.zip**, the separate-addon build. The older gps.1 ZIP
 used the original addon's folder and should not be used for a side-by-side install.
 If you already installed gps.1 into `OpenMap`, reinstall the official OpenMap there first.
 
 1. Quit WoW. Leave your existing `Interface/AddOns/OpenMap` folder in place.
 2. Extract the Forever GPS ZIP into `Interface/AddOns`. The new folder must be
    `Interface/AddOns/OpenMapGPS`, containing `OpenMapGPS.toc`.
-3. Restart the client after updating to refresh its AddOn List metadata. **OpenMap - GPS** has
+3. Restart the client after updating to load the added textures and refresh its AddOn List metadata. **OpenMap - GPS** has
    its own entry, rather than being nested under OpenMap.
 4. In AddOns, enable **OpenMap - GPS** and disable original **OpenMap**, then reload. To use
    the original again, enable it and disable OpenMap - GPS in that same list.

@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+## v0.8.10-gps.12 (2026-11-17)
+
+### Improved
+
+- **Updated OpenMap base:** merged the official v0.8.10 release, including blank-map and saved
+  settings fixes, combat-safe map behavior, paced loading, rendering improvements, corrected
+  flight-path discovery, dungeon-map controls and Portuguese zone tiles.
+- **GPS features retained:** route planning, green map guidance, TomTom waypoint updates,
+  hidden-tracker preferences, manual road editing, recordings, location menus and the computer
+  icon remain available. GPS node markers follow the shared instance visibility rules.
+- **Independent installation:** OpenMap - GPS keeps its own addon identity and saved data.
+  New upstream textures require a full client restart after updating.
+
 ## v0.8.10-gps.11 (2026-11-17)
 
 ### Improved
@@ -109,6 +122,117 @@
   in reverse, on a loop or back and forth. Saved trails supply a road network with turn guidance
   and rerouting. Locations without connected recorded roads use explicitly labeled direct guidance;
   transport itinerary planning and a bundled road network are not included. By willcramer.
+
+## v0.8.10 (2026-11-16)
+
+### Fixed
+
+- **The map loads again for everyone**: for some players since v0.8.9 the map opened blank, with an
+  error about GetMapInfoAtPosition. A view worked out while the map was still 0 px across (a divide
+  by zero) was put into the map, and every view after it was worked out from it, so the map stayed
+  blank. A view that isn't one is never put up now, the map's last view and its saved window place
+  and size are checked as they're read back, and a bad one is forgotten (#260, #261, #263). The cause, found
+  by OlehPetrykUA: v0.8.9 put the map together during its very first build, before it had a size.
+
+- **Fewer hitches zooming out**: the first zoom out of a session made the lettering of every continent
+  and sea name (hundreds of font strings) in one frame; one name is made a frame now. And the tiles
+  fading in as you zoom out set their opacity in 8 steps instead of on every frame, a third to a half
+  fewer calls to the client for a zoom out. By k4m1.
+
+- **No more flight paths at Eastern Plaguelands' towers**: Plaguewood, Northpass, Eastwall and Crown
+  Guard Tower are in the game's flight tables, but no character can learn them and no flight master
+  stands there; they're left out (#264).
+
+- **A dungeon you've been inside counts as found** ("Only places you've found"): Blackfathom Deeps'
+  entrance, under the Zoram Strand's water, never showed, done or not. Counted from your next visit (#256).
+
+- **A quest from the quest log shows its map with "Center on player, keep zoom"**: in your own zone
+  the map opened at the kept zoom on you, the quest off screen; it shows the quest's map whole now, as
+  with the other choices (#255).
+
+- **The zone highlight toggle works again**: with it off, zones could still glow under the cursor, where
+  the game made its highlight after OpenMap set the map up (#262).
+
+- **The map in combat**: opened, zoomed or panned in a fight, the map no longer comes up stretched,
+  half empty and see-through until the fight ends. The game can refuse OpenMap's zoom then (the map
+  holds the group members' protected icon); the map is now drawn at the zoom the game kept, and the
+  one you asked for is put up as the fight ends. The window is no longer moved, sized or scaled in a
+  fight either (each was an "action blocked"): that waits for the fight's end too (#294). By Vennomfang.
+
+- **ClassicUI Forever**: its World map option lays the map window out itself every frame, so
+  OpenMap's resize corners and title bar did nothing, and in a fight parts of the map went missing.
+  OpenMap now asks once whether to turn that option off (a reload). Kept on, OpenMap's corners, title
+  bar and saved place stand down and leave the window to it.
+
+- **Stuck on a dungeon's map**: inside a dungeon, Esc closed the whole map, and it opened on the
+  dungeon again, never the world. Esc (out of combat), a right-click and Back now go to the world map
+  around the dungeon's entrance (or your last place outdoors), and another addon laying the window out
+  again no longer throws the map back to the dungeon.
+
+- **Your settings kept**: for some players every setting went back to its default at each login since
+  v0.8.9. A broken number from the blank map (#261) was saved with them, which the game can't read back,
+  so the whole file was lost; such a number is never saved now (#306).
+
+- **"Share where you are" off means off**: your place could still go out once, queued just before you
+  turned it off or in answer to a friend's hello at that moment. Nothing is sent now while it's off;
+  friends and guild see only your zone, as the game's own lists show it (#277).
+
+- **Learned flight paths are this character's**: a new character was shown flight masters another
+  character had learned, and a learned one could show as not learned. Once you've opened a flight
+  master's map on a character, what it lists is what counts (#274, #301).
+
+- **Mount Hyjal's two flight masters** (Summit of Eternity, Tainted Foothills) are on the map (#288). And
+  the wind riders shown at Eastern Plaguelands' towers, where there are none, are gone (#307, #309).
+
+- **Learned flight masters in green**: they were your faction's icon, red for the Horde, which read as
+  not learned. They're the game's flight map green now, greyed where not learned.
+
+- **The world map reopens where you left it inside a dungeon**: with any reopen choice but Always
+  remember, browsing the world map in a dungeon and opening it again went back to the whole continent
+  each time. With nowhere to centre on, it reopens where you left it now.
+
+### Improved
+
+- **A dungeon's map never covers your quest log**: beside the quest log it always opens on your quests;
+  the dungeon's panel shows only when you pick its tab. And **dungeon maps inside dungeons can be turned
+  off** (Options and the menu's Dungeons): off, the map opened inside a dungeon is the game's own there; a
+  dungeon's map still opens from its entrance. The first dungeon you're in says once where that switch is.
+  With Dungeon Journal or NeedRoll installed, their map is left to them inside a dungeon (#302, #267).
+
+- **Sharp map by default**: Soften and paper grain is off for everyone (turn it back on in Look > Up close).
+  It softened the map a moment after it stopped moving, sharp while zooming or panning, which read as the
+  map going blurry (#286, #118). Its tooltip now says so.
+
+- **The game's own frame rate limit while the map is open**: v0.8.9's 60 fps cap held the whole game at
+  60 while the map was open, below what many had set. It's off by default again (set once back to off
+  for everyone who had 60); the Map frame rate cap is still there to turn on (#273).
+
+- **Faster loading**: the stitched map is no longer built during the loading screen. It's built a few
+  seconds after it, a few milliseconds a frame (not in combat), so the map is ready by the time you open
+  it; opened sooner, the rest is built then. By Vennomfang.
+
+- **A smoother map on a Brazilian Portuguese client**: the zones' art from further out is drawn from
+  tiles baked from the ptBR client's own maps, place names and city banners in Portuguese, as an English
+  client's has been (it was every zone's art drawn live: panning at mid zoom took about half the frame
+  time). Other languages draw it live as before, until their own tiles are baked. (New textures:
+  restart the game.) By cscoder69, with thanks to developer-felipe, whose #265 took this on first.
+
+- **Less work while the map is closed**: the guild and friends lists are read at most every 30 seconds
+  (a raid's roster changes came each time), exploring somewhere recolours the map's art the next time
+  it opens rather than then, and another addon loading no longer looks through every global table
+  again.
+
+- **Smoother panning and zooming**: darkened unexplored land lets go of zones out of view (they were
+  laid out on every frame, more the more of the world you'd seen), and of a zone's old shading when
+  it's made again; the boat and zeppelin routes' finer dots are hidden, not only faded, from afar; the
+  continents' names rest their outer glow while the map moves; and the close-up minimap, the cursor's
+  place name and the coordinates skip work when nothing has changed. By cscoder69.
+
+- **Smoother with the map open**: "Quests from every zone" asked the game for the quests of every zone
+  and city in a single frame, half a second after each opening and again after each burst of quest log
+  updates while the map was open (and once more after it closed). The zones are now read a few a frame
+  and the icons put up together once all are in; nothing is read while the map is closed.
+  `/openmap status` says what the last reading cost. By Merryfett.
 
 ## v0.8.9 (2026-11-14)
 

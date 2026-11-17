@@ -53,6 +53,7 @@ AI coding agents: read [AGENTS.md](../AGENTS.md) too.
    python -P tools/offline-test/friends.py  # friends and guild on the map: what Friends.lua hears and sends
    python -P tools/offline-test/padfriends.py  # the controller view: friends and guild set up with it, A on an icon with nothing to press
    python -P tools/offline-test/bosses.py   # boss pins' data: each on one of its dungeon's floors, on the picture
+   python -P tools/offline-test/perf.py     # a zoom out's work: regions drawn, anchored, touched and made per step, against budgets (docs/performance.md)
    python -P tools/offline-test/questie.py  # Questie's icons found as a LibStub library (to 12.7) and a module (12.8)
    python -P tools/offline-test/quests.py   # your quests' icons: on the usual map and in the controller view (PadView.lua)
    ```
@@ -76,7 +77,7 @@ AI coding agents: read [AGENTS.md](../AGENTS.md) too.
 ## Clients
 
 The custom GPS build can be packaged separately with
-`python -P tools/package/build.py v0.8.10-gps.11 --client=forever --variant=gps`.
+`python -P tools/package/build.py v0.8.10-gps.12 --client=forever --variant=gps`.
 `tools/package/variant.py` rewrites only the archive's addon identity; source and normal packages
 remain OpenMap. The variant's `BootGPS.lua` runs first and keeps all map code dormant while
 the original is loaded. Explicit `Group: OpenMapGPS` prevents the AddOn List from nesting it under
@@ -129,7 +130,7 @@ table CSVs, `<tex>` a texture cache. Order matters where one step reads another'
 | 12c | `tools/map-preview/gapplaces.py <db2> <cache>` (best with `OPENMAP_WOW`: it reads the terrain) | `MapGapPlace/`, `Data/GapPlaces.lua` | 12b |
 | 13 | `tools/map-preview/tone.py <db2> <tex>` | `Data/Tones.lua` | |
 | 13a | `tools/map-preview/minimaplod.py <db2> <tex>` | `MapMiniLOD/`, `Data/MinimapLOD.lua` | 13 |
-| 15 | `tools/map-preview/render.py <db2> <tex> <out> --bake-zones` | `MapZones/`, `Data/ZoneArt.lua` | 5, 7, 8, 11, 12, 12b |
+| 15 | `tools/map-preview/render.py <db2> <tex> <out> --bake-zones` (another language's own set: `OPENMAP_LOCALE=<locale>` with `OPENMAP_WOW` on an install of it, and a texture cache of its own) | `MapZones/` (`MapZones/<locale>/`), `Data/ZoneArt.lua` | 5, 7, 8, 11, 12, 12b |
 | 16 | `tools/changelog/build.py` (after any change to `CHANGELOG.md` or `CHANGELOG-retail.md`) | every client's `Data/<client>/Changelog.lua` | |
 | 17 | `tools/map-dungeons/build.py <cache> <WoW folder> [preview dir]` | `Data/DungeonMaps.lua` | 1 |
 | 17a | `tools/map-dungeons/drawn.py` | `MapDungeonDrawn/`, `Data/DungeonDrawn.lua` | `art/drawn/dungeons/` |

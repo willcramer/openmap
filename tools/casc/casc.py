@@ -6,6 +6,7 @@
 #   python -P tools/casc/casc.py <World of Warcraft folder> <file ID> <out file> [product]
 #   product: the install's product in .build.info (WoW Forever's is wowf; it was wow_classic_beta,
 #   and either name finds whichever the install has)
+#   OPENMAP_LOCALE=ptBR (or another client language): read that language's files, from an install of it
 #
 # From the tools: Casc(folder, product).read(fid) -> bytes (KeyError: not in this install).
 # The install is whatever build the launcher last updated it to, which can be newer than
@@ -21,6 +22,11 @@ LOCALE_ENUS = 0x2
 LOCALES = {"enUS": 0x2, "koKR": 0x4, "frFR": 0x10, "deDE": 0x20, "zhCN": 0x40, "esES": 0x80,
            "zhTW": 0x100, "enGB": 0x200, "esMX": 0x1000, "ruRU": 0x2000, "ptBR": 0x4000, "itIT": 0x8000}
 NO_NAMES = 0x10000000           # root block content flag: no name hashes stored
+# OPENMAP_LOCALE: the files as that language's client reads them (its own map art, lettered in its
+# language; an install has only the languages it was installed with). enUS unless set
+LOCALE = LOCALES.get(os.environ.get("OPENMAP_LOCALE", "enUS"))
+if LOCALE is None:
+    raise SystemExit("OPENMAP_LOCALE=%s: not one of %s" % (os.environ["OPENMAP_LOCALE"], ", ".join(LOCALES)))
 
 
 class Encrypted(Exception):
@@ -149,7 +155,7 @@ class Casc:
     def read_ckey(self, ckey):
         return blte(self._read_ekey(self.ekey_of(ckey)))
 
-    # --- file ID -> content key: the root table (enUS or every locale)
+    # --- file ID -> content key: the root table (OPENMAP_LOCALE's entries, enUS by default)
     def _root(self, d):
         fids, keys = [], []
         self._blocks = []                       # every block's IDs and locale mask (locales())
@@ -182,7 +188,7 @@ class Casc:
                 ck = rec[:, :16]
                 pos += 24 * num
             self._blocks.append((ids, locale))
-            if locale & LOCALE_ENUS:
+            if locale & LOCALE:
                 fids.append(ids)
                 keys.append(ck)
         fid = np.concatenate(fids)

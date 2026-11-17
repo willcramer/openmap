@@ -4,6 +4,10 @@
 local _, ns = ...
 
 ns.MapChangelog = {
+	{ version = "v0.8.10-gps.12", date = "2026-11-17", heads = { [1] = "Improved", }, items = {
+		"|cff6e2c0aUpdated OpenMap base:|r merged the official v0.8.10 map, combat, startup, dungeon and saved settings fixes while retaining GPS navigation, manual roads, recordings and tracker controls.",
+		"|cff6e2c0aGPS overlays:|r guidance, road display and node markers follow shared instance visibility. The separate OpenMap - GPS addon identity and saved data remain independent.",
+	} },
 	{ version = "v0.8.10-gps.11", date = "2026-11-17", heads = { [1] = "Improved", }, items = {
 		"|cff6e2c0aGPS icon:|r the navigation action and its map shortcut use the client's blue handheld-computer icon.",
 	} },
@@ -20,9 +24,5 @@ ns.MapChangelog = {
 	{ version = "v0.8.10-gps.7", date = "2026-11-16", heads = { [1] = "Improved", }, items = {
 		"|cff6e2c0aOpenMap - GPS:|r updated the custom addon's display name.",
 		"|cff6e2c0aContext menu by default:|r right-click opens the location menu on new and existing profiles. Later choices of Zoom out remain saved.",
-	} },
-	{ version = "v0.8.10-gps.6", date = "2026-11-16", heads = { [1] = "Improved", }, items = {
-		"|cff6e2c0aIndependent GPS entry:|r OpenMap GPS Test has its own AddOn List group; choose it manually in AddOns. The quick-switch commands have been removed.",
-		"|cff6e2c0aRight-click location menu:|r choose Zoom out or Open location menu in Options. The menu can place a waypoint, add a note or start GPS at the clicked location.",
 	} },
 }

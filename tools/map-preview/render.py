@@ -81,6 +81,12 @@ def rect(mapid):
 # OPENMAP_WOW: the game's folder (World of Warcraft); its own files are read there first
 # (tools/casc), wago.tools only for what the install doesn't have
 WOW = os.environ.get("OPENMAP_WOW")
+# OPENMAP_LOCALE: the client language whose art is read (tools/casc, from an install of that language:
+# wago.tools's files are enUS) and whose zone tiles --bake-zones writes (MapZones/<locale>/, Stitch.lua's
+# Baked.lettered); enUS's are MapZones/ itself
+LOCALE = os.environ.get("OPENMAP_LOCALE", "enUS")
+ENGLISH = LOCALE[:2] == "en"
+ZONES_DIR = os.path.join(TEXDIR, "MapZones") if ENGLISH else os.path.join(TEXDIR, "MapZones", LOCALE)
 _casc = []
 def local(fid, p):
     if not WOW: return False
@@ -98,6 +104,8 @@ def local(fid, p):
 def fetch(fid):
     p = os.path.join(cache, "%d.blp" % fid)
     if (not os.path.exists(p) or os.path.getsize(p) == 0) and not local(fid, p):
+        if not ENGLISH:
+            print("not in the install, fetched from wago.tools (enUS):", fid, flush=True)
         url = "https://wago.tools/api/casc/%d?download&version=%s" % (fid, BUILD)
         req = urllib.request.Request(url, headers={"User-Agent": "openmap-tools/1"})
         for attempt in range(3):
@@ -257,7 +265,9 @@ def over(m):
     k = ("o", m["id"])
     if k not in _cache:
         o = overlay_canvas(m["art"])
-        hole = mask("MapBannerHole/%d" % m["id"])        # (drawn without its banner for a city: banners.py)
+        # (drawn without its banner for a city: banners.py; English only, as Stitch.lua's BannerHole:
+        # another language's art keeps its own banner, in its language)
+        hole = mask("MapBannerHole/%d" % m["id"]) if ENGLISH else None
         if hole is not None:
             o = o.copy()
             o[..., 3] *= hole
@@ -684,9 +694,10 @@ def render(cu, cv, zoom, path):
     d = detail_at(zf) * (1 - 0.75 * UNDER_T)    # (a cave surfacing: Stitch.SetUnderground)
     if USE_BAKED:                                         # the zones' baked tiles (--bake-zones), as Stitch.lua draws them
         T_ = ZONE_STEP / ZONE_PX
-        for f_ in os.listdir(os.path.join(TEXDIR, "MapZones")):
+        for f_ in os.listdir(ZONES_DIR):
+            if not f_.endswith(".blp"): continue          # (other languages' sets are folders in it)
             i_, j_ = map(int, f_[:-4].split("_"))
-            img_ = np.asarray(Image.open(os.path.join(TEXDIR, "MapZones", f_)).convert("RGBA")).astype(np.float32) / 255
+            img_ = np.asarray(Image.open(os.path.join(ZONES_DIR, f_)).convert("RGBA")).astype(np.float32) / 255
             img_ = np.asarray(Image.fromarray((img_ * 255).astype(np.uint8)).crop((1, 1, ZONE_TILE - 1, ZONE_TILE - 1)).resize((1002, 668), Image.BILINEAR)).astype(np.float32) / 255
             img_[..., :3] = desat(img_[..., :3], (ZONE_DESAT - BAKE_DESAT) / (1 - BAKE_DESAT))   # (Stitch.lua's Baked.desat)
             place({"rect": (i_ * T_ / W, (i_ + 1) * T_ / W, j_ * T_ / H, (j_ + 1) * T_ / H)}, img_, None,
@@ -743,7 +754,7 @@ def render(cu, cv, zoom, path):
             a_ = smooth(zf, (fade[0] * f_, fade[1] * f_))
             cut_ = os.path.join(TEXDIR, "MapCityMask", "%d.tga" % m["id"])    # (cut down to the city: banners.py)
             place(m, base, mask("MapCityMask/%d" % m["id"]) if os.path.exists(cut_) else M_ROUND, alpha=a_)
-            b_ = banner(m["id"])                          # its zone's banner for it: its title at every zoom,
+            b_ = ENGLISH and banner(m["id"])              # its zone's banner for it: its title at every zoom,
             if b_:                                        # or giving way to its own (Stitch.lua's MapCityTitles)
                 out_ = smooth(zf, (BANNER_OUT[0] * f_, BANNER_OUT[1] * f_)) if city_title(m["id"]) else 0
                 place(b_, b_["img"], None, alpha=d * (1 - out_))
@@ -1584,7 +1595,7 @@ def bake_zones():
     for m in live:                                       # (coreRoot: the interiors, graded zones only)
         if grade.get(m["id"]) and os.path.exists(os.path.join(TEXDIR, "MapCore", "%d.tga" % m["id"])):
             layers.append((m["rect"], lambda m=m: over(m), lambda m=m: edge_of(m) * core(m), None, BAKE_DESAT))
-    out_dir = os.path.join(TEXDIR, "MapZones")
+    out_dir = ZONES_DIR
     os.makedirs(out_dir, exist_ok=True)
     for f in os.listdir(out_dir):
         if f.endswith(".blp"): os.remove(os.path.join(out_dir, f))
@@ -1639,7 +1650,15 @@ def bake_zones():
         f.write("\ttiles = {   -- i * 256 + j: column i, row j\n")
         for k in range(0, len(made), 16):
             f.write("\t\t" + ", ".join(str(v_) for v_ in made[k:k + 16]) + ",\n")
-        f.write("\t},\n}\n")
+        f.write("\t},\n")
+        # the other languages baked from their own clients' art (MapZones/<locale>/: OPENMAP_LOCALE)
+        root_ = os.path.join(TEXDIR, "MapZones")
+        locales = sorted(d_ for d_ in os.listdir(root_) if os.path.isdir(os.path.join(root_, d_))
+                         and any(x_.endswith(".blp") for x_ in os.listdir(os.path.join(root_, d_))))
+        if locales:
+            f.write("\tlocales = { %s },   -- MapZones\\<locale>\\: those clients' own art, in their language\n"
+                    % ", ".join("%s = true" % l_ for l_ in locales))
+        f.write("}\n")
     print("baked", len(made), "zone tiles", flush=True)
 
 views = sys.argv[4:] or ["world=0.5,0.5,1"]

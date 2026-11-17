@@ -134,6 +134,9 @@ settings they're baked at (colour match and desaturation at their defaults, unex
 not hidden) they're drawn instead of the live zone layers, a few dozen tiles where the live
 layers are hundreds of masked textures, until the view passes the tiles' own pixels; then
 the live layers take over (`Baked.FADE`, in screen px per tile px), tile by tile near the view.
+The tiles carry the art's lettering: they're drawn on an English client, or on one whose language has
+its own set baked from its own art (`MapZones/<locale>/`, `ns.MapZoneArt.locales`: `Baked.lettered`);
+any other client draws the live layers at every zoom.
 Drawn at `1 - (1 - d)^2` for the zone detail's fade `d`, as strong as the live layers stacked.
 The live layers come on at full under the tiles a little before the hand-over (`Baked.WARM`),
 so their files load there, and the tiles fade off them; while their files are still loading
@@ -218,6 +221,15 @@ Fed the view (centre, half extents, zoom) on every pan and zoom (`S.SetView`):
 
 ## The rest of `Map/`
 
+- `GPS.lua` and `GPSPanel.lua` (custom GPS test build): player-recorded walking trails stored
+  in `worldmap.gpsRoutes`, bounded to 50 routes / 2,000 points per route / 10,000 points total.
+  A lazy graph joins samples within 10 yards; heap-based Dijkstra connects nearby endpoints
+  (at most 100 yards from a sample). No bundled road graph. A disconnected same-continent
+  destination uses explicitly labeled direct guidance; cross-continent requests fail.
+  Live progress owns only its current waypoint and yields to external changes. Secret or
+  missing positions and taxi travel suspend guidance. The panel's 0.2-second ticker works
+  with the map closed; its pooled route pins rebuild on route/step changes. `docs/gps.md`
+  covers commands, recording, coverage and the remaining in-game acceptance test.
 - `Chart.lua`: the sea chart (Options' Responsive ocean & border, off unless chosen): Santiago Reyes's sea, ornaments and
   frame round the world map, laid out for the window's shape (`Data/Chart.lua`, `tools/map-chart/`'s
   layout, which `tools/offline-test/chart.py` checks it against). Drawn on a frame of its own just under the

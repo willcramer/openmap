@@ -1,0 +1,82 @@
+{
+  "source_url": "https://www.curseforge.com/wow/addons/forever-maps-world-map-gps-navigation/files/9632734",
+  "source_archive_sha256": "35708cc0437d9a68d03095516abe7788fd61911a3fb66ac1b2023be1faa99f6b",
+  "source_members": {
+    "ForeverMaps/GameData/ShippedData.lua": "12baa58d267841fe7145b0ee78a2e118b951948fb1348ea977bcd1d735198bec",
+    "ForeverMaps/GameData/BuildingData.lua": "7917b1d3c7ed954160a516c4b0e5df0c0bfa77f43982878299e380cf4213e3f3",
+    "ForeverMaps/GameData/AreaLevelData.lua": "cb519a654b99e07f4122574c0228d6cdf8a4417b68b2b2bce9769589e00f0fe8",
+    "ForeverMaps/GameData/AreaChunkData.lua": "72fe891bfdeeee4d9d7308cae121bd87762670e5161758b1edd5555a4999cab5"
+  },
+  "source_version": "2026-11-15 17:28",
+  "author": "sahnetee",
+  "permission": "Used with author permission confirmed by the fork maintainer; not relicensed under MIT.",
+  "roads_sha256": "8c29c3b288e3a790c1c3de5a96cab8cd5da62d9a28e132eb03fe0a48f9f7f15c",
+  "buildings_sha256": "7871fac182c88b4ae905017d0b522776ee1640c04c28c56ed8f54dd3c23c2e5b",
+  "levels_sha256": "2a076836c3685dbe12261dcfb4fc22de71e22bafbe1977132e10fa28270d79ef",
+  "areas_sha256": "70d724ccc7db39365650cd248e22ae0b22a4e475a4f3af2e3d58348988a33c8d",
+  "anchors_sha256": "0e877db4007bb4d28bcf9eb6e14092c6635c7b04ecc997bd96fa29ed43131a00",
+  "top_anchors": {
+    "0": 4
+  },
+  "nodes": 8944,
+  "networks": {
+    "0": {
+      "nodes": 4467,
+      "links": 9832,
+      "zones": 27,
+      "unplaced": 0,
+      "dangling_links": []
+    },
+    "1": {
+      "nodes": 4134,
+      "links": 8832,
+      "zones": 24,
+      "unplaced": 0,
+      "dangling_links": []
+    },
+    "2806": {
+      "nodes": 2,
+      "links": 0,
+      "zones": 1,
+      "unplaced": 2,
+      "dangling_links": []
+    },
+    "2991": {
+      "nodes": 341,
+      "links": 752,
+      "zones": 2,
+      "unplaced": 0,
+      "dangling_links": []
+    }
+  },
+  "node_fields": {
+    "area": 8803,
+    "areaGuess": 4801,
+    "elevator": 5,
+    "layer": 1072,
+    "links": 8944,
+    "map": 8942,
+    "nostart": 94,
+    "oneway": 78,
+    "piece": 1156,
+    "pieceGuess": 977,
+    "tower": 11,
+    "towerOf": 2,
+    "type": 4330,
+    "wx": 8944,
+    "wy": 8944,
+    "zone": 8944
+  },
+  "node_types": {
+    "alliance": 2291,
+    "horde": 1137,
+    "offroad": 869,
+    "road": 4614,
+    "swim": 33
+  },
+  "buildings": {
+    "0": 661,
+    "1": 376,
+    "2991": 24
+  }
+}

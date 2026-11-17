@@ -4,45 +4,26 @@
 local _, ns = ...
 
 ns.MapChangelog = {
-	{ version = "v0.8.9", date = "2026-11-14", heads = { [1] = "New", [3] = "Improved", [4] = "Fixed", }, items = {
-		"|cff6e2c0aHide world markers in instances|r (the menu's On the map tab, and Options; off unless turned on): in dungeons, raids and battlegrounds, OpenMap's friends, guild, transport and all-zone quest markers step aside. With Dungeon maps off and another addon's dungeon map shown over the world (NeedRoll's), the world under it stops answering the mouse, and a right-click brings the world map back, at the dungeon's outdoor entrance (#232). By HonzoNebro.",
-		"|cff6e2c0aPin options|r (OpenMap's options, Moving about and Sharing): - |cff6e2c0aFollow new pins|r: on by default, as before. Off, a pin you drop doesn't become the waypoint, so addons that route to it (Shortest Path Forever) are left alone; the pin's Follow still sets it. - |cff6e2c0aSend new pins to group|r: a pin you drop goes to your party or raid once its card is closed. - |cff6e2c0aAuto-add group's pins|r: pins your party or raid shares are added without asking. By diegodiaz1256.",
-		"|cff6e2c0aThe controller view's switch in the map's menu too|r: \"OpenMap's map with the Gamepad UI (test)\" is under The map in OpenMap's menu as well as in Options (it was only in Esc > Options > AddOns, and a player took it for gone).",
-		"|cff6e2c0aOne arrow for you, not two|r: where OpenMap draws your arrow itself (the map underneath can't place you), Blizzard's arrow now steps aside, so the two no longer show a little apart (#229).",
-		"|cff6e2c0aQuests from the tracker open on their details|r: the first click on a tracked quest opened the map on the quest list; it shows the quest's text now (#224).",
-		"|cff6e2c0aThe map cooler on your graphics card|r: OpenMap's \"Map frame rate cap\" is now 60 by default (and set to 60 once for everyone): a still map was drawn as fast as the card could go (#233). Turn it off in Options if you'd rather.",
-		"|cff6e2c0aFade while moving fades while you steer with the mouse|r: the hidden cursor's last place over the map held it solid, so it hardly ever faded (#69).",
-		"|cff6e2c0aResizing the window keeps it where it is|r: it could jump to the screen's bottom left (#241).",
-		"|cff6e2c0aCity names in your language|r: Thunder Bluff's and Darnassus' name banners showed in English on other languages' clients; the zone map's own banner, in the client's language, is shown there now (#47).",
+	{ version = "v0.8.10-gps.14", date = "2026-11-17", heads = { [1] = "Improved", }, items = {
+		"|cff6e2c0aAsynchronous GPS starts:|r new destinations, saved playback and routing changes plan across frames, with calculating feedback and cancellation. Cold room indexing is paced too.",
+		"|cff6e2c0aMinimap route:|r green guidance follows minimap zoom and rotation. Its saved GPS route on minimap setting is enabled by default and independent of tracker visibility.",
 	} },
-	{ version = "v0.8.8", date = "2026-11-13", heads = { [1] = "Fixed", }, items = {
-		"|cff6e2c0aParty and raid markers stay steady|r: one marker per member, moving smoothly. OpenMap's ring now follows Blizzard's own dot where the game places a member, instead of a second dot of its own that lagged behind it; elsewhere OpenMap's dot keeps its highlight and tooltip as it moves. The ring is now a thin gold edge (the wide one round a dark gap read as a target: #158, #170). By puschie286.",
-		"|cff6e2c0aFriends on the map: your own faction only.|r Your place is only shared with, and shown from, players of your own faction: Battle.net friends on the other faction no longer see where you are, nor you them (a player's report: it let Horde and Alliance find each other for PvP).",
+	{ version = "v0.8.10-gps.13", date = "2026-11-17", heads = { [1] = "Improved", }, items = {
+		"|cff6e2c0aAutomatic rerouting:|r planning and route redraws run in small steps across frames, retaining the current route until a valid replacement is ready. Closed maps skip route-marker work.",
+		"|cff6e2c0aRouting caches:|r reuse destination attachments and recorded-road projections. Stale work is cancelled when navigation, waypoint ownership, routing data or player floor changes.",
 	} },
-	{ version = "v0.8.6", date = "2026-11-12", heads = { [1] = "Improved", }, items = {
-		"|cff6e2c0aIcons stay shown while zooming|r: \"Fade icons while zooming\" is now off for everyone, as zooming is smooth enough with them shown; turn it on again in the menu's On the map tab if you prefer it.",
+	{ version = "v0.8.10-gps.12", date = "2026-11-17", heads = { [1] = "Improved", }, items = {
+		"|cff6e2c0aUpdated OpenMap base:|r merged the official v0.8.10 map, combat, startup, dungeon and saved settings fixes while retaining GPS navigation, manual roads, recordings and tracker controls.",
+		"|cff6e2c0aGPS overlays:|r guidance, road display and node markers follow shared instance visibility. The separate OpenMap - GPS addon identity and saved data remain independent.",
 	} },
-	{ version = "v0.8.5", date = "2026-11-12", heads = { [1] = "New", [3] = "Fixed", }, items = {
-		"|cff6e2c0aOpenMap's map with a controller|r (the game's Gamepad UI; a test, off until you turn it on in Options: \"OpenMap's map with the Gamepad UI (test)\"): the seamless map with the Gamepad UI on, where OpenMap leaves the world map to Blizzard. OpenMap draws its map over Blizzard's, so the controller's buttons keep working and B closes the map. The left stick moves the cursor (at the edge it pans), the right stick zooms about it, A zooms in or presses what's under the cursor, X zooms out or closes what's open, and pressing the left stick puts the waypoint there. Off (the default): Blizzard's map with the Gamepad UI, as before. If you play with a controller, try it and tell us how it goes (#57). By FlyingPenguin98.",
-		"|cff6e2c0aReopen the map on your zone|r (the menu's More tab, Reopen map: \"Center on your zone\"): the map opens on the whole zone you're in, in the middle, wherever you stand in it (#143).",
-		"|cff6e2c0a\"Darken unexplored areas\" keeps its soft edges up close|r: once the minimap's detail shows, the shade was hard-edged rectangles; it now has each unexplored area's own shape, as further out (#101, #129).",
+	{ version = "v0.8.10-gps.11", date = "2026-11-17", heads = { [1] = "Improved", }, items = {
+		"|cff6e2c0aGPS icon:|r the navigation action and its map shortcut use the client's blue handheld-computer icon.",
 	} },
-	{ version = "v0.8.4", date = "2026-11-11", heads = { [1] = "Improved", [2] = "Fixed", }, items = {
-		"|cff6e2c0aYour party and raid get a gold-bordered dot|r on the stitched map, everywhere, so they can't be mistaken for a guild member's dot. Someone the game won't place is shown faintly in the middle of their zone, with \"Somewhere in\" on the tooltip. By KonigTX.",
-		"|cff6e2c0a\"Your arrow\" off also hides the yellow location ping|r when the world map opens or changes zones. Turning it on again restores the normal arrow and ping; party markers stay visible (#78). By Luquatic.",
-		"|cff6e2c0a\"Party and raid members\" off means off|r: Blizzard's own blips for your group are hidden too, not only OpenMap's dots (#77, found by Luquatic).",
-		"|cff6e2c0aDragging the map no longer zooms into a zone or city|r: a drag that came back near where it started counted as a click and zoomed into what was under the cursor, Ironforge from parts of Dun Morogh most of all (#37, #64).",
-		"|cff6e2c0aGuild markers clear when a guildmate joins your group|r: their shared-location dot or zone badge entry could stay when the guild roster and the party spelled the character's name differently. By puschie286.",
+	{ version = "v0.8.10-gps.10", date = "2026-11-16", heads = { [1] = "Added", }, items = {
+		"|cff6e2c0aMap road editor:|r add and connect custom road nodes directly from the map's right-click menu. Edits save separately, participate in GPS planning and have cyan markers with a white selection. Remove your connections or confirm deletion of your own nodes from the same menu.",
 	} },
-	{ version = "v0.8.3", date = "2026-11-09", heads = { [1] = "New", [5] = "Improved", [9] = "Fixed", }, items = {
-		"|cff6e2c0aTurn off OpenMap's dungeon maps|r (Options and the menu's On the map tab): off, clicking an entrance shows its card over the world map, and opening the map inside a dungeon shows the world map, so another dungeon map addon (NeedRoll, Dungeon Journal ...) can show its own. By ZiiMs.",
-		"|cff6e2c0aFriends and guild each have their own switch|r: keep your friends on the map and hide a big guild, or the other way round. A save with the old single switch off turns both off. By ZiiMs.",
-		"|cff6e2c0aMap brightness|r in the Look tab: dim the whole stitched map, including explored areas and the sea, while player and quest icons stay bright. 100% keeps the original look (the default). By forcedroidbrain.",
-		"|cff6e2c0aA launcher for Titan Panel|r and other LibDataBroker displays: it works like the minimap button (click: the map with its menu; right-click: the options window). By Naladdar.",
-		"|cff6e2c0aThe settings menu can be resized|r: drag its bottom-right corner to make it wider or shorter, double-click the corner to reset it. Long labels (German, the nearby zones settings) wrap instead of running into the next column, and the settings scroll when they don't fit the screen, instead of the whole menu shrinking. By Naladdar.",
-		"|cff6e2c0aThe map window can be resized with Move Any|r: Move Any still places and scales the window, and OpenMap's corner grips set its width and height. By Naladdar.",
-		"|cff6e2c0aClicking a quest's icon on the windowed map shows it in the quest log|r: the quest log beside the map opens if it was closed, with the quest's details, as well as tracking the quest and zooming in on it. (On the full-screen map a click still tracks and zooms only.)",
-		"|cff6e2c0aA dungeon map remembers its tab|r: picking Quests beside the quest log keeps it picked the next time a dungeon's map opens.",
-		"|cff6e2c0aNo more dot in the bottom-left corner of the screen|r after closing the map, or inside a dungeon: the map art OpenMap keeps loaded while the map is closed was drawn there, hundreds of faint copies on one pixel. Found by ryanull24.",
+	{ version = "v0.8.10-gps.9", date = "2026-11-16", heads = { [1] = "Improved", }, items = {
+		"|cff6e2c0aGPS controls in the map menu:|r GPS navigation offers road display, recording, saving, route selection, playback, confirmed deletion and tracker visibility without slash commands.",
+		"|cff6e2c0aRoad nodes on the map:|r the optional road display marks actual network nodes and saved trail samples. Zoom in to inspect a junction; wide views keep a bounded marker budget.",
 	} },
 }

@@ -20,6 +20,12 @@ OpenMap stitches every zone map into one continuous map. Scroll out of Elwynn an
   Blizzard's where it drew one, else the game's own minimap of it.
 - **Flight paths.** Learned ones in colour, the rest greyed out. Click two flight masters to see the route you'd fly and roughly how long it takes.
 - **Getting around.** Search for a zone, city, dungeon or flight master; a "Find me" button (or middle-click the map); choose how the map reopens; party and raid members are shown across the whole map. Or take your own arrow off the map and find your way old-school.
+- **Custom GPS test build:** live directions, recorded roads and reusable routes. Alt-click the map,
+  Shift-click a search result, or use a pin's GPS button. The separate `OpenMapGPS` package installs
+  beside the original as its own AddOn List entry; enable the map you want there and reload.
+  `/omgps gps` opens the GPS controls. The Forever build includes 8,944 road nodes and associated
+  room/floor data from Forever Maps, used with its author's permission.
+  See [GPS setup and testing](docs/gps.md) for coverage and limits.
 - **Map pins and drawing.** Ctrl-click for as many pins as you like, each with a note and a colour, followed with Blizzard's waypoint (and TomTom's); share them with your group, guild or a friend. Draw on the map with a pen, lines, arrows, circles and raid marks, on its own or on a pin.
 - **Vendors, spirit healers and rares** (needs Questie): repair, innkeepers, trainers, bankers, auctioneers, stable masters, spirit healers and rare mobs. Questie's quest icons can be switched on or off from OpenMap's menu too. (Still working on performance here.)
 - **A map that fits your screen.** No more black bars at the sides: resize the window to any shape, or go full screen and the map fills it.
@@ -63,4 +69,4 @@ Restart the game after adding new texture files; `/reload` is enough for Lua cha
 
 ## Licence
 
-The code, data tables and tools are MIT, see [LICENSE](LICENSE). Bundled libraries keep their own licences (`OpenMap/LICENSES`). The map itself is Blizzard's: the zone and continent art is loaded from the game at run time, and the few textures OpenMap ships that are cut from that art (the sea, the blank paper, coastlines, masks) remain Blizzard's and aren't covered by the MIT licence. [OpenMap/Media/Textures/Forever/NOTICE.md](OpenMap/Media/Textures/Forever/NOTICE.md) (and retail's, [Retail/NOTICE.md](OpenMap/Media/Textures/Retail/NOTICE.md)) list them and the scripts that make them.
+The code, original data tables and tools are MIT, see [LICENSE](LICENSE). The custom GPS build's imported Forever Maps road and room data is distributed with author permission under its [separate data notice](OpenMap/Data/Forever/RoadData-NOTICE.md). Bundled libraries keep their own licences (`OpenMap/LICENSES`). The map itself is Blizzard's: the zone and continent art is loaded from the game at run time, and the few textures OpenMap ships that are cut from that art (the sea, the blank paper, coastlines, masks) remain Blizzard's and aren't covered by the MIT licence. [OpenMap/Media/Textures/Forever/NOTICE.md](OpenMap/Media/Textures/Forever/NOTICE.md) (and retail's, [Retail/NOTICE.md](OpenMap/Media/Textures/Retail/NOTICE.md)) list them and the scripts that make them.

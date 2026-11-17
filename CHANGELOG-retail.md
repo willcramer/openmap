@@ -1,5 +1,208 @@
 # OpenMap changelog
 
+## Unreleased
+
+## v0.8.10-gps.14 (2026-11-17)
+
+### Improved
+
+- **Asynchronous GPS starts:** new destinations, saved playback and routing changes plan across
+  frames, with calculating feedback and cancellation. Cold room indexing is paced too.
+- **Minimap route:** green guidance follows minimap zoom and rotation. Its saved GPS route on
+  minimap setting is enabled by default and independent of tracker visibility.
+
+## v0.8.10-gps.13 (2026-11-17)
+
+### Improved
+
+- **Automatic rerouting:** planning and route redraws run in small steps across frames, retaining
+  the current route until a valid replacement is ready. Closed maps skip route-marker work.
+- **Routing caches:** reuse destination attachments and recorded-road projections. Stale work
+  is cancelled when navigation, waypoint ownership, routing data or player floor changes.
+
+## v0.8.10-gps.12 (2026-11-17)
+
+### Improved
+
+- **Updated OpenMap base:** merged the official v0.8.10 map, combat, startup, dungeon and saved
+  settings fixes while retaining GPS navigation, manual roads, recordings and tracker controls.
+- **GPS overlays:** guidance, road display and node markers follow shared instance visibility.
+  The separate OpenMap - GPS addon identity and saved data remain independent.
+
+## v0.8.10-gps.11 (2026-11-17)
+
+### Improved
+
+- **GPS icon:** the navigation action and its map shortcut use the client's blue
+  handheld-computer icon.
+
+## v0.8.10-gps.10 (2026-11-16)
+
+### Added
+
+- **Map road editor:** add and connect custom road nodes directly from the map's right-click
+  menu. Edits save separately, participate in GPS planning and have cyan markers with a white
+  selection. Remove your connections or confirm deletion of your own nodes from the same menu.
+
+## v0.8.10-gps.9 (2026-11-16)
+
+### Improved
+
+- **GPS controls in the map menu:** GPS navigation offers road display, recording, saving,
+  route selection, playback, confirmed deletion and tracker visibility without slash commands.
+- **Road nodes on the map:** the optional road display marks actual network nodes and saved
+  trail samples. Zoom in to inspect a junction; wide views keep a bounded marker budget.
+
+## v0.8.10-gps.8 (2026-11-16)
+
+### Improved
+
+- **GPS tracker visibility:** hide the guidance window while navigation, route drawing and
+  TomTom continue. A saved preference and tracker on/off commands restore or hide it.
+
+## v0.8.10-gps.7 (2026-11-16)
+
+### Improved
+
+- **OpenMap - GPS:** updated the custom addon's display name.
+- **Context menu by default:** right-click opens the location menu on new and existing
+  profiles. Later choices of Zoom out remain saved.
+
+## v0.8.10-gps.6 (2026-11-16)
+
+### Improved
+
+- **Independent GPS entry:** OpenMap GPS Test has its own AddOn List group; choose it manually
+  in AddOns. The quick-switch commands have been removed.
+- **Right-click location menu:** choose Zoom out or Open location menu in Options. The menu can
+  place a waypoint, add a note or start GPS at the clicked location.
+
+## v0.8.10-gps.5 (2026-11-16)
+
+### Improved
+
+- **GPS route drawing:** a solid green line follows the remaining waypoints from your current
+  position, with distinct waypoint and destination nodes. It keeps its width while zooming.
+- **Settings import:** `/omgps sync settings` copies shared OpenMap preferences through the
+  original's live profile and returns to GPS, preserving GPS-specific settings and recordings.
+
+## v0.8.10-gps.4 (2026-11-16)
+
+### Fixed
+
+- **GPS addon switching:** save the current character's addon selection before reloading so
+  `/omgps use gps` activates GPS and `/omgps use original` restores the original.
+- **Controller-view mouse input:** Alt-click starts GPS without changing ordinary zoom or
+  active drawing/pin tools.
+
+## v0.8.10-gps.3 (2026-11-16)
+
+### Improved
+
+- **GPS integration:** shared floor-aware routing and native-map drawing infrastructure; user
+  recordings and the separate addon package remain supported. Forever's supplied road data is
+  loaded only by the Forever client and is not included in the Retail package.
+
+## v0.8.10-gps.2 (2026-11-16)
+
+### Improved
+
+- **Separate OpenMapGPS package:** independent settings and commands; safe standby beside
+  the original. `/omgps use gps` and `/omgps use original` switch maps with a UI reload.
+
+## v0.8.10-gps.1 (2026-11-16)
+
+### New
+
+- **Custom GPS test build:** live directions, walking-trail recording and replay, and routing over
+  saved trails. Alt-click the map, Shift-click a search result or use a pin's GPS button.
+  No bundled road network or transport planning; unrecorded locations use direct guidance.
+  By willcramer.
+
+## v0.8.10 (2026-11-16)
+
+### Fixed
+
+- **The map loads again for everyone**: for some players since v0.8.9 the map opened blank, with an
+  error about GetMapInfoAtPosition. A view worked out while the map was still 0 px across (a divide
+  by zero) was put into the map, and every view after it was worked out from it, so the map stayed
+  blank. A view that isn't one is never put up now, the map's last view and its saved window place
+  and size are checked as they're read back, and a bad one is forgotten (#260, #261, #263). The cause, found
+  by OlehPetrykUA: v0.8.9 put the map together during its very first build, before it had a size.
+
+- **Fewer hitches zooming out**: the first zoom out of a session made the lettering of every continent
+  and sea name (hundreds of font strings) in one frame; one name is made a frame now. And the tiles
+  fading in as you zoom out set their opacity in 8 steps instead of on every frame, a third to a half
+  fewer calls to the client for a zoom out. By k4m1.
+
+- **Your arrow in the right place again**: v0.8.9's "one arrow, not two" hid Blizzard's own arrow on
+  retail too, where OpenMap's could be the one out of place (further north than the minimap); Blizzard's
+  stays on retail now (#254).
+
+- **A quest from the quest log shows its map with "Center on player, keep zoom"**: in your own zone
+  the map opened at the kept zoom on you, the quest off screen; it shows the quest's map whole now, as
+  with the other choices (#255).
+
+- **The zone highlight toggle works again**: with it off, zones could still glow under the cursor, where
+  the game made its highlight after OpenMap set the map up (#262).
+
+- **The map in combat**: opened, zoomed or panned in a fight, the map no longer comes up stretched
+  and half empty until the fight ends: it's drawn at the zoom the game kept, and the one you asked for
+  is put up as the fight ends. The window is no longer moved, sized or scaled in a fight (#294). By Vennomfang.
+
+- **Esc on a dungeon's map** goes back to the world map (out of combat) instead of closing the map.
+
+- **Your settings kept**: for some players every setting went back to its default at each login since
+  v0.8.9. A broken number from the blank map (#261) was saved with them, which the game can't read back,
+  so the whole file was lost; such a number is never saved now (#306).
+
+- **"Share where you are" off means off**: your place could still go out once, queued just before you
+  turned it off or in answer to a friend's hello at that moment. Nothing is sent now while it's off;
+  friends and guild see only your zone, as the game's own lists show it (#277).
+
+- **Learned flight masters in green**: they were your faction's icon, red for the Horde, which read as
+  not learned. They're the game's flight map green now, greyed where not learned.
+
+- **The world map reopens where you left it inside a dungeon**: with any reopen choice but Always
+  remember, browsing the world map in a dungeon and opening it again went back to the whole continent
+  each time. With nowhere to centre on, it reopens where you left it now.
+
+### Improved
+
+- **A dungeon's map never covers your quest log**: beside the quest log it always opens on your quests;
+  the dungeon's panel shows only when you pick its tab. And **dungeon maps inside dungeons can be turned
+  off** (Options and the menu's Dungeons): off, the map opened inside a dungeon is the game's own there; a
+  dungeon's map still opens from its entrance. The first dungeon you're in says once where that switch is.
+  With Dungeon Journal or NeedRoll installed, their map is left to them inside a dungeon (#302, #267).
+
+- **Sharp map by default**: Soften and paper grain is off for everyone (turn it back on in Look > Up close).
+  It softened the map a moment after it stopped moving, sharp while zooming or panning, which read as the
+  map going blurry (#286, #118). Its tooltip now says so.
+
+- **The game's own frame rate limit while the map is open**: v0.8.9's 60 fps cap held the whole game at
+  60 while the map was open, below what many had set. It's off by default again (set once back to off
+  for everyone who had 60); the Map frame rate cap is still there to turn on (#273).
+
+- **Faster loading**: the stitched map is built a few seconds after the loading screen, a few
+  milliseconds a frame, not during it. By Vennomfang.
+
+- **Less work while the map is closed**: the guild and friends lists are read at most every 30 seconds
+  (a raid's roster changes came each time), exploring somewhere recolours the map's art the next time
+  it opens rather than then, and another addon loading no longer looks through every global table
+  again.
+
+- **Smoother panning and zooming**: darkened unexplored land lets go of zones out of view (they were
+  laid out on every frame, more the more of the world you'd seen), and of a zone's old shading when
+  it's made again; the boat and zeppelin routes' finer dots are hidden, not only faded, from afar; the
+  continents' names rest their outer glow while the map moves; and the close-up minimap, the cursor's
+  place name and the coordinates skip work when nothing has changed. By cscoder69.
+
+- **Smoother with the map open**: "Quests from every zone" asked the game for the quests of every zone
+  and city in a single frame, half a second after each opening and again after each burst of quest log
+  updates while the map was open (and once more after it closed). The zones are now read a few a frame
+  and the icons put up together once all are in; nothing is read while the map is closed.
+  `/openmap status` says what the last reading cost. By Merryfett.
+
 ## v0.8.9 (2026-11-14)
 
 ### New

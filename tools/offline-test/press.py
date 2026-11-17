@@ -14,9 +14,10 @@ class PressTests(unittest.TestCase):
         self.lua = LuaRuntime(unpack_returned_tuples=True)
         self.lua.execute("""
             cx, cy = 100, 100
-            sc = { mouseButtonInfo = { LeftButton = { down = false } } }
+            sc = { mouseButtonInfo = { LeftButton = { down = false }, RightButton = { down = false } } }
             function sc:GetCursorPosition() return cx, cy end
             function Down() sc.mouseButtonInfo.LeftButton.down = true PressDown(nil, 'LeftButton') end
+            function RightDown() sc.mouseButtonInfo.RightButton.down = true PressDown(nil, 'RightButton') end
             function MoveTo(x, y) cx, cy = x, y PressTrack() end
         """)
         helpers = SOURCE[SOURCE.index('local press = {'):SOURCE.index('local function OnCanvasClick(')]
@@ -40,19 +41,27 @@ class PressTests(unittest.TestCase):
     def test_no_tracking_after_release(self):
         self.check("Down() sc.mouseButtonInfo.LeftButton.down = false MoveTo(300, 300) assert(not WasDrag())")
 
+    def test_right_drag_out_and_back_is_not_a_context_click(self):
+        self.check("RightDown() MoveTo(160,100) MoveTo(100,100) assert(WasDrag('RightButton')) assert(not WasDrag('LeftButton'))")
+
+    def test_each_button_has_independent_press_tracking(self):
+        self.check("Down() MoveTo(160,100) RightDown() MoveTo(161,101) assert(WasDrag()) assert(not WasDrag('RightButton'))")
+
 
 class CtrlClickTests(unittest.TestCase):
     def setUp(self):
         self.lua = LuaRuntime(unpack_returned_tuples=True)
         self.lua.execute("""
-            ctrl, shift = false, false
+            ctrl, shift, alt = false, false, false
             function IsControlKeyDown() return ctrl end
             function IsShiftKeyDown() return shift end
+            function IsAltKeyDown() return alt end
             active, dropped, glided = true, 0, 0
             mod = { db = {}, DropWaypoint = function() dropped = dropped + 1 end,
                 CursorWorld = function() return 0.5, 0.5 end }
-            sc = { mouseButtonInfo = { LeftButton = { down = false } } }
+            sc = { mouseButtonInfo = { LeftButton = { down = false }, RightButton = { down = false } } }
             function sc:GetCursorPosition() return 0, 0 end
+            ns = {}
             WORLD = 947
             S = { ChainAt = function() return { WORLD, 1 } end, Rect = function() return 0, 1, 0, 1 end }
             function View() return 0, 0, 1 end
@@ -61,7 +70,7 @@ class CtrlClickTests(unittest.TestCase):
             function GlideTo() glided = glided + 1 end
         """)
         chunk = SOURCE[SOURCE.index('local function Dropping('):SOURCE.index('-- our icons: a press')]
-        self.lua.execute(chunk + '\n_G.OnCanvasClick = OnCanvasClick\n')
+        self.lua.execute(chunk + '\n_G.OnCanvasClick, _G.PressDown, _G.PressTrack = OnCanvasClick, PressDown, PressTrack\n')
 
     def check(self, code):
         self.lua.execute(code)
@@ -76,6 +85,121 @@ class CtrlClickTests(unittest.TestCase):
 
     def test_plain_click_still_zooms_when_turned_off(self):
         self.check("mod.db.ctrlClickPin = false assert(OnCanvasClick(true, 'LeftButton') == true) assert(glided == 1)")
+
+    def test_alt_click_navigates_without_zooming_or_dropping_a_pin(self):
+        self.check("""
+            local navigated = 0
+            mod.GPSGoWorld = function(u, v)
+                assert(u == .5 and v == .5)
+                navigated = navigated + 1
+            end
+            alt = true
+            assert(OnCanvasClick(true, 'LeftButton') == true)
+            assert(navigated == 1 and dropped == 0 and glided == 0)
+        """)
+
+    def test_alt_drag_does_not_start_navigation(self):
+        self.check("""
+            mod.GPSGoWorld = function() error('a drag started GPS') end
+            alt = true
+            sc.GetCursorPosition = function() return 0, 0 end
+            PressDown(nil, 'LeftButton')
+            sc.mouseButtonInfo.LeftButton.down = true
+            sc.GetCursorPosition = function() return 100, 0 end
+            PressTrack()
+            assert(OnCanvasClick(true, 'LeftButton') == true)
+            assert(dropped == 0 and glided == 0)
+        """)
+
+    def test_right_click_defaults_to_zoom_without_opening_a_menu(self):
+        self.check("""
+            mod.OpenLocationMenu=function()error('default right-click opened a menu')end
+            assert(OnCanvasClick(true,'RightButton')==true)
+            assert(glided==1 and dropped==0)
+        """)
+
+    def test_right_click_menu_captures_both_world_coordinates_and_owner(self):
+        self.check("""
+            mod.db.mapRightClick='menu'
+            local opened=0
+            mod.OpenLocationMenu=function(u,v,owner)
+                assert(u==.5 and v==.5 and owner==sc)
+                opened=opened+1
+                return true
+            end
+            assert(OnCanvasClick(true,'RightButton')==true)
+            assert(opened==1 and glided==0 and dropped==0)
+        """)
+
+    def test_editor_mouse_menu_overrides_zoom_without_changing_controller_or_saved_choice(self):
+        self.check("""
+            mod.db.mapRightClick='zoom'
+            local editing,opened=true,0
+            mod.GPSRoadEditing=function()return editing end
+            mod.OpenLocationMenu=function(u,v,owner)
+                assert(u==.5 and v==.5 and owner==sc)
+                opened=opened+1 return true
+            end
+            assert(OnCanvasClick(true,'RightButton')==true and opened==1 and glided==0)
+            assert(mod.db.mapRightClick=='zoom')
+            assert(OnCanvasClick(nil,'RightButton')==true and opened==1 and glided==1)
+            editing=false
+            assert(OnCanvasClick(true,'RightButton')==true and opened==1 and glided==2)
+        """)
+
+    def test_editor_menu_does_not_capture_right_drag(self):
+        self.check("""
+            mod.GPSRoadEditing=function()return true end
+            mod.OpenLocationMenu=function()error('editor captured a drag')end
+            PressDown(nil,'RightButton')sc.mouseButtonInfo.RightButton.down=true
+            sc.GetCursorPosition=function()return 100,0 end PressTrack()
+            sc.GetCursorPosition=function()return 0,0 end PressTrack()
+            assert(OnCanvasClick(true,'RightButton')==true and glided==0)
+        """)
+
+    def test_right_drag_suppresses_the_menu_and_zoom(self):
+        self.check("""
+            mod.db.mapRightClick='menu'
+            mod.OpenLocationMenu=function()error('right drag opened a menu')end
+            PressDown(nil,'RightButton')
+            sc.mouseButtonInfo.RightButton.down=true
+            sc.GetCursorPosition=function()return 100,0 end
+            PressTrack()
+            sc.GetCursorPosition=function()return 0,0 end
+            PressTrack()
+            assert(OnCanvasClick(true,'RightButton')==true)
+            assert(glided==0 and dropped==0)
+        """)
+
+    def test_gamepad_parent_navigation_still_zooms_with_menu_mode(self):
+        self.check("""
+            mod.db.mapRightClick='menu'
+            mod.OpenLocationMenu=function()error('controller X opened a mouse menu')end
+            assert(OnCanvasClick(nil,'RightButton')==true)
+            assert(glided==1)
+        """)
+
+    def test_tools_and_dungeon_overlay_do_not_open_the_menu(self):
+        self.check("""
+            mod.db.mapRightClick='menu'
+            mod.OpenLocationMenu=function()error('a tool or hidden dungeon opened a menu')end
+            mod.IsSketching=function()return true end
+            OnCanvasClick(true,'RightButton')assert(glided==1)
+            mod.IsSketching=nil mod.PinMode=function()return true end
+            OnCanvasClick(true,'RightButton')assert(glided==2)
+            mod.PinMode=nil mod.DungeonViewShown=function()return true end
+            OnCanvasClick(true,'RightButton')assert(glided==3)
+            mod.DungeonViewShown=nil mod.instanceWorldHidden=true
+            OnCanvasClick(true,'RightButton')assert(glided==3)
+        """)
+
+    def test_failed_menu_resolution_is_consumed_without_unexpected_zoom(self):
+        self.check("""
+            mod.db.mapRightClick='menu'
+            mod.OpenLocationMenu=function()return false end
+            assert(OnCanvasClick(true,'RightButton')==true)
+            assert(glided==0)
+        """)
 
 
 if __name__ == '__main__':

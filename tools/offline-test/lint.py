@@ -122,12 +122,12 @@ def check_truncation(path):
 WOW_API = {
     "CreateFrame", "CreateFromMixins", "CreateVector2D", "Clamp", "HideUIPanel", "ShowUIPanel",
     "LibStub", "GetTime", "GetCursorPosition", "InCombatLockdown", "IsControlKeyDown", "IsShiftKeyDown", "IsAltKeyDown",
-    "GameTooltip_Hide", "SetOverrideBindingClick", "ClearOverrideBindings",
+    "GameTooltip_Hide", "SetOverrideBindingClick", "ClearOverrideBindings", "ReloadUI",
     "StaticPopup_Show", "StaticPopup_Hide", "UnitClass", "UnitExists", "UnitIsUnit", "UnitFactionGroup", "UnitOnTaxi",
     "IsInGroup", "IsInRaid", "GetNumRoutes", "NumTaxiNodes", "TaxiNodeGetType", "TaxiNodeName",
     "GetAddOnMemoryUsage", "UpdateAddOnMemoryUsage", "UnitLevel", "GetQuestDifficultyColor", "GetSpellInfo", "GetNumSkillLines", "GetSkillLineInfo", "GetCVar", "GetCVarBool",
     "debugprofilestop", "GetFramerate", "IsAddOnLoaded", "GetUnitSpeed", "IsPlayerMoving", "IsMouselooking", "IsModifiedClick", "GetPhysicalScreenSize", "IsMouseButtonDown",
-    "IsInGuild", "UnitIsPlayer", "GetUnitName", "UnitName", "Ambiguate", "ToggleWorldMap",
+    "IsInGuild", "UnitIsPlayer", "GetUnitName", "UnitName", "UnitGUID", "Ambiguate", "ToggleWorldMap",
     "UnitRace", "GetLocale", "PlaySound", "IsInInstance", "GetInstanceInfo",
     "GetNormalizedRealmName", "GetRealmName", "GetNumGuildMembers", "GetGuildRosterInfo", "BNGetNumFriends",
 }

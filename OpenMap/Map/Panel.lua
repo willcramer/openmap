@@ -149,6 +149,11 @@ end
 -- right = true (it takes right-clicks itself), grey = fn (optional: its icon greyed, as a setting's off) }
 local function Actions()
 	local list = {
+		-- inv_111_gallywixcomputer_blackwater, referenced from the client's own art.
+		{ L["GPS navigation"], id = "gps", icon = { texture = 6383475, icon = true },
+			tip = L["View roads and nodes, record new paths, and manage GPS guidance."],
+			run = function() if mod.ToggleGPS then mod:ToggleGPS() end end,
+			lit = function() return mod.GPSStatus and mod.GPSStatus().active or false end },
 		{ L["Find me"], id = "find", icon = Icon("Ability_Hunter_SniperShot"),   -- (a crosshair)
 			 tip = L["Glide to where you are. Middle-click the map to center on you at the current zoom."],
 			run = function() mod:FindMe() end },
@@ -219,6 +224,9 @@ local function Rows()
 			texture = "Interface\\Icons\\Ability_Mount_Wyvern_01", icon = true }),
 		optRow(L["Only places you've found"], "foundOnly", Icon("INV_Misc_Spyglass_03")),
 		optRow(L["Boat and zeppelin routes"], "routes", { atlas = "Ships_CargoShip-Map", texture = "Interface\\Icons\\INV_Misc_Spyglass_02", icon = true }),
+		row(L["Road network"], "gpsShowRoads", Icon("INV_Misc_Map_01"),
+			function() return mod.GPSRoadsShown and mod.GPSRoadsShown() end,
+			function(on) if mod.GPSSetRoadsShown then mod.GPSSetRoadsShown(on) end end),
 		optRow(L["Your arrow"], "playerArrow", { texture = "Interface\\Minimap\\MinimapArrow" }),
 		optRow(L["Party and raid members"], "group", Icon("Spell_Holy_PrayerOfFortitude")),
 		optRow(L["Friends on the map"], "friends", Icon("INV_Misc_GroupNeedMore")),
@@ -248,6 +256,7 @@ local function Rows()
 	rows[#rows].note = L["Improves performance"]      -- (a second line, so nobody turns it off unaware)
 	rows[#rows + 1] = { L["Dungeons"] }
 	rows[#rows + 1] = row(L["Dungeon maps"], "dungeonMaps", Icon("INV_Misc_Map_01"), mod.DungeonMapsOn, mod.SetDungeonMaps)
+	rows[#rows + 1] = optRow(L["Dungeon maps inside dungeons"], "dungeonInside", Icon("INV_Misc_Key_13"))
 	rows[#rows + 1] = optRow(L["Level ranges"], "dungeonLevels", Icon("Spell_ChargePositive"))
 	rows[#rows + 1] = optRow(L["Dungeon bosses"], "dungeonBosses", Icon("INV_Misc_Bone_ElfSkull_01"))
 	-- (with Questie, Dungeon Journal or NeedRoll: where they come from is in Options)
@@ -335,6 +344,22 @@ local function Rows()
 	rows[#rows + 1] = optRow(L["Caves underground"], "underground", Icon("Trade_Mining"))
 	-- the rest
 	rows[#rows + 1] = { L["Moving about"], tab = "more" }
+	if mod.GPSSetTrackerShown then
+		rows[#rows + 1] = row(L["GPS tracker"], "gpsShowTracker", Icon("INV_Misc_Map_01"),
+			function() return db.gpsShowTracker ~= false end,
+			function(on) mod.GPSSetTrackerShown(on) end)
+	end
+	if options.mapRightClick then
+		rows[#rows + 1] = row(L["Right-click opens location menu"], "mapRightClick", Icon("INV_Misc_Map_01"),
+			function() return db.mapRightClick == "menu" end,
+			function(on) options.mapRightClick.set({ "mapRightClick" }, on and "menu" or "zoom") end)
+	end
+	rows[#rows + 1] = row(L["Use bundled roads"], "gpsUseRoads", Icon("INV_Misc_Map_01"),
+		function() return db.gpsUseRoads ~= false end,
+		function(on) if mod.GPSSetRoutingOption then mod.GPSSetRoutingOption("gpsUseRoads", on) end end)
+	rows[#rows + 1] = row(L["Allow enemy roads"], "gpsAllowEnemy", Icon("INV_Misc_Map_01"),
+		function() return db.gpsAllowEnemy == true end,
+		function(on) if mod.GPSSetRoutingOption then mod.GPSSetRoutingOption("gpsAllowEnemy", on) end end)
 	rows[#rows + 1] = optRow(L["Load the zone in view"], "autoSwitch", Icon("Ability_Hunter_Pathfinding"))
 	fromOptions(L["Ctrl-click drops a pin"], "ctrlClickPin", Icon("INV_Misc_Map_01"))
 	fromOptions(L["Follow new pins"], "pinsFollowNew", Icon("INV_Misc_Map_01"))
@@ -353,6 +378,11 @@ local function Rows()
 	rows[#rows + 1] = optRow(L["Share where you are"], "friendsShare", Icon("Ability_Hunter_EagleEye"))
 	rows[#rows].note = L["Your guild and friends see you"]   -- (a second line: what turning it on means)
 	rows[#rows + 1] = { L["Tools"] }
+	if mod.GPSSetRoadEditing then
+		rows[#rows + 1] = row(L["Edit road network"], "gpsRoadEditor", Icon("INV_Misc_Map_01"),
+			function() return mod.GPSRoadEditing() end,
+			function(v) mod.GPSSetRoadEditing(v) end)
+	end
 	if mod.TogglePaint then
 		rows[#rows + 1] = row(L["Map notes"], "paint", Icon("INV_Misc_Note_02"), function() return mod:IsPainting() end,
 			function(v) mod:TogglePaint(v) end)

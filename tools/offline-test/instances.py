@@ -34,7 +34,7 @@ class InstanceTests(unittest.TestCase):
         self.lua.execute(helpers)
         self.lua.execute(re.search(r'function mod:RefreshInstancePins\(.*?\nend\n', WORLD, re.S).group())
         self.lua.execute("""
-            affected = { 'friends', 'friendzones', 'boats', 'zeppelins', 'routes', 'flight', 'route', 'quests' }
+            affected = { 'friends', 'friendzones', 'boats', 'zeppelins', 'routes', 'flight', 'route', 'quests', 'gps', 'gpsnext', 'gpsroads', 'gpsroadnodes' }
             preserved = { 'group', 'waypoint', 'ping', 'userpins', 'sketch', 'dungeons', 'needroll' }
             for _, keys in ipairs({ affected, preserved }) do
                 for _, key in ipairs(keys) do S.PinSet(key, 0) end
@@ -105,16 +105,20 @@ class InstanceTests(unittest.TestCase):
             mod:RefreshInstancePins()
             for _, key in ipairs(affected) do S.SetPinSetOn(sets[key], true) end
             Check(true)
-            sets.quests = nil
-            local late = S.PinSet('quests', 0)
-            assert(late.frame.shown == false, 'late set leaked before next view update')
             local built = 0
-            late.build = function() built = built + 1 end
-            S.SetPinSetOn(late, true)
+            local lateKeys = { 'quests', 'gps', 'gpsnext', 'gpsroads', 'gpsroadnodes' }
+            for _, key in ipairs(lateKeys) do
+                sets[key] = nil
+                local late = S.PinSet(key, 0)
+                assert(late.frame.shown == false, key .. ' leaked before next view update')
+                late.build = function() built = built + 1 end
+                S.SetPinSetOn(late, true)
+            end
             assert(built == 0)
             inside, kind = false, 'none'
             mod:RefreshInstancePins()
-            assert(built == 1 and late.frame.shown)
+            assert(built == #lateKeys)
+            for _, key in ipairs(lateKeys) do assert(sets[key].frame.shown, key) end
             sets.flight.minZoom = 6
             mod:RefreshInstancePins()
             assert(not sets.flight.frame.shown, 'zoom restriction lost')

@@ -61,6 +61,7 @@ local lastX, lastY              -- the pad's cursor on the last frame (screen px
                                 --  as A or X changes its map, before the hooks below run
 local dirty = false
 local drag                      -- the mouse's drag under way: { x, y (screen px at its start), u, v, moved }
+local rightPress                -- tracked separately: a right drag neither pans nor opens the location menu
 local playerWait, hoverWait, groupWait = 0, 0, 0
 local hovered                   -- the icon under the pad's cursor, entered as the mouse would
 local questieLayer              -- Questie's icons, on this view
@@ -534,6 +535,12 @@ local function OnUpdate(_, elapsed)
 			u, v, dirty = drag.u - dx / (W * px), drag.v + dy / (H * px), true
 		end
 	end
+	if rightPress and not rightPress.moved then
+		local mx, my = GetCursorPosition()
+		local es = view:GetEffectiveScale()
+		local dx, dy = (mx - rightPress.x) / es, (my - rightPress.y) / es
+		if dx * dx + dy * dy > 16 then rightPress.moved = true end
+	end
 	local x, y = Cursor()
 	local dungeon = mod.DungeonViewShown and mod.DungeonViewShown()
 	local stick = x and mod.PadStickTilt and mod.PadStickTilt() or 0
@@ -779,6 +786,12 @@ end
 function mod.PadViewBuilt() return built end
 -- for Dungeons.lua: this view is the map now (Blizzard's left as it is)
 function mod.PadViewOn() return built and On() end
+function mod.PadViewHalfExtents(atZoom)
+	if not view or not view:IsShown() or not On() then return end
+	local W, H = S.Size()
+	local pixels = FitPx() * (atZoom or zoom)
+	return view:GetWidth() / (2 * W * pixels), view:GetHeight() / (2 * H * pixels)
+end
 -- for the files whose pins are handed out again as they're redrawn (Stitch.lua's sets reuse their frames):
 -- the pin under the controller's cursor, if it's one of `pins`, is left first, as the mouse would leave it,
 -- and entered again if it's back, its tooltip as it is then
@@ -897,15 +910,45 @@ local function Setup()
 		ZoomAbout(sx, sy, zoom * (delta > 0 and 1.25 or 0.8))
 	end)
 	view:SetScript("OnMouseDown", function(_, button)
+		if button == "RightButton" then
+			local mx, my = GetCursorPosition()
+			rightPress = { x = mx, y = my }
+			return
+		end
 		if button ~= "LeftButton" then return end
 		local mx, my = GetCursorPosition()
 		drag, glide = { x = mx, y = my, u = u, v = v }, nil
 	end)
 	view:SetScript("OnMouseUp", function(_, button)
-		local d = drag
-		drag = nil
-		if (d and d.moved) or (button ~= "LeftButton" and button ~= "RightButton") then return end
+		if button ~= "LeftButton" and button ~= "RightButton" then return end
+		local d
+		if button == "RightButton" then d, rightPress = rightPress, nil
+		else d, drag = drag, nil end
+		if button == "RightButton" and not d then return end
+		if d and d.moved then return end
 		lastX, lastY = GetCursorPosition()
+		if button == "RightButton" and d then
+			local es = view:GetEffectiveScale()
+			local dx, dy = (lastX - d.x) / es, (lastY - d.y) / es
+			if dx * dx + dy * dy > 16 then return end
+		end
+		if button == "RightButton" and d and (mod.db.mapRightClick == "menu" or mod.GPSRoadEditing and mod.GPSRoadEditing()) and mod.OpenLocationMenu
+			and not (mod.DungeonViewShown and mod.DungeonViewShown())
+			and not (mod.IsSketching and mod:IsSketching())
+			and not (mod.PinMode and mod.PinMode()) then
+			local cu, cv = WorldAt(Offset(lastX, lastY))
+			mod.OpenLocationMenu(cu, cv, view)
+			return
+		end
+		-- Mouse navigation uses this view's coordinates, not Blizzard's canvas or
+		-- the controller cursor. Keep the active drawing/pin tools in control.
+		if button == "LeftButton" and mod.GPSGoWorld and IsAltKeyDown()
+			and not (mod.DungeonViewShown and mod.DungeonViewShown())
+			and not (mod.IsSketching and mod:IsSketching())
+			and not (mod.PinMode and mod.PinMode()) then
+			mod.GPSGoWorld(WorldAt(Offset(lastX, lastY)))
+			return
+		end
 		local h = hovered
 		hovered = nil          -- (the pad's icon isn't the mouse's; OpenMap's icons take their own clicks)
 		Step(button == "LeftButton")

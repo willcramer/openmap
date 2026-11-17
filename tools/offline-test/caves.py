@@ -64,6 +64,11 @@ class CaveTests(unittest.TestCase):
                 L = setmetatable({}, { __index = function(_, k) return k end }) }
             function ns:GetModule() return mod end
         """)
+        # Core.lua's own Safe.Finite (Close.lua's view guard: #260 #261)
+        core = (ROOT / "Core.lua").read_text(encoding="utf-8")
+        start = core.index("function Safe.Finite(")
+        self.lua.execute("ns.Safe = { IsSecret = function() return false end }\nlocal Safe = ns.Safe\n"
+                         + core[start:core.index("\nend\n", start) + 5])
         g = self.lua.globals()
         for rel in ("Data/Forever/Caves.lua", "Data/Forever/CaveMinimap.lua", "Data/Forever/Tiles.lua", "Map/Close.lua"):
             fn = self.lua.execute("return function(src, name, ns) local f = assert(loadstring(src, '@' .. name)) return f('OpenMap', ns) end")

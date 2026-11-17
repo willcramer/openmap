@@ -130,10 +130,12 @@ green lines from becoming visible. Closed maps defer route geometry while guidan
   without destination reuse, or 21.8–32.9 ms with it. Final costs and route-point counts match.
   A further 100 moving-start queries to reused destinations match baseline costs and reasons.
 - A full-addon OnUpdate harness measures guidance, planning, publication and deferred stitched
-  drawing through completion. Across the four routes, maximum update CPU time is 1.06–1.29 ms
+  drawing through completion. Across the four routes, maximum update CPU time is 1.07–1.68 ms
   with the map closed. With the stitched map open and a simulated 10 microseconds per drawing API
-  call, maxima are 1.07–1.23 ms, versus 67.8–113.2 ms in a single update in the old build using
-  the same model. Planning and drawing complete in 28–63 frames at simulated 120 Hz.
+  call, maxima are 1.07–1.13 ms, versus 70.3–112.2 ms in a single update in the old build using
+  the same model. Planning and drawing complete in 29–59 frames at simulated 120 Hz. A native
+  Zephras journey drops from 9.41 ms to a 1.05 ms peak, completing in five frames. Completed
+  staged geometry matches direct drawing on both map types.
 
 These are offline CPU measurements with mocked client APIs; the simulated drawing cost is not a
 measurement of the game's renderer. They do not establish a live FPS result or a hard 1 ms ceiling.

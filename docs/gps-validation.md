@@ -1,6 +1,6 @@
 # GPS road-network validation
 
-Candidate: **v0.8.10-gps.10**, Forever Maps dataset **2.0.166**, separate addon **OpenMapGPS**
+Candidate: **v0.8.10-gps.11**, Forever Maps dataset **2.0.166**, separate addon **OpenMapGPS**
 (display name **OpenMap - GPS**).
 This is an offline-verified test build. No live game-client verification is claimed.
 
@@ -102,6 +102,10 @@ redistributed as a test dependency. To reproduce locally, set `OPENMAP_ROAD_SOUR
 `roads_import.py` and `gps_road_parity.py` under `tools/offline-test/` with Python and lupa.
 
 ## Still requires the game
+
+The GPS menu/shortcut icon references client FileDataID 6383475 directly. Its 64×64 BLP was
+read and decoded from the installed Forever 1.60.1.70938 client and visually inspected. No
+additional texture is bundled. Live UI appearance remains part of the acceptance check.
 
 The live HUD's arrow alignment, UI-scale layout, actual protected/secret API behavior, controller
 interaction, performance and terrain walkability need the acceptance checks in [gps.md](gps.md).

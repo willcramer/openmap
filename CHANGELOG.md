@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## v0.8.10-gps.11 (2026-11-17)
+
+### Improved
+
+- **GPS icon:** GPS navigation and its map shortcut use Blizzard's blue handheld-computer
+  icon. The icon is referenced directly from the client.
+
 ## v0.8.10-gps.10 (2026-11-16)
 
 ### Added

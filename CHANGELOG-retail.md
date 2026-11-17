@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## v0.8.10-gps.11 (2026-11-17)
+
+### Improved
+
+- **GPS icon:** the navigation action and its map shortcut use the client's blue
+  handheld-computer icon.
+
 ## v0.8.10-gps.10 (2026-11-16)
 
 ### Added

@@ -149,7 +149,8 @@ end
 -- right = true (it takes right-clicks itself), grey = fn (optional: its icon greyed, as a setting's off) }
 local function Actions()
 	local list = {
-		{ L["GPS navigation"], id = "gps", icon = Icon("INV_Misc_Map_01"),
+		-- inv_111_gallywixcomputer_blackwater, referenced from the client's own art.
+		{ L["GPS navigation"], id = "gps", icon = { texture = 6383475, icon = true },
 			tip = L["View roads and nodes, record new paths, and manage GPS guidance."],
 			run = function() if mod.ToggleGPS then mod:ToggleGPS() end end,
 			lit = function() return mod.GPSStatus and mod.GPSStatus().active or false end },

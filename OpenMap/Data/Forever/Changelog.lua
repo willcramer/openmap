@@ -4,6 +4,9 @@
 local _, ns = ...
 
 ns.MapChangelog = {
+	{ version = "v0.8.10-gps.11", date = "2026-11-17", heads = { [1] = "Improved", }, items = {
+		"|cff6e2c0aGPS icon:|r GPS navigation and its map shortcut use Blizzard's blue handheld-computer icon. The icon is referenced directly from the client.",
+	} },
 	{ version = "v0.8.10-gps.10", date = "2026-11-16", heads = { [1] = "Added", }, items = {
 		"|cff6e2c0aPlace and connect road nodes on the map:|r choose Edit road network in GPS navigation, then right-click to add nodes, select an existing node, or add a connected node along a new path. Connect separate nodes, remove your connections, or delete your own nodes with confirmation. Changes save automatically and become available for GPS route planning.",
 		"|cff6e2c0aSeparate custom-road display:|r cyan nodes and links show your map edits; a white marker shows the selected node. The editor supports the world map, controller view and Zephras maps. Finish editing restores normal right-click behavior. The bundled road data stays intact.",
@@ -22,9 +25,5 @@ ns.MapChangelog = {
 	{ version = "v0.8.10-gps.6", date = "2026-11-16", heads = { [1] = "Improved", }, items = {
 		"|cff6e2c0aIndependent AddOn List entry:|r OpenMap GPS Test now has its own group. Choose the active map through the AddOns list; /omgps use gps and /omgps use original have been removed.",
 		"|cff6e2c0aRight-click choice:|r Options' Right-click on the map can keep Zoom out or open a location menu with Place waypoint, Add note and Go Here. The menu remembers where you clicked. Notes open the existing pin editor without replacing your active GPS waypoint.",
-	} },
-	{ version = "v0.8.10-gps.5", date = "2026-11-16", heads = { [1] = "Improved", }, items = {
-		"|cff6e2c0aGreen GPS route:|r a continuous line joins the remaining waypoint nodes, with a larger destination marker. Its leading segment follows your current position. The line keeps its width while zooming and works on the stitched map, controller view and native Zephras maps.",
-		"|cff6e2c0aImport original map settings:|r /omgps sync settings copies relevant appearance, window, filter and control preferences from original OpenMap, then returns to GPS. It switches through the original with UI reloads to read its live profile. GPS routes and GPS-specific options, recordings and map-pin data remain separate.",
 	} },
 }

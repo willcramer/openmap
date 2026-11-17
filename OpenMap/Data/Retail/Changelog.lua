@@ -4,6 +4,9 @@
 local _, ns = ...
 
 ns.MapChangelog = {
+	{ version = "v0.8.10-gps.11", date = "2026-11-17", heads = { [1] = "Improved", }, items = {
+		"|cff6e2c0aGPS icon:|r the navigation action and its map shortcut use the client's blue handheld-computer icon.",
+	} },
 	{ version = "v0.8.10-gps.10", date = "2026-11-16", heads = { [1] = "Added", }, items = {
 		"|cff6e2c0aMap road editor:|r add and connect custom road nodes directly from the map's right-click menu. Edits save separately, participate in GPS planning and have cyan markers with a white selection. Remove your connections or confirm deletion of your own nodes from the same menu.",
 	} },
@@ -21,9 +24,5 @@ ns.MapChangelog = {
 	{ version = "v0.8.10-gps.6", date = "2026-11-16", heads = { [1] = "Improved", }, items = {
 		"|cff6e2c0aIndependent GPS entry:|r OpenMap GPS Test has its own AddOn List group; choose it manually in AddOns. The quick-switch commands have been removed.",
 		"|cff6e2c0aRight-click location menu:|r choose Zoom out or Open location menu in Options. The menu can place a waypoint, add a note or start GPS at the clicked location.",
-	} },
-	{ version = "v0.8.10-gps.5", date = "2026-11-16", heads = { [1] = "Improved", }, items = {
-		"|cff6e2c0aGPS route drawing:|r a solid green line follows the remaining waypoints from your current position, with distinct waypoint and destination nodes. It keeps its width while zooming.",
-		"|cff6e2c0aSettings import:|r /omgps sync settings copies shared OpenMap preferences through the original's live profile and returns to GPS, preserving GPS-specific settings and recordings.",
 	} },
 }

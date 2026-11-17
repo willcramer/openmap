@@ -10,7 +10,7 @@ routing implementation or art is included. See the [data notice](../OpenMap/Data
 
 ## Install
 
-Use **OpenMapGPS-v0.8.10-gps.10-forever.zip**, the separate-addon build. The older gps.1 ZIP
+Use **OpenMapGPS-v0.8.10-gps.11-forever.zip**, the separate-addon build. The older gps.1 ZIP
 used the original addon's folder and should not be used for a side-by-side install.
 If you already installed gps.1 into `OpenMap`, reinstall the official OpenMap there first.
 
@@ -37,6 +37,8 @@ offer road display, tracker visibility, recording, saving, saved-route selection
 confirmed deletion, plus **Edit road network** for placing nodes directly on the map. These
 actions do not require slash commands. You can star GPS navigation
 in the map menu to give it a shortcut on the map. `/omgps gps` also opens the same controls.
+The GPS action and its starred shortcut use the client's blue handheld-computer icon
+([inv_111_gallywixcomputer_blackwater](https://www.wowhead.com/forever/icon=6383475/inv-111-gallywixcomputer-blackwater)).
 `/console scriptErrors 1` enables error reports.
 TomTom is optional. The test build retains OpenMap's normal map and pins.
 

@@ -581,5 +581,84 @@ class NativeGPSRouteTests(unittest.TestCase):
         ''')
 
 
+class NativeGPSBudgetTests(unittest.TestCase):
+    def setUp(self):
+        NativeGPSRouteTests.setUp(self)
+        self.lua.execute('''
+            local running
+            function mod.GPSPlanningCheckpoint()
+                assert(coroutine.running()==running)
+                coroutine.yield()
+            end
+            function mod.GPSRunBudgetedWork(job,budget)
+                assert(budget>0)
+                running=job.co
+                local ok,result=coroutine.resume(job.co)
+                running=nil
+                return coroutine.status(job.co)=='dead',.1,ok,result
+            end
+            function visibleRouteRoots()
+                local count=0
+                for _,frame in ipairs(FRAMES)do
+                    if frame:GetParent()==canvas and frame:GetObjectType()=='Frame'
+                        and frame:GetFrameLevel()==canvas:GetFrameLevel()+10 and frame:IsShown()then count=count+1 end
+                end
+                return count
+            end
+            function FinishNative()
+                for _=1,100 do
+                    if not mod.GPSNativeDrawingPending()then return end
+                    assert(mod.GPSRunNativeDrawing(.1)<=.1)
+                    assert(visibleRouteRoots()<=1,'an incomplete staging route was shown')
+                end
+                error('native draw did not finish')
+            end
+            function ChangeRoute()
+                status.route={
+                    {cont=2991,wx=200,wy=100},
+                    {cont=2991,wx=200,wy=400},
+                    {cont=2991,wx=900,wy=400}
+                }
+            end
+        ''')
+
+    def test_staged_native_route_keeps_old_geometry_until_complete(self):
+        self.lua.execute('''
+            mod.GPSDrawNative(status)
+            assert(mod.GPSNativeStats().drawn==2 and visibleRouteRoots()==1)
+            ChangeRoute()mod.GPSDrawNative(status,true)
+            assert(mod.GPSNativeDrawingPending())
+            mod.GPSRunNativeDrawing(.1)
+            assert(mod.GPSNativeStats().drawn==2 and visibleRouteRoots()==1)
+            FinishNative()
+            assert(mod.GPSNativeStats().drawn==3 and mod.GPSNativeStats().lines==2)
+            assert(visibleRouteRoots()==1 and #ERRORS==0)
+        ''')
+
+    def test_stopped_navigation_cancels_unfinished_native_route(self):
+        self.lua.execute('''
+            mod.GPSDrawNative(status)
+            ChangeRoute()mod.GPSDrawNative(status,true)mod.GPSRunNativeDrawing(.1)
+            status.active=false mod.GPSDrawNative(status,true)
+            assert(not mod.GPSNativeDrawingPending()and visibleRouteRoots()==0)
+            assert(mod.GPSRunNativeDrawing(.1)==0)
+            assert(not mod.GPSNativeStats().shown)
+        ''')
+
+    def test_replaced_route_and_changed_host_do_not_publish_stale_geometry(self):
+        self.lua.execute('''
+            mod.GPSDrawNative(status)
+            ChangeRoute()mod.GPSDrawNative(status,true)mod.GPSRunNativeDrawing(.1)
+            status.route={{cont=2991,wx=100,wy=100},{cont=2991,wx=300,wy=100}}
+            host=2665
+            assert(mod.GPSRunNativeDrawing(.1)==0)
+            mod.GPSDrawNative(status,true)
+            assert(visibleRouteRoots()==0)
+            FinishNative()
+            assert(mod.GPSNativeStats().map==2665 and mod.GPSNativeStats().drawn==2)
+            assert(visibleRouteRoots()==1 and #ERRORS==0)
+        ''')
+
+
 if __name__ == '__main__':
     unittest.main()

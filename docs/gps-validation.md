@@ -1,6 +1,6 @@
 # GPS road-network validation
 
-Candidate: **v0.8.10-gps.12**, Forever Maps dataset **2.0.166**, separate addon **OpenMapGPS**
+Candidate: **v0.8.10-gps.13**, Forever Maps dataset **2.0.166**, separate addon **OpenMapGPS**
 (display name **OpenMap - GPS**).
 This is an offline-verified test build. No live game-client verification is claimed.
 
@@ -34,7 +34,7 @@ This is an offline-verified test build. No live game-client verification is clai
 ## OpenMap integration and installation
 
 - All six loader modes, navigation and controller-waypoint checks pass for Forever and Retail.
-  Existing focused tests also pass. The consolidated local run has 47 successful invocations,
+  Existing focused tests also pass. The consolidated local run has 50 successful invocations,
   including upstream's new performance and flight-discovery suites.
 - Official OpenMap v0.8.10 (`0f4d2e4b6fe82b9032618fd3b824eaaa5b36dcef`) is merged into the
   GPS branch. Changelog sections retain both custom history and official release notes; locale
@@ -60,7 +60,7 @@ This is an offline-verified test build. No live game-client verification is clai
   Retail). They exercise actual road data, recorded extensions, Brill's upper platform, Zephras,
   faction border stops with a persistent HUD, resuming the original target after changing the
   faction option, and ghost routing through otherwise restricted paths.
-- Fourteen road-overlay, eight stitched route-view and eighteen native-map tests cover solid green
+- Fourteen road-overlay, eight stitched route-view and twenty-one native-map tests cover solid green
   line geometry, actual waypoint/destination nodes, clipping, view caching, player-head movement,
   completed segment removal and reuse of drawing regions. Both route renderers retain all bends
   for valid routes within a 25,000-point budget. Optional network views add exact bundled-node
@@ -110,6 +110,37 @@ The reference-dependent checks are optional in public CI because the reference a
 redistributed as a test dependency. To reproduce locally, set `OPENMAP_ROAD_SOURCE` to the permitted
 2.0.166 ZIP and `FOREVER_MAPS_REFERENCE` to a separately installed reference addon, then run
 `roads_import.py` and `gps_road_parity.py` under `tools/offline-test/` with Python and lupa.
+
+## Automatic-replanning performance
+
+The previous build synchronously searched the network from its guidance update after moving
+off-route, with a five-second minimum cooldown. The new build keeps that cooldown and the movement
+thresholds, but resumes automatic planning and route drawing every frame within a shared 1 ms
+target budget. Bounded checkpoints also cover cold graph construction, recorded-road projection,
+route reconstruction and recycling old drawing regions. Hidden staging layers prevent partial
+green lines from becoming visible. Closed maps defer route geometry while guidance continues.
+
+- Seven planner tests cover cooperative work, destination attachment reuse, cache invalidation
+  and route parity. Scheduler tests cover frame budgets, fallback operation limits, atomic route
+  publication, waypoint ownership, cancellation and recorded-sample cache invalidation. Three
+  drawing-pool tests verify interrupted cleanup cannot recycle a region twice. Native rendering
+  tests additionally cover staged publication, cancellation and map-host changes.
+- Independent Lua 5.1 measurements use the committed gps.12 baseline and four fixed node pairs.
+  Median raw route CPU time across 15 samples per pair changes from 52.0–63.5 ms to 32.9–44.2 ms
+  without destination reuse, or 21.8–32.9 ms with it. Final costs and route-point counts match.
+  A further 100 moving-start queries to reused destinations match baseline costs and reasons.
+- A full-addon OnUpdate harness measures guidance, planning, publication and deferred stitched
+  drawing through completion. Across the four routes, maximum update CPU time is 1.06–1.29 ms
+  with the map closed. With the stitched map open and a simulated 10 microseconds per drawing API
+  call, maxima are 1.07–1.23 ms, versus 67.8–113.2 ms in a single update in the old build using
+  the same model. Planning and drawing complete in 28–63 frames at simulated 120 Hz.
+
+These are offline CPU measurements with mocked client APIs; the simulated drawing cost is not a
+measurement of the game's renderer. They do not establish a live FPS result or a hard 1 ms ceiling.
+Individual API calls, garbage collection and guidance updates can overrun the target. Explicitly
+starting a new journey or changing routing options still plans synchronously. The recurring
+automatic off-route calculation is the scope of this change. Live acceptance must include moving
+off-route with the map closed and open, the tracker hidden, and TomTom enabled.
 
 ## Still requires the game
 

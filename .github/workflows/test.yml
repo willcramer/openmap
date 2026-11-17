@@ -41,6 +41,9 @@ jobs:
       - run: python -P tools/offline-test/gps_rooms.py
       - run: python -P tools/offline-test/gps_roads.py
       - run: python -P tools/offline-test/gps_road_edit.py
+      - run: python -P tools/offline-test/gps_planner.py
+      - run: python -P tools/offline-test/gps_async.py
+      - run: python -P tools/offline-test/gps_render.py
       - run: python -P tools/offline-test/gps_road_view.py
       - run: python -P tools/offline-test/gps_route_view.py
       - run: python -P tools/offline-test/context_menu.py

@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+## v0.8.10-gps.13 (2026-11-17)
+
+### Improved
+
+- **Automatic rerouting:** planning and route redraws run in small steps across frames, retaining
+  the current route until a valid replacement is ready. Closed maps skip route-marker work.
+- **Routing caches:** reuse destination attachments and recorded-road projections. Stale work
+  is cancelled when navigation, waypoint ownership, routing data or player floor changes.
+
 ## v0.8.10-gps.12 (2026-11-17)
 
 ### Improved

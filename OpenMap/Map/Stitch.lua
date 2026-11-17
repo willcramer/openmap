@@ -922,7 +922,20 @@ do
 		end
 	end
 
-	function S.ClearPinSet(set)
+	function S.ClearPinSet(set, checkpoint)
+		if checkpoint then
+			-- Remove each region before yielding: an abandoned staging build can
+			-- be cleared again without returning the same region to its pool twice.
+			while #set.pins > 0 do RecyclePin(set, tremove(set.pins)) checkpoint() end
+			while #set.lines > 0 do
+				local line = tremove(set.lines)
+				line:Hide()
+				set.linePool[#set.linePool + 1] = line
+				checkpoint()
+			end
+			while #set.anchors > 0 do DropAnchor(tremove(set.anchors)) checkpoint() end
+			return
+		end
 		for _, pin in ipairs(set.pins) do RecyclePin(set, pin) end
 		for _, line in ipairs(set.lines) do
 			line:Hide()
@@ -941,7 +954,7 @@ end
 -- (Townsfolk are never shown further out than their own: there are thousands of them)
 local places = { from = nil, sets = { dungeons = true, boats = true, zeppelins = true, flight = true },
 	world = { friends = true, friendzones = true, boats = true, zeppelins = true,
-		routes = true, flight = true, route = true, quests = true, gps = true, gpsroads = true, gpsroadnodes = true } }
+		routes = true, flight = true, route = true, quests = true, gps = true, gpsnext = true, gpsroads = true, gpsroadnodes = true } }
 
 function S.WorldPinsHidden(key)
 	return places.hidden and places.world[key] or false

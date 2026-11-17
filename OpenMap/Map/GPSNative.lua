@@ -12,6 +12,7 @@ local lines, lineDrawn, head, headShown, headUpdates = {}, 0, nil, false, 0
 local headTarget, headPoint
 local lastRoute, lastIndex, lastMap, lastWidth, lastHeight, lastScale, lastCount
 local lastStyle, lastPlayerX, lastPlayerY, lastPlayerCont, lastPlayerLayer, lastPlayerFloor
+local nativeJob, spare, requested
 local networkRoot, networkCanvas, networkData, networkMap, networkWidth, networkHeight, networkScale
 local networkDots, networkDrawn, networkRedraws = {}, 0, 0
 local networkNodes, networkNodesDrawn, networkRoutes, networkRevision = {}, 0
@@ -30,8 +31,27 @@ local function Number(value)
 end
 
 local function Hide()
+	nativeJob, requested = nil, nil
+	if spare and spare.root then spare.root:Hide() end
 	if root then root:Hide() end
 	drawn, lineDrawn, headShown, lastRoute = 0, 0, false, nil
+end
+
+local function SaveRouteState()
+	return { root = root, canvas = canvas, dots = dots, drawn = drawn, lines = lines, lineDrawn = lineDrawn,
+		head = head, headShown = headShown, headTarget = headTarget, headPoint = headPoint,
+		route = lastRoute, index = lastIndex, map = lastMap, width = lastWidth, height = lastHeight,
+		scale = lastScale, count = lastCount, style = lastStyle,
+		px = lastPlayerX, py = lastPlayerY, cont = lastPlayerCont, layer = lastPlayerLayer, floor = lastPlayerFloor }
+end
+
+local function LoadRouteState(state)
+	root, canvas, dots, lines = state.root, state.canvas, state.dots or {}, state.lines or {}
+	drawn, lineDrawn, head, headShown = state.drawn or 0, state.lineDrawn or 0, state.head, state.headShown or false
+	headTarget, headPoint = state.headTarget, state.headPoint
+	lastRoute, lastIndex, lastMap = state.route, state.index, state.map
+	lastWidth, lastHeight, lastScale, lastCount, lastStyle = state.width, state.height, state.scale, state.count, state.style
+	lastPlayerX, lastPlayerY, lastPlayerCont, lastPlayerLayer, lastPlayerFloor = state.px, state.py, state.cont, state.layer, state.floor
 end
 
 local function HideNetwork()
@@ -310,13 +330,97 @@ local function DrawNetwork(nextCanvas, host, continent, width, height, scale)
 	networkRoot:SetShown(networkDrawn > 0 or networkNodesDrawn > 0)
 end
 
+local function BuildRoute(request, checkpoint)
+	local status, host, continent = request.status, request.host, request.continent
+	local width, height, scale, style = request.width, request.height, request.scale, request.style
+	local route, index = request.route, request.index
+	Attach(request.canvas)
+	if checkpoint then root:Hide() end
+	lastRoute, lastIndex, lastMap, lastStyle = route, index, host, style
+	lastWidth, lastHeight, lastScale, lastCount = width, height, scale, request.count
+	lastPlayerX, lastPlayerY = nil, nil
+	redraws, drawn, lineDrawn = redraws + 1, 0, 0
+	headTarget, headPoint = route[index], nil
+	local previous
+	-- Staging remains hidden until every bend and endpoint has been built.
+	for i = index, math.min(request.count, index + MAX_POINTS - 1) do
+		local point = Project(route[i], host, continent)
+		if i == index then headPoint = point end
+		RouteNode(point, i == request.count, width, height, scale, style)
+		if Nonzero(previous, point) then
+			local first, last = Clip(previous, point)
+			if Nonzero(first, last) then
+				lineDrawn = lineDrawn + 1
+				local line = lines[lineDrawn] or root:CreateLine(nil, "ARTWORK")
+				lines[lineDrawn] = line
+				RouteLine(line, first, last, width, height, scale, style)
+			end
+		end
+		previous = point
+		if checkpoint then checkpoint() end
+	end
+	for i = drawn + 1, #dots do dots[i]:Hide() if checkpoint then checkpoint() end end
+	for i = lineDrawn + 1, #lines do lines[i]:Hide() if checkpoint then checkpoint() end end
+	if head then head:Hide() end
+	headShown = false
+end
+
+local function SameRequest(a, b)
+	return a and b and a.route == b.route and a.index == b.index and a.count == b.count
+		and a.host == b.host and a.canvas == b.canvas and a.width == b.width and a.height == b.height
+		and a.scale == b.scale and a.style == b.style
+end
+
+local function CurrentRequest(request)
+	if not request or requested ~= request or not map or not map:IsShown() or mod.instanceWorldHidden
+		or (mod.instancePinsHidden and not mod.instanceWorldBrowsing)
+		or (mod.IsStitched and mod.IsStitched()) then return false end
+	local status = mod.GPSStatus and mod.GPSStatus() or request.status
+	return status.active and status.route == request.route and (status.index or 1) == request.index
+		and #request.route == request.count and Safe.Call(map.GetMapID, map) == request.host
+		and Safe.Call(map.GetCanvas, map) == request.canvas
+		and Safe.Call(request.canvas.GetWidth, request.canvas) == request.width
+		and Safe.Call(request.canvas.GetHeight, request.canvas) == request.height
+		and (Number(Safe.Call(map.GetCanvasScale, map)) or 1) == request.scale
+end
+
+function mod.GPSRunNativeDrawing(budget)
+	local job = nativeJob
+	if not job or not mod.GPSRunBudgetedWork then return 0 end
+	if not CurrentRequest(job.request) then nativeJob = nil return 0 end
+	local front = SaveRouteState()
+	LoadRouteState(spare or {})
+	local done, spent, ok, err = mod.GPSRunBudgetedWork(job, budget)
+	spare = SaveRouteState()
+	LoadRouteState(front)
+	if not ok then
+		nativeJob = nil
+		if spare.root then spare.root:Hide() end
+		geterrorhandler()(err)
+	elseif done then
+		nativeJob = nil
+		if CurrentRequest(job.request) then
+			if root then root:Hide() end
+			LoadRouteState(spare)
+			spare = front
+			local request = job.request
+			local status = mod.GPSStatus and mod.GPSStatus() or request.status
+			Head(status, request.host, request.continent, request.width, request.height, request.scale, request.style, true)
+			root:SetShown(drawn > 0 or lineDrawn > 0 or headShown)
+		end
+	end
+	return spent or 0
+end
+
+function mod.GPSNativeDrawingPending() return nativeJob ~= nil end
+
 function mod:SetupGPSNative(worldMap)
 	if map then return end
 	map = worldMap or _G.WorldMapFrame
 	if map and map.HookScript then map:HookScript("OnHide", HideAll) end
 end
 
-function mod.GPSDrawNative(status)
+function mod.GPSDrawNative(status, budgeted)
 	if not map then mod:SetupGPSNative() end
 	local active = status and status.active and type(status.route) == "table"
 	local showNetwork = mod.GPSRoadsShown and mod.GPSRoadsShown()
@@ -339,31 +443,19 @@ function mod.GPSDrawNative(status)
 	local changed = status.route ~= lastRoute or index ~= lastIndex or host ~= lastMap or width ~= lastWidth
 		or height ~= lastHeight or scale ~= lastScale or #status.route ~= lastCount or style ~= lastStyle
 	if changed then
-		lastRoute, lastIndex, lastMap, lastStyle = status.route, index, host, style
-		lastWidth, lastHeight, lastScale, lastCount = width, height, scale, #status.route
-		redraws, drawn, lineDrawn = redraws + 1, 0, 0
-		headTarget, headPoint = status.route[index], nil
-		local previous
-		-- Preserve every bend. The ceiling exceeds the engine's combined road and
-		-- recording limits; malformed oversized input is truncated, never shortcut.
-		for i = index, math.min(#status.route, index + MAX_POINTS - 1) do
-			local point = Project(status.route[i], host, continent)
-			if i == index then headPoint = point end
-			RouteNode(point, i == #status.route, width, height, scale, style)
-			if Nonzero(previous, point) then
-				local first, last = Clip(previous, point)
-				if Nonzero(first, last) then
-					lineDrawn = lineDrawn + 1
-					local line = lines[lineDrawn] or root:CreateLine(nil, "ARTWORK")
-					lines[lineDrawn] = line
-					RouteLine(line, first, last, width, height, scale, style)
-				end
+		local request = { status = status, route = status.route, index = index, count = #status.route,
+			host = host, continent = continent, canvas = nextCanvas, width = width, height = height, scale = scale, style = style }
+		if budgeted and mod.GPSRunBudgetedWork and mod.GPSPlanningCheckpoint then
+			if not SameRequest(requested, request) or not nativeJob then
+				requested = request
+				nativeJob = { request = request }
+				nativeJob.co = coroutine.create(function() BuildRoute(request, mod.GPSPlanningCheckpoint) end)
 			end
-			-- A failed projection breaks the path instead of bridging another floor.
-			previous = point
+			if lastMap ~= host then root:Hide() end
+			return
 		end
-		for i = drawn + 1, #dots do dots[i]:Hide() end
-		for i = lineDrawn + 1, #lines do lines[i]:Hide() end
+		nativeJob, requested = nil, nil
+		BuildRoute(request)
 	end
 	Head(status, host, continent, width, height, scale, style, changed)
 	root:SetShown(drawn > 0 or lineDrawn > 0 or headShown)
@@ -374,6 +466,7 @@ function mod.GPSNativeStats()
 		lines = lineDrawn + (headShown and 1 or 0), linePooled = #lines + (head and 1 or 0),
 		headShown = headShown, headUpdates = headUpdates, pointLimit = MAX_POINTS,
 		shown = root and root:IsShown() or false, networkDrawn = networkDrawn,
+		drawingPending = nativeJob ~= nil,
 		networkPooled = #networkDots, networkRedraws = networkRedraws,
 		networkNodesDrawn = networkNodesDrawn, networkNodesPooled = #networkNodes,
 		networkShown = networkRoot and networkRoot:IsShown() or false }

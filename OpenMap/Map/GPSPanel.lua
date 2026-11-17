@@ -10,6 +10,7 @@ mod.defaults.gpsShowTracker = true
 local panel, hud, ticker, trail
 local drawnRoute, drawnIndex, drawnActive, drawnCount
 local playerPin, playerLine, firstPoint
+local drawing, desired
 local MAX_ROUTE_POINTS = 25000 -- the supplied graph plus all permitted recorded samples and stair steps
 local mode = "once"
 local MODES = { "once", "reverse", "loop", "pingpong" }
@@ -101,6 +102,10 @@ local function Number(value)
 	return type(value) == "number" and value == value and math.abs(value) < math.huge and value or nil
 end
 
+local function WorkClock()
+	return type(debugprofilestop) == "function" and Number(debugprofilestop()) or GetTime() * 1000
+end
+
 local function Placed(point)
 	return type(point) == "table" and Number(point.u) and Number(point.v) and Number(point.cont)
 end
@@ -109,13 +114,115 @@ local function Line(a, b)
 	return S.AddLine(trail, a.u, a.v, b.u, b.v, 3, GREEN[1], GREEN[2], GREEN[3], 1)
 end
 
-function mod.GPSDrawRoute(status)
+local function MoveHead(status)
+	if not status.active or not firstPoint then return end
+	local player = status.player
+	local u, v, continent
+	if Placed(player) and not player.unknown and not player.ambiguous
+		and (player.layer == nil or firstPoint.layer == nil or player.layer == firstPoint.layer)
+		and not (mod.GPSOtherFloor and mod.GPSOtherFloor(player, firstPoint)) then
+		u, v, continent = player.u, player.v, player.cont
+	end
+	if not u or continent ~= firstPoint.cont then
+		if playerLine then playerLine:Hide() playerPin:Hide() end
+		return
+	end
+	if not playerPin then
+		playerPin = S.AddPin(trail, u, v, DOT)
+		playerPin:EnableMouse(false)
+		playerLine = Line({ u = u, v = v }, firstPoint)
+		-- Move only this pin's existing anchor as the player walks.
+		playerLine:SetStartPoint("CENTER", playerPin)
+	else S.MovePin(trail, playerPin, u, v) end
+	playerPin:Show()
+	playerLine:Show()
+end
+
+local function Visible()
+	return not WorldMapFrame or WorldMapFrame:IsShown()
+end
+
+local function SetShown(set, shown)
+	if S.SetPinSetOn then S.SetPinSetOn(set, shown)
+	else set.on = shown if set.frame then set.frame:SetShown(shown) end end
+end
+
+local function Matches(job, request)
+	return job and request and job.route == request.route and job.index == request.index
+		and job.count == request.count and job.active == request.active
+end
+
+function mod.GPSRunRouteDrawing(budget)
+	local job = drawing
+	if not job or not mod.GPSRunBudgetedWork then return 0 end
+	if not Visible() or not S.IsBuilt() or not Matches(job, desired) then drawing = nil return 0 end
+	local done, spent, ok, err = mod.GPSRunBudgetedWork(job, budget)
+	if not done then return spent end
+	drawing = nil
+	if not ok then
+		if type(geterrorhandler) == "function" then geterrorhandler()(err) end
+		return spent
+	end
+	if not Matches(job, desired) or not Visible() then return spent end
+	SetShown(trail, false)
+	trail = job.set
+	drawnRoute, drawnIndex, drawnActive, drawnCount = job.route, job.index, job.active, job.count
+	playerPin, playerLine, firstPoint = nil, nil, job.firstPoint
+	SetShown(trail, true)
+	MoveHead(desired.status)
+	return spent
+end
+
+function mod.GPSRouteDrawingPending() return drawing ~= nil end
+
+function mod.GPSDrawRoute(status, budgeted)
 	if not S.IsBuilt() then return end
 	if not trail then trail = S.PinSet("gps", 0, 4) end
 	status = status or {}
 	local route = type(status.route) == "table" and status.route or nil
 	local index = math.max(1, math.floor(Number(status.index) or 1))
 	local count = route and #route or 0
+	if budgeted and mod.GPSRunBudgetedWork and mod.GPSPlanningCheckpoint then
+		desired = { status = status, route = route, index = index, count = count, active = status.active }
+		if not status.active or not route then
+			drawing = nil
+			SetShown(trail, false)
+			drawnRoute, drawnIndex, drawnActive, drawnCount = route, index, status.active, count
+			return
+		end
+		if not Visible() then drawing = nil return end
+		if drawnRoute == route and drawnIndex == index and drawnActive == status.active and drawnCount == count then
+			drawing = nil
+			SetShown(trail, true)
+			MoveHead(status)
+			return
+		end
+		if Matches(drawing, desired) then return end
+		local job = { route = route, index = index, active = status.active, count = count }
+		job.set = S.PinSet(trail == S.PinSet("gps", 0, 4) and "gpsnext" or "gps", 0, 4)
+		SetShown(job.set, false)
+		job.co = coroutine.create(function()
+			S.ClearPinSet(job.set, mod.GPSPlanningCheckpoint)
+			local previous
+			for i = index, math.min(count, index + MAX_ROUTE_POINTS - 1) do
+				mod.GPSPlanningCheckpoint()
+				local point = route[i]
+				if Placed(point) then
+					local pin = S.AddPin(job.set, point.u, point.v, i == count and TARGET or DOT)
+					pin:EnableMouse(false)
+					if i == index then job.firstPoint = point end
+					if previous and previous.cont == point.cont then
+						S.AddLine(job.set, previous.u, previous.v, point.u, point.v, 3, GREEN[1], GREEN[2], GREEN[3], 1)
+					end
+					previous = point
+				else previous = nil end
+			end
+		end)
+		drawing = job
+		return
+	end
+	drawing, desired = nil, nil
+	SetShown(trail, status.active and route ~= nil)
 	if drawnRoute ~= route or drawnIndex ~= index or drawnActive ~= status.active or drawnCount ~= count then
 		drawnRoute, drawnIndex, drawnActive, drawnCount = route, index, status.active, count
 		S.ClearPinSet(trail)
@@ -138,37 +245,14 @@ function mod.GPSDrawRoute(status)
 			end
 		end
 	end
-	if not status.active or not firstPoint then return end
-	local player = status.player
-	local u, v, continent
-	if Placed(player) and not player.unknown and not player.ambiguous
-		and (player.layer == nil or firstPoint.layer == nil or player.layer == firstPoint.layer)
-		and not (mod.GPSOtherFloor and mod.GPSOtherFloor(player, firstPoint)) then
-		u, v, continent = player.u, player.v, player.cont
-	end
-	if not u or continent ~= firstPoint.cont then
-		if playerLine then playerLine:Hide() playerPin:Hide() end
-		return
-	end
-	if not playerPin then
-		playerPin = S.AddPin(trail, u, v, DOT)
-		playerPin:EnableMouse(false)
-		playerLine = Line({ u = u, v = v }, firstPoint)
-		-- Lines remain screen-sized on the view. Move only this pin's existing
-		-- world anchor as the player walks; the remaining road never rebuilds.
-		playerLine:SetStartPoint("CENTER", playerPin)
-	else
-		S.MovePin(trail, playerPin, u, v)
-	end
-	playerPin:Show()
-	playerLine:Show()
+	MoveHead(status)
 end
 
 local function Refresh()
 	if not mod.GPSStatus then return end
 	local status = mod.GPSStatus()
-	mod.GPSDrawRoute(status)
-	if mod.GPSDrawNative then mod.GPSDrawNative(status) end
+	mod.GPSDrawRoute(status, true)
+	if mod.GPSDrawNative then mod.GPSDrawNative(status, true) end
 	if mod.GPSRefreshRoadView then mod.GPSRefreshRoadView() end
 	if hud then
 		hud:SetShown(mod.db.gpsShowTracker ~= false and (status.active or status.state == "faction-stop"
@@ -389,11 +473,17 @@ function mod:SetupGPSPanel()
 	ticker = CreateFrame("Frame", nil, UIParent)
 	local elapsed = 0
 	ticker:SetScript("OnUpdate", function(_, dt)
+		local started = WorkClock()
 		elapsed = elapsed + dt
-		if elapsed < 0.2 then return end
-		elapsed = 0
-		mod.GPSUpdate()
-		Refresh()
+		if elapsed >= 0.2 then
+			elapsed = 0
+			mod.GPSUpdate()
+			Refresh()
+		end
+		-- Replanning and both map overlays share one frame's CPU allowance.
+		if mod.GPSRunPlanning then mod.GPSRunPlanning(math.max(0, 1 - (WorkClock() - started))) end
+		mod.GPSRunRouteDrawing(math.max(0, 1 - (WorkClock() - started)))
+		if mod.GPSRunNativeDrawing then mod.GPSRunNativeDrawing(math.max(0, 1 - (WorkClock() - started))) end
 	end)
 	local previous = mod.OnGPSChanged
 	mod.OnGPSChanged = function()

@@ -14,6 +14,10 @@ local SAMPLE, REACH, JOIN, ATTACH = 12, 15, 10, 100 -- yards
 local active, recording, graph, owned, lastPlayer
 local roadsRevision = 0
 local status = { active = false, state = "stopped", recorded = 0 }
+local planning, work, recordedCache, rules, publishing
+local PLAN_BUDGET_MS, PLAN_OPERATIONS = 1, 256
+local planStats = { started = 0, completed = 0, cancelled = 0, failed = 0, maxSliceMS = 0,
+	lastTotalMS = 0, lastFrames = 0 }
 
 local function Number(n)
 	n = Safe.Value(n)
@@ -28,6 +32,48 @@ end
 
 local function Routes()
 	return mod.db.gpsRoutes
+end
+
+local function Clock()
+	local value = type(debugprofilestop) == "function" and Number(debugprofilestop())
+	return value or (type(GetTime) == "function" and Number(GetTime()) or 0) * 1000
+end
+
+-- Router and drawing loops share this cooperative checkpoint. Ordinary direct
+-- calls remain synchronous; only the coroutine currently being resumed yields.
+function mod.GPSPlanningCheckpoint()
+	if not work or coroutine.running() ~= work.co then return end
+	work.operations = work.operations + 1
+	if work.operations >= PLAN_OPERATIONS or Clock() - work.sliceStart >= work.budget then coroutine.yield() end
+end
+
+function mod.GPSRunBudgetedWork(job, budget)
+	if not job or not job.co or (budget or PLAN_BUDGET_MS) <= 0 then return false, 0, true end
+	work = job
+	job.sliceStart, job.operations, job.budget = Clock(), 0, budget or PLAN_BUDGET_MS
+	local ok, a, b, c = coroutine.resume(job.co)
+	local spent = math.max(0, Clock() - job.sliceStart)
+	work = nil
+	job.totalMS, job.frames = (job.totalMS or 0) + spent, (job.frames or 0) + 1
+	job.maxSliceMS = math.max(job.maxSliceMS or 0, spent)
+	return not ok or coroutine.status(job.co) == "dead", spent, ok, a, b, c
+end
+
+local function CancelPlanning()
+	if planning then planStats.cancelled = planStats.cancelled + 1 end
+	planning, status.planning = nil, false
+end
+
+local function Rules()
+	if not rules or rules.roads ~= ns.GPSRoadData or rules.buildings ~= ns.GPSBuildingData
+		or rules.levels ~= ns.GPSRoadLevels or rules.areas ~= ns.GPSRoadAreas or rules.mapLevels ~= ns.MapLevels
+		or rules.room ~= mod.GPSRoomContext or rules.otherFloor ~= mod.GPSOtherFloor
+		or rules.world ~= C_Map.GetWorldPosFromMapPos then
+		rules = { roads = ns.GPSRoadData, buildings = ns.GPSBuildingData, levels = ns.GPSRoadLevels,
+			areas = ns.GPSRoadAreas, mapLevels = ns.MapLevels, room = mod.GPSRoomContext,
+			otherFloor = mod.GPSOtherFloor, world = C_Map.GetWorldPosFromMapPos }
+	end
+	return rules
 end
 
 local function Point(mapID, x, y)
@@ -144,6 +190,15 @@ local function Distance(a, b)
 	return math.sqrt((a.wx - b.wx) ^ 2 + (a.wy - b.wy) ^ 2)
 end
 
+local function RemainingLengths(route)
+	local lengths = { [#route] = 0 }
+	for i = #route - 1, 1, -1 do
+		mod.GPSPlanningCheckpoint()
+		lengths[i] = lengths[i + 1] + Distance(route[i], route[i + 1])
+	end
+	return lengths
+end
+
 local function Compact(p)
 	return { p.map, p.x, p.y, z = p.z, piece = p.piece, layer = p.layer }
 end
@@ -162,11 +217,36 @@ local function SamplePoint(sample)
 	return p
 end
 
+local function RecordedExtras(all)
+	local source, rule = Routes(), Rules()
+	if not recordedCache or recordedCache.source ~= source or recordedCache.revision ~= roadsRevision
+		or recordedCache.rules ~= rule then
+		local converted, usable = {}, {}
+		for name, trail in pairs(source) do
+			local points, walked = {}, {}
+			for _, sample in ipairs(type(trail) == "table" and trail.points or {}) do
+				mod.GPSPlanningCheckpoint()
+				local p = SamplePoint(sample)
+				-- A failed projection still breaks a recorded-only trail. The
+				-- bundled overlay retains its existing valid-sample input format.
+				walked[#walked + 1] = p or false
+				if p then points[#points + 1] = p end
+			end
+			converted[name] = { points = walked }
+			if #points > 1 then usable[name] = { points = points } end
+		end
+		graph = nil
+		recordedCache = { source = source, revision = roadsRevision, rules = rule, all = converted, usable = usable }
+	end
+	return all and recordedCache.all or recordedCache.usable
+end
+
 -- Overlay views use the same saved-sample projection and revision as routing.
 function mod.GPSRecordedPoint(sample) return SamplePoint(sample) end
 function mod.GPSRoadsRevision() return roadsRevision end
 
 local function Notify()
+	if publishing then return end
 	if mod.OnGPSChanged then mod.OnGPSChanged() end
 end
 
@@ -178,6 +258,7 @@ local function SameWaypoint(p)
 end
 
 local function Track()
+	if publishing then return end
 	local p = active and active.route[active.index]
 	if not p or not p.map or not p.x or not p.y then return end
 	owned = p
@@ -185,6 +266,7 @@ local function Track()
 end
 
 local function Stop(state, clear)
+	CancelPlanning()
 	local ours = SameWaypoint(owned)
 	active, owned = nil, nil
 	status.active, status.state = false, state or "stopped"
@@ -207,6 +289,7 @@ end
 
 -- Nearby samples from separate walks form junctions. A grid bounds the comparisons.
 local function BuildGraph()
+	local extras = RecordedExtras(true)
 	if graph then return graph end
 	local nodes, links, cells = {}, {}, {}
 	local function key(p, dx, dy)
@@ -217,16 +300,17 @@ local function BuildGraph()
 		links[b][#links[b] + 1] = { a, d }
 	end
 	for _, name in ipairs(mod.GPSList()) do
-		local trail = Routes()[name]
+		local trail = extras[name]
 		local previous
-		for _, sample in ipairs(trail.points or {}) do
+		for _, p in ipairs(trail and trail.points or {}) do
+			mod.GPSPlanningCheckpoint()
 			if #nodes >= MAX_TOTAL then break end
-			local p = SamplePoint(sample)
 			if p then
 				local id = #nodes + 1
 				nodes[id], links[id] = p, {}
 				for dx = -1, 1 do for dy = -1, 1 do
 					for _, other in ipairs(cells[key(p, dx, dy)] or {}) do
+						mod.GPSPlanningCheckpoint()
 						local d = Distance(p, nodes[other])
 						if d <= JOIN then edge(id, other, d) end
 					end
@@ -272,6 +356,7 @@ local function RoadRoute(from, to)
 	end
 	local startID, finishID, startDistance, finishDistance
 	for id, p in ipairs(g.nodes) do
+		mod.GPSPlanningCheckpoint()
 		local ds, df = Distance(from, p), Distance(to, p)
 		if ds <= ATTACH and (not startDistance or ds < startDistance) then startID, startDistance = id, ds end
 		if df <= ATTACH and (not finishDistance or df < finishDistance) then finishID, finishDistance = id, df end
@@ -281,11 +366,13 @@ local function RoadRoute(from, to)
 	push(startID, startDistance)
 	local best, total
 	while #heap > 0 do
+		mod.GPSPlanningCheckpoint()
 		local id, cost = pop()
 		if total and cost >= total then break end
 		if distances[id] == cost then
 			if id == finishID then best, total = id, cost + finishDistance break end
 			for _, e in ipairs(g.links[id]) do
+				mod.GPSPlanningCheckpoint()
 				local nextCost = cost + e[2]
 				if not distances[e[1]] or nextCost < distances[e[1]] then
 					distances[e[1]], prev[e[1]] = nextCost, id
@@ -296,8 +383,8 @@ local function RoadRoute(from, to)
 	end
 	if not best then return end
 	local reversed, out = {}, {}
-	while best do reversed[#reversed + 1], best = g.nodes[best], prev[best] end
-	for i = #reversed, 1, -1 do out[#out + 1] = reversed[i] end
+	while best do mod.GPSPlanningCheckpoint() reversed[#reversed + 1], best = g.nodes[best], prev[best] end
+	for i = #reversed, 1, -1 do mod.GPSPlanningCheckpoint() out[#out + 1] = reversed[i] end
 	if #out == 0 or Distance(out[#out], to) > 1 then out[#out + 1] = to end
 	return out
 end
@@ -331,12 +418,14 @@ local function RoadLevel(node)
 			end
 		end
 	end
-	if data and data ~= levelData then
-		levelData, levelNames = data, {}
-		for id, level in pairs(data.areas or {}) do
+	if data ~= levelData then
+		local names = {}
+		for id, level in pairs(data and data.areas or {}) do
+			mod.GPSPlanningCheckpoint()
 			local name = Safe.Call(C_Map.GetAreaInfo, id)
-			if name then levelNames[name] = level end
+			if name then names[name] = level end
 		end
+		levelData, levelNames = data, names
 	end
 	if levelNames and node.area then
 		local area = node.area:match(".*/%s*(.-)%s*$") or node.area
@@ -348,20 +437,12 @@ local function RoadLevel(node)
 	return zone and zone[1]
 end
 
-local function Plan(from, to)
+local function Plan(from, to, destinationCache)
 	local manual = mod.GPSRoadEditSnapshot and mod.GPSRoadEditSnapshot()
 	local hasManual = manual and (next(manual.nodes) or next(manual.links))
 	if mod.GPSRoadRoute and (mod.db.gpsUseRoads ~= false or hasManual) then
 		local ghost = Safe.Call(_G.UnitIsGhost, "player") == true
-		local extras = {}
-		for name, trail in pairs(Routes()) do
-			local points = {}
-			for _, sample in ipairs(type(trail) == "table" and trail.points or {}) do
-				local p = SamplePoint(sample)
-				if p then points[#points + 1] = p end
-			end
-			if #points > 1 then extras[name] = { points = points } end
-		end
+		local extras = RecordedExtras()
 		local route, reason, stats = mod.GPSRoadRoute(from, to, {
 			tops = mod.GPSRoadTopsAt and mod.GPSRoadTopsAt(from),
 			faction = Safe.Call(UnitFactionGroup, "player"), playerLevel = Safe.Call(UnitLevel, "player"),
@@ -369,14 +450,16 @@ local function Plan(from, to)
 			aboveLevel = mod.db.gpsAboveLevel, minLevel = RoadLevel,
 			extraRoutes = extras, extraRevision = roadsRevision,
 			manualRoads = manual, excludeBundled = mod.db.gpsUseRoads == false,
+			checkpoint = mod.GPSPlanningCheckpoint, destinationCache = destinationCache, cacheRevision = Rules(),
 		})
 		if route then
 			if not ghost and mod.db.gpsAllowEnemy ~= true then
 				for i, point in ipairs(route) do
+					mod.GPSPlanningCheckpoint()
 					if point.enemy then
 						if i == 1 then return nil, "blocked" end
 						local safe = {}
-						for j = 1, i - 1 do safe[j] = route[j] end
+						for j = 1, i - 1 do mod.GPSPlanningCheckpoint() safe[j] = route[j] end
 						safe[#safe].factionStop = true
 						if stats then stats.factionStop = true end
 						route = safe
@@ -401,10 +484,133 @@ local function RouteError(reason)
 	return L["No road route connects these continents."]
 end
 
-local function Start(route, title, state, mode, target)
+local function SnapshotPoint(point)
+	local copy = {}
+	for key, value in pairs(point) do copy[key] = value end
+	if point.pieces then
+		copy.pieces = {}
+		for key, value in pairs(point.pieces) do copy.pieces[key] = value end
+	end
+	if point.candidates then
+		copy.candidates = {}
+		for i, candidate in ipairs(point.candidates) do
+			local item = {}
+			for key, value in pairs(candidate) do item[key] = value end
+			copy.candidates[i] = item
+		end
+	end
+	return copy
+end
+
+local function SamePieces(a, b)
+	for key, value in pairs(a or {}) do if not b or b[key] ~= value then return false end end
+	for key, value in pairs(b or {}) do if not a or a[key] ~= value then return false end end
+	return true
+end
+
+local function SamePlanningFloor(a, b)
+	return a and b and a.cont == b.cont and a.layer == b.layer and a.piece == b.piece
+		and not b.unknown and (not b.ambiguous or b.floorResolved)
+		and SamePieces(a.pieces, b.pieces)
+		and not (a.z and b.z and math.abs(a.z - b.z) > 8)
+		and not (mod.GPSOtherFloor and mod.GPSOtherFloor(a, b))
+end
+
+local function QueuePlan(player)
+	if planning or not active then return end
+	local job = { owner = active, from = SnapshotPoint(player), target = SnapshotPoint(active.target),
+		db = mod.db, recordings = Routes(), revision = roadsRevision, rules = Rules(),
+		graphRevision = mod.GPSRoadGraphRevision and mod.GPSRoadGraphRevision(),
+		faction = Safe.Call(UnitFactionGroup, "player"), level = Safe.Call(UnitLevel, "player"),
+		ghost = Safe.Call(_G.UnitIsGhost, "player") == true,
+		useRoads = mod.db.gpsUseRoads, allowEnemy = mod.db.gpsAllowEnemy,
+		offroad = mod.db.gpsOffroad, aboveLevel = mod.db.gpsAboveLevel }
+	active.destinationCache = active.destinationCache or {}
+	job.co = coroutine.create(function()
+		local route, source, stats = Plan(job.from, job.target, job.owner.destinationCache)
+		if route then job.remaining = RemainingLengths(route) end
+		return route, source, stats
+	end)
+	planning, status.planning = job, true
+	planStats.started = planStats.started + 1
+end
+
+local function PlanningValid(job)
+	return active == job.owner and active.mode == "navigate" and active.target
+		and mod.db == job.db and Routes() == job.recordings and roadsRevision == job.revision
+		and Rules() == job.rules
+		and (not mod.GPSRoadGraphRevision or mod.GPSRoadGraphRevision() == job.graphRevision)
+		and mod.db.gpsUseRoads == job.useRoads and mod.db.gpsAllowEnemy == job.allowEnemy
+		and mod.db.gpsOffroad == job.offroad and mod.db.gpsAboveLevel == job.aboveLevel
+		and Safe.Call(UnitFactionGroup, "player") == job.faction and Safe.Call(UnitLevel, "player") == job.level
+		and (Safe.Call(_G.UnitIsGhost, "player") == true) == job.ghost
+end
+
+function mod.GPSRunPlanning(budget)
+	local job = planning
+	if not job then return 0 end
+	if owned and not SameWaypoint(owned) then Stop("stopped", false) return 0 end
+	if not PlanningValid(job) then
+		CancelPlanning()
+		if active == job.owner then active.destinationCache, active.replanAt, lastPlayer = {}, 0, nil end
+		return 0
+	end
+	if not SamePlanningFloor(job.from, status.player) or Distance(job.from, status.player) > 100
+		or Safe.Call(UnitOnTaxi, "player") then
+		CancelPlanning()
+		if active == job.owner then active.replanAt, lastPlayer = 0, nil end
+		return 0
+	end
+	local done, spent, ok, route, source, stats = mod.GPSRunBudgetedWork(job, budget)
+	planStats.maxSliceMS = math.max(planStats.maxSliceMS, job.maxSliceMS or 0)
+	if not done then return spent end
+	planStats.lastTotalMS, planStats.lastFrames = job.totalMS or 0, job.frames or 0
+	if not ok then
+		planning, status.planning = nil, false
+		planStats.failed = planStats.failed + 1
+		if type(geterrorhandler) == "function" then geterrorhandler()(route) end
+		return spent
+	end
+	-- Re-read position and ownership before publication: a loading screen,
+	-- floor change, teleport or another addon's waypoint makes this result stale.
+	local player = Player()
+	if not PlanningValid(job) or not SamePlanningFloor(job.from, player) or Distance(job.from, player) > 100
+		or Safe.Call(UnitOnTaxi, "player") or owned and not SameWaypoint(owned) then
+		CancelPlanning()
+		if active == job.owner then active.replanAt, lastPlayer = 0, nil end
+		return spent
+	end
+	planning, status.planning = nil, false
+	planStats.completed = planStats.completed + 1
+	if route then
+		active.state, status.roadSource, status.roadStats = source, source, stats
+		active.route, active.index, status.route = route, 1, route
+		active.remaining, active.origin = job.remaining, job.from
+		status.index, status.total, status.state = 1, #route, source
+		status.drawAsync = true
+		-- Settle progress against the latest player first. Its intermediate
+		-- origin/step changes must not publish another waypoint or map request.
+		publishing = true
+		mod.GPSUpdate()
+		publishing = false
+		Track()
+		Notify()
+	end
+	return spent
+end
+
+function mod.GPSPlanningStats()
+	local result = { active = planning ~= nil, budgetMS = PLAN_BUDGET_MS }
+	for key, value in pairs(planStats) do result[key] = value end
+	return result
+end
+
+local function Start(route, title, state, mode, target, destinationCache)
 	Stop("stopped", false)
 	lastPlayer = nil
-	active = { route = route, index = 1, title = title or L["GPS"], state = state, mode = mode, target = target, origin = Player() }
+	active = { route = route, index = 1, title = title or L["GPS"], state = state, mode = mode, target = target,
+		origin = Player(), destinationCache = destinationCache or {}, remaining = RemainingLengths(route) }
+	status.drawAsync = false
 	status.route, status.title, status.state = route, active.title, state
 	status.roadSource = state
 	if state ~= "bundled" then status.roadStats = nil end
@@ -417,13 +623,15 @@ local function Start(route, title, state, mode, target)
 end
 
 function mod.GPSStart(mapID, x, y, title)
+	CancelPlanning()
 	local target, player = Point(mapID, x, y), Player()
 	if not target then return nil, L["GPS cannot navigate to that location."] end
 	if not player then return nil, L["GPS is waiting for your position."] end
-	local route, source, stats = Plan(player, target)
+	local cache = {}
+	local route, source, stats = Plan(player, target, cache)
 	if not route then return nil, RouteError(source) end
 	status.roadSource, status.roadStats = source, stats
-	return Start(route, Name(title), source, "navigate", target)
+	return Start(route, Name(title), source, "navigate", target, cache)
 end
 
 function mod.GPSList()
@@ -599,6 +807,7 @@ function mod.GPSUpdate()
 	if not active then return end
 	if owned and not SameWaypoint(owned) then Stop("stopped", false) return end
 	if not player or Safe.Call(UnitOnTaxi, "player") then
+		CancelPlanning()
 		status.player = nil
 		status.state, status.instruction, status.bearing = "waiting", L["GPS is waiting for your position."], nil
 		status.distance, status.remaining = nil, nil
@@ -608,6 +817,7 @@ function mod.GPSUpdate()
 	local route, index = active.route, active.index
 	local p = route[index]
 	if player.cont ~= p.cont then
+		CancelPlanning()
 		status.player = nil
 		status.state, status.instruction, status.bearing = "waiting", L["Return to the route's continent to continue GPS."], nil
 		status.distance, status.remaining = nil, nil
@@ -629,6 +839,7 @@ function mod.GPSUpdate()
 				local reversed = {}
 				for i = #route, 1, -1 do reversed[#reversed + 1] = route[i] end
 				active.route, active.index, status.route = reversed, 2, reversed
+				active.remaining = RemainingLengths(reversed)
 			else
 				local factionStop = p.factionStop
 				if factionStop then status.resumeTarget, status.resumeTitle = active.target, active.title end
@@ -647,25 +858,15 @@ function mod.GPSUpdate()
 	end
 	-- Replan after leaving the current road, with a cooldown and actual movement required.
 	local now = GetTime()
-	if active.mode == "navigate" and (active.state == "recorded" or active.state == "bundled")
+	if not planning and active.mode == "navigate" and (active.state == "recorded" or active.state == "bundled")
 		and not p.stairOwner and now >= (active.replanAt or 0) then
 		local off = index > 1 and SegmentDistance(player, route[index - 1], p) or d
 		if off > 60 and (not lastPlayer or Distance(lastPlayer, player) > 20) then
 			active.replanAt, lastPlayer = now + 5, player
-			local newRoute, source, stats = Plan(player, active.target)
-			if newRoute then
-				active.state, status.roadSource, status.roadStats = source, source, stats
-				active.route, active.index, status.route = newRoute, 1, newRoute
-				Track()
-				Notify()
-				route, index, p = newRoute, 1, newRoute[1]
-				d = Distance(player, p)
-				floorMatches = FloorMatches(player, p)
-			end
+			QueuePlan(player)
 		end
 	end
-	local remaining = d
-	for i = index + 1, #route do remaining = remaining + Distance(route[i - 1], route[i]) end
+	local remaining = d + (active.remaining[index] or 0)
 	status.active, status.state, status.title = true, active.state, active.title
 	status.index, status.total = index, #route
 	status.map, status.x, status.y, status.u, status.v = p.map, p.x, p.y, p.u, p.v
@@ -714,6 +915,8 @@ function mod.GPSSetRoutingOption(key, value)
 	elseif key == "gpsAboveLevel" then
 		if value ~= "allow" and value ~= "warn" and value ~= "avoid" and value ~= "never" and value ~= "deny" then return false end
 	else return false end
+	CancelPlanning()
+	if active then active.destinationCache = {} end
 	mod.db[key] = value
 	if not active and status.state == "faction-stop" and status.resumeTarget and mod.db.gpsAllowEnemy == true then
 		local target, title = status.resumeTarget, status.resumeTitle

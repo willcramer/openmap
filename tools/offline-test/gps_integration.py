@@ -181,12 +181,17 @@ class GPSIntegrationTests(unittest.TestCase):
         self.lua.execute(r'''
             -- Only map drawing regions are simulated. Core, GPS, Nav and the
             -- tracker callbacks still run through the complete addon.
+            WorldMapFrame.IsShown=function()return true end
             DRAW={}
             local S=testns.MapStitch
             S.IsBuilt=function()return true end
             S.PinSet=function(key)
                 if not DRAW[key]then DRAW[key]={frame=CreateFrame('Frame'),pins={},lines={}}end
                 return DRAW[key]
+            end
+            S.SetPinSetOn=function(set,on)set.on=on set.frame:SetShown(on)end
+            function DrawnGPS()
+                for _,set in pairs(DRAW)do if set.on then return set end end
             end
             S.ClearPinSet=function(set)
                 for _,pin in ipairs(set.pins)do pin:Hide()end
@@ -219,8 +224,8 @@ class GPSIntegrationTests(unittest.TestCase):
             assert(gpsmod.GPSPlay('Tracker road','once'))
             TickGPS()
             assert(OpenMapGPSGuide:IsShown()and WAYPOINT.position.x==.3)
-            local route,waypoint,updates,lines=gpsmod.GPSStatus().route,WAYPOINT,#added,DRAW.gps.lines
-            assert(#DRAW.gps.lines>0,'active GPS route was not drawn')
+            local route,waypoint,updates,lines=gpsmod.GPSStatus().route,WAYPOINT,#added,DrawnGPS().lines
+            assert(#lines>0,'active GPS route was not drawn')
             local hide
             for _,frame in ipairs(FRAMES)do
                 if frame:GetParent()==OpenMapGPSGuide and frame:GetText()=='Hide'and frame:GetScript('OnClick')then hide=frame end
@@ -233,14 +238,14 @@ class GPSIntegrationTests(unittest.TestCase):
             hide:GetScript('OnClick')(hide)
             assert(not OpenMapGPSGuide:IsShown()and not gpsmod.GPSTrackerEnabled())
             assert(gpsmod.GPSStatus().active and gpsmod.GPSStatus().route==route)
-            assert(WAYPOINT==waypoint and #added==updates and DRAW.gps.lines==lines and #lines>0)
+            assert(WAYPOINT==waypoint and #added==updates and DrawnGPS().lines==lines and #lines>0)
             PX=.3 TickGPS()
             assert(gpsmod.GPSStatus().active and gpsmod.GPSStatus().index==3)
             assert(WAYPOINT.position.x==.4 and added[#added].x==.4 and #added>updates)
-            assert(not OpenMapGPSGuide:IsShown()and #DRAW.gps.lines>0)
+            assert(not OpenMapGPSGuide:IsShown()and #DrawnGPS().lines>0)
             PX=.4 TickGPS()
             assert(gpsmod.GPSStatus().state=='arrived'and WAYPOINT==nil)
-            assert(#removed==#added and #DRAW.gps.lines==0)
+            assert(#removed==#added and not DrawnGPS())
             assert(#gpsmod.db.gpsRoutes['Tracker road'].points==3)
         ''')
 

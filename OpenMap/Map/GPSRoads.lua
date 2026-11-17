@@ -5,7 +5,21 @@ local mod = ns:GetModule("worldmap")
 local Safe = ns.Safe
 local cachedData, cachedNetworks
 local extraCache = {}
+local graphRevision = 0
 local EMPTY_GRAPH = { nodes = {}, list = {}, links = {}, edgeCount = 0, source = {} }
+
+local function Checkpoint(context)
+	local check = context and context.checkpoint or mod.GPSPlanningCheckpoint
+	if check then check() end
+end
+
+local function Query(context)
+	local copy = {}
+	for key, value in pairs(context or {}) do copy[key] = value end
+	copy._allowed, copy._high = {}, {}
+	copy._faction = type(copy.faction) == "string" and copy.faction:lower() or nil
+	return copy
+end
 
 local function Number(value)
 	value = Safe.Value(value)
@@ -16,14 +30,17 @@ local function Distance(a, b)
 	return math.sqrt((a.wx - b.wx) ^ 2 + (a.wy - b.wy) ^ 2)
 end
 
-local function Network(continent)
+local function Network(continent, context)
 	local data = ns.GPSRoadData
 	if data ~= cachedData then cachedData, cachedNetworks = data, {} end
 	if not data or not data.networks or not data.networks[continent] then return end
 	if cachedNetworks[continent] then return cachedNetworks[continent] end
 	local source = data.networks[continent].nodes or {}
 	local graph = { nodes = {}, list = {}, links = {}, edgeCount = 0, source = source }
+	local worked = 0
 	for id, raw in pairs(source) do
+		worked = worked + 1
+		if worked % 16 == 0 then Checkpoint(context) end
 		if Number(id) and Number(raw.wx) and Number(raw.wy) then
 			local p = mod.GPSRoadPoint and mod.GPSRoadPoint(raw, continent)
 			if not p then p = { wx = raw.wx, wy = raw.wy, cont = continent, map = raw.map } end
@@ -37,7 +54,8 @@ local function Network(continent)
 		end
 	end
 	table.sort(graph.list)
-	for _, id in ipairs(graph.list) do
+	for i, id in ipairs(graph.list) do
+		if i % 16 == 0 then Checkpoint(context) end
 		local p = graph.nodes[id]
 		local tower = p.tower
 		if tower and Number(tower.x) and Number(tower.y) and Number(tower.r) and Number(tower.turns) then
@@ -65,7 +83,8 @@ local function Network(continent)
 			for exit, turn in pairs(tower.exits or {}) do mark(graph.nodes[exit], turn) end
 		end
 	end
-	for _, id in ipairs(graph.list) do
+	for i, id in ipairs(graph.list) do
+		if i % 16 == 0 then Checkpoint(context) end
 		local raw = source[id]
 		for nextID, linked in pairs(raw.links or {}) do
 			local target = source[nextID]
@@ -85,23 +104,32 @@ end
 
 local function Enemy(p, context)
 	if p.type ~= "alliance" and p.type ~= "horde" then return false end
-	local own = type(context.faction) == "string" and context.faction:lower()
+	local own = context._faction
+	if own == nil and type(context.faction) == "string" then own = context.faction:lower() end
 	return p.type ~= own
 end
 
 local function High(p, context)
 	if p.type ~= "offroad" or not context.minLevel or not context.playerLevel then return false end
+	local key = p.nodeID or p
+	local cached = context._high and context._high[key]
+	if cached ~= nil then return cached end
 	local minimum = context.minLevel(p)
-	return minimum and minimum > context.playerLevel or false
+	local value = minimum and minimum > context.playerLevel or false
+	if context._high then context._high[key] = value end
+	return value
 end
 
 local function Allowed(p, context)
 	if context.ghost then return true end
-	if Enemy(p, context) and not context.allowEnemy then return false end
-	if p.type == "swim" and context.swim == "deny" then return false end
-	if p.type == "offroad" and context.offroad == "deny" then return false end
-	if High(p, context) and (context.aboveLevel == "deny" or context.aboveLevel == "never") then return false end
-	return true
+	local cached = context._allowed and context._allowed[p]
+	if cached ~= nil then return cached end
+	local value = not (Enemy(p, context) and not context.allowEnemy)
+		and not (p.type == "swim" and context.swim == "deny")
+		and not (p.type == "offroad" and context.offroad == "deny")
+		and not (High(p, context) and (context.aboveLevel == "deny" or context.aboveLevel == "never"))
+	if context._allowed then context._allowed[p] = value end
+	return value
 end
 
 local function EndpointAllowed(p, at, starting, context)
@@ -135,44 +163,76 @@ local function GeometryCompatible(a, b)
 		and not (mod.GPSOtherFloor and mod.GPSOtherFloor(a, b))
 end
 
+local function Geometry(graph, a, b)
+	if graph.geometryRule ~= mod.GPSOtherFloor or graph.geometryData ~= ns.GPSBuildingData then
+		graph.geometry, graph.geometryRule, graph.geometryData = {}, mod.GPSOtherFloor, ns.GPSBuildingData
+	end
+	local rows = graph.geometry
+	if not rows then rows = {} graph.geometry = rows end
+	local row = rows[a.nodeID]
+	if not row then row = {} rows[a.nodeID] = row end
+	local value = row[b.nodeID]
+	if value == nil then value = GeometryCompatible(a, b) row[b.nodeID] = value end
+	return value
+end
+
+local function EndpointQuery(at, starting, context)
+	local cache = {}
+	return function(p)
+		local value = cache[p]
+		if value == nil then value = EndpointAllowed(p, at, starting, context) cache[p] = value end
+		return value
+	end
+end
+
 local function Attachment(graph, at, starting, context)
+	local endpoint = EndpointQuery(at, starting, context)
 	local nearest, distance, blocked, floor
 	local pin = not starting and not at.nodeID
 	local edge, edgeDistance, preferredEdge, preferredDistance, preferredRank
 	local limit = context.attachLimit or math.huge
-	for _, id in ipairs(graph.list) do
+	local function candidate(id, nextID, t, wx, wy)
+		local a, b = graph.nodes[id], graph.nodes[nextID]
+		return { a = id, b = nextID, t = t, point = { wx = wx, wy = wy, cont = at.cont,
+			map = a.map, piece = a.piece, layer = a.layer, source = "bundled",
+			roadEnemy = Enemy(a, context) or Enemy(b, context), roadHigh = High(a, context) or High(b, context),
+			roadOffroad = a.type == "offroad" or b.type == "offroad", roadSwim = a.type == "swim" or b.type == "swim" } }
+	end
+	for i, id in ipairs(graph.list) do
+		if i % 16 == 0 then Checkpoint(context) end
 		local p = graph.nodes[id]
 		local d = Distance(at, p)
 		if d <= limit and not Allowed(p, context) then blocked = true end
-		if d <= limit and not EndpointAllowed(p, at, starting, context) and Allowed(p, context) and not p.nostart then floor = true end
-		if EndpointAllowed(p, at, starting, context) then
+		if d <= limit and not endpoint(p) and Allowed(p, context) and not p.nostart then floor = true end
+		if endpoint(p) then
 			if not distance or d < distance then nearest, distance = { node = id, point = p }, d end
 		end
 	end
 	-- Choose one nearest piece of road rather than connecting to every point in
 	-- a radius, which would cut across hairpins and jump over missing bridges.
-	for _, id in ipairs(graph.list) do
+	for i, id in ipairs(graph.list) do
+		if i % 16 == 0 then Checkpoint(context) end
 		local a = graph.nodes[id]
-		if EndpointAllowed(a, at, starting, context) then
-			for _, nextID in ipairs(graph.links[id]) do
+		if endpoint(a) then
+			for j, nextID in ipairs(graph.links[id]) do
+				if j % 16 == 0 then Checkpoint(context) end
 				local b = graph.nodes[nextID]
-				if GeometryCompatible(a, b) and EndpointAllowed(b, at, starting, context) then
+				if Geometry(graph, a, b) and endpoint(b) then
 					local d, t, wx, wy = Projection(at, a, b)
-					local candidate = { a = id, b = nextID, t = t, point = { wx = wx, wy = wy, cont = at.cont,
-						map = a.map, piece = a.piece, layer = a.layer, source = "bundled",
-						roadEnemy = Enemy(a, context) or Enemy(b, context), roadHigh = High(a, context) or High(b, context),
-						roadOffroad = a.type == "offroad" or b.type == "offroad", roadSwim = a.type == "swim" or b.type == "swim" } }
 					if pin then
-						if not edgeDistance or d < edgeDistance - 0.00001 then edge, edgeDistance = candidate, d end
+						local nearest = not edgeDistance or d < edgeDistance - 0.00001
 						local room = at.piece and a.piece == at.piece and b.piece == at.piece
 						local layer = at.layer and a.layer and b.layer and (at.layer == true or (a.layer == at.layer and b.layer == at.layer))
 						local rank = room and 0 or layer and 1 or nil
-						if rank and d <= (context.entryRadius or 100) and (not preferredRank or rank < preferredRank
-							or (rank == preferredRank and d < preferredDistance - 0.00001)) then
-							preferredEdge, preferredDistance, preferredRank = candidate, d, rank
+						local preferred = rank and d <= (context.entryRadius or 100) and (not preferredRank or rank < preferredRank
+							or (rank == preferredRank and d < preferredDistance - 0.00001))
+						if nearest or preferred then
+							local entry = candidate(id, nextID, t, wx, wy)
+							if nearest then edge, edgeDistance = entry, d end
+							if preferred then preferredEdge, preferredDistance, preferredRank = entry, d, rank end
 						end
 					elseif t > 0.00001 and t < 0.99999 and (not distance or d < distance - 0.00001) then
-						nearest, distance = candidate, d
+						nearest, distance = candidate(id, nextID, t, wx, wy), d
 					end
 				end
 			end
@@ -184,21 +244,25 @@ local function Attachment(graph, at, starting, context)
 	return nearest
 end
 
-local function Parts(graph)
+local function Parts(graph, context)
 	if graph.parts then return graph.parts end
 	local roots = {}
-	for _, id in ipairs(graph.list) do roots[id] = id end
+	for i, id in ipairs(graph.list) do if i % 16 == 0 then Checkpoint(context) end roots[id] = id end
 	local function root(id)
 		while roots[id] ~= id do roots[id] = roots[roots[id]] id = roots[id] end
 		return id
 	end
-	for _, id in ipairs(graph.list) do
+	for i, id in ipairs(graph.list) do
+		if i % 16 == 0 then Checkpoint(context) end
 		for other in pairs(graph.source[id] and graph.source[id].links or {}) do
 			if roots[other] then roots[root(other)] = root(id) end
 		end
-		for _, other in ipairs(graph.links[id]) do roots[root(other)] = root(id) end
+		for j, other in ipairs(graph.links[id]) do
+			if j % 16 == 0 then Checkpoint(context) end
+			roots[root(other)] = root(id)
+		end
 	end
-	for _, id in ipairs(graph.list) do roots[id] = root(id) end
+	for i, id in ipairs(graph.list) do if i % 16 == 0 then Checkpoint(context) end roots[id] = root(id) end
 	graph.parts = roots
 	return roots
 end
@@ -206,53 +270,62 @@ end
 local function StartAttachments(graph, at, context)
 	local candidates, nearest, blocked, floor = {}, nil, false, false
 	local limit, radius = context.attachLimit or math.huge, context.entryRadius or 100
-	local parts = Parts(graph)
+	local parts, closest = Parts(graph, context), {}
+	local endpoint, eligibleCache = EndpointQuery(at, true, context), {}
+	local function wanted(id, distance)
+		local old = closest[parts[id]]
+		return distance <= limit and (distance <= radius or not old or distance < old.distance)
+	end
 	local function offer(entry, distance)
 		if distance > limit then return end
 		entry.distance, entry.part = distance, parts[entry.node or entry.a]
-		candidates[#candidates + 1] = entry
+		if distance <= radius then candidates[#candidates + 1] = entry end
+		if not closest[entry.part] or distance < closest[entry.part].distance then closest[entry.part] = entry end
 		if not nearest or distance < nearest then nearest = distance end
 	end
 	local function eligible(p)
-		if not EndpointAllowed(p, at, true, context) then return false end
-		if context.tops and next(context.tops) then return context.tops[p.nodeID] and true or false end
-		if p.stairOwner and p.stairTurn ~= 0 and not at.stairOwner then return false end
-		if p.stairOwner and p.stairTurn > 0 and not at.stairOwner
-			and not (context.tops and context.tops[p.nodeID])
-			and not (at.piece and at.piece == p.piece)
-			and not (at.z and p.minZ and p.maxZ and at.z >= p.minZ - 2 and at.z <= p.maxZ + 2) then return false end
-		return true
+		local value = eligibleCache[p]
+		if value ~= nil then return value end
+		value = endpoint(p)
+		if value and context.tops and next(context.tops) then value = context.tops[p.nodeID] and true or false
+		elseif value and p.stairOwner and p.stairTurn ~= 0 and not at.stairOwner then value = false end
+		eligibleCache[p] = value
+		return value
 	end
-	for _, id in ipairs(graph.list) do
+	for i, id in ipairs(graph.list) do
+		if i % 16 == 0 then Checkpoint(context) end
 		local p = graph.nodes[id]
 		local distance = Distance(at, p)
 		if distance <= limit then
 			if not Allowed(p, context) then blocked = true
 			elseif not eligible(p) and not p.nostart then floor = true end
 		end
-		if eligible(p) and (not next(graph.source[id] and graph.source[id].links or {})
+		if eligible(p) and wanted(id, distance) and (not next(graph.source[id] and graph.source[id].links or {})
 			or (context.tops and context.tops[id]) or p.stairOwner) then offer({ node = id, point = p }, distance) end
 	end
 	local seen = {}
-	for _, id in ipairs(graph.list) do
+	for i, id in ipairs(graph.list) do
+		if i % 16 == 0 then Checkpoint(context) end
 		local a = graph.nodes[id]
 		if eligible(a) then
-			for _, other in ipairs(graph.links[id]) do
+			for j, other in ipairs(graph.links[id]) do
+				if j % 16 == 0 then Checkpoint(context) end
 				local key = math.min(id, other) .. ":" .. math.max(id, other)
 				local b = graph.nodes[other]
-				if not seen[key] and eligible(b) and GeometryCompatible(a, b) then
+				if not seen[key] and eligible(b) and Geometry(graph, a, b) then
 					seen[key] = true
 					local distance, t, wx, wy = Projection(at, a, b)
-					offer({ a = id, b = other, t = t, point = { wx = wx, wy = wy, cont = at.cont,
+					if wanted(id, distance) then offer({ a = id, b = other, t = t, point = { wx = wx, wy = wy, cont = at.cont,
 							map = a.map, piece = a.piece, layer = a.layer, source = "bundled",
 							roadOffroad = a.type == "offroad" or b.type == "offroad",
 							roadSwim = a.type == "swim" or b.type == "swim",
 							roadHigh = High(a, context) or High(b, context),
-							roadEnemy = Enemy(a, context) or Enemy(b, context) } }, distance)
+							roadEnemy = Enemy(a, context) or Enemy(b, context) } }, distance) end
 				elseif not seen[key] and a.layer ~= b.layer then
 					-- A doorway or lift is entered at the end on your level,
 					-- never halfway through its vertical transition.
-					offer({ node = id, point = a }, Distance(at, a))
+					local distance = Distance(at, a)
+					if wanted(id, distance) then offer({ node = id, point = a }, distance) end
 				end
 			end
 		end
@@ -278,7 +351,8 @@ local function StartAttachments(graph, at, context)
 	local preferred, preferredValue
 	local function nearestWith(key, value)
 		local distance
-		for _, entry in ipairs(candidates) do
+		for i, entry in ipairs(candidates) do
+			if i % 16 == 0 then Checkpoint(context) end
 			if entryHas(entry, key, value) then
 				local candidate = adjusted(entry, key, value)
 				if candidate.distance <= radius and (not distance or candidate.distance < distance) then distance = candidate.distance end
@@ -297,16 +371,17 @@ local function StartAttachments(graph, at, context)
 	if pieceDistance and pieceDistance <= nearest + 20 then preferred, preferredValue, nearest = "piece", at.piece, pieceDistance
 	elseif areaDistance and areaDistance <= nearest + 40 then preferred, preferredValue, nearest = "area", at.area, areaDistance end
 	local slack = context.entrySlack or ((at.layer ~= nil and at.layer ~= false) and 20 or 15)
-	for _, id in ipairs(graph.list) do
+	for i, id in ipairs(graph.list) do
+		if i % 16 == 0 then Checkpoint(context) end
 		local p = graph.nodes[id]
 		for lowerID in pairs(p.oneway or {}) do
 			local lower = graph.nodes[lowerID]
 			if lower and Distance(at, lower) <= 50 and Distance(at, lower) < Distance(at, p) then slack = math.min(slack, 10) end
 		end
 	end
-	local out, closest = {}, {}
-	for _, entry in ipairs(candidates) do
-		if not closest[entry.part] or entry.distance < closest[entry.part].distance then closest[entry.part] = entry end
+	local out = {}
+	for i, entry in ipairs(candidates) do
+		if i % 16 == 0 then Checkpoint(context) end
 		if not preferred or entryHas(entry, preferred, preferredValue) then
 			local candidate = adjusted(entry, preferred, preferredValue)
 			if candidate.distance <= math.min(radius, nearest + slack) + 0.00001 then out[#out + 1] = candidate end
@@ -360,6 +435,46 @@ local function CopyPoint(point)
 	return copy
 end
 
+local function CopyAttachment(entry)
+	if not entry then return end
+	local copy = CopyPoint(entry)
+	copy.point = CopyPoint(entry.point)
+	return copy
+end
+
+local function EqualKey(a, b)
+	if not a or not b then return false end
+	for key, value in pairs(a) do if b[key] ~= value then return false end end
+	for key, value in pairs(b) do if a[key] ~= value then return false end end
+	return true
+end
+
+local function Destination(graph, at, context)
+	local cache = context.destinationCache
+	-- Arbitrary level callbacks may change without their function changing.
+	-- Callers opt in with a revision token for their external level data.
+	if type(cache) ~= "table" or context.minLevel and context.cacheRevision == nil then
+		return Attachment(graph, at, false, context)
+	end
+	local point, options, pieces = {}, {}, {}
+	for _, key in ipairs({ "cont", "wx", "wy", "map", "nodeID", "piece", "layer", "z", "floorResolved" }) do point[key] = at[key] end
+	for key, value in pairs(at.pieces or {}) do pieces[key] = value end
+	for key, value in pairs(context) do
+		if type(key) == "string" and key:sub(1, 1) ~= "_" and key ~= "checkpoint" and key ~= "destinationCache"
+			and key ~= "extraRoutes" and key ~= "manualRoads" and key ~= "tops" then options[key] = value end
+	end
+	options.geometryRule, options.geometryData = mod.GPSOtherFloor, ns.GPSBuildingData
+	if cache.graph == graph and EqualKey(cache.point, point) and EqualKey(cache.options, options) and EqualKey(cache.pieces, pieces) then
+		cache.hits = (cache.hits or 0) + 1
+		return CopyAttachment(cache.result), cache.reason
+	end
+	local entry, reason = Attachment(graph, at, false, context)
+	cache.graph, cache.point, cache.options, cache.pieces = graph, point, options, pieces
+	cache.result, cache.reason = CopyAttachment(entry), reason
+	cache.misses = (cache.misses or 0) + 1
+	return entry, reason
+end
+
 local function Augmented(graph, continent, context)
 	local extra = context.extraRoutes
 	local manual = context.manualRoads
@@ -378,8 +493,12 @@ local function Augmented(graph, continent, context)
 		cells[key][#cells[key] + 1] = id
 	end
 	for _, id in ipairs(graph.list) do
+		Checkpoint(context)
 		out.nodes[id], out.list[#out.list + 1], out.links[id] = graph.nodes[id], id, {}
-		for _, other in ipairs(graph.links[id]) do out.links[id][#out.links[id] + 1] = other end
+		for i, other in ipairs(graph.links[id]) do
+			if i % 16 == 0 then Checkpoint(context) end
+			out.links[id][#out.links[id] + 1] = other
+		end
 		index(id, graph.nodes[id])
 	end
 	local nextID = #graph.list > 0 and graph.list[#graph.list] + 1 or 1
@@ -394,6 +513,7 @@ local function Augmented(graph, continent, context)
 		local trail = extra[name]
 		local previous
 		for _, raw in ipairs(type(trail) == "table" and trail.points or {}) do
+			Checkpoint(context)
 			if raw.cont == continent and Number(raw.wx) and Number(raw.wy) then
 				local id, p = nextID, CopyPoint(raw)
 				nextID = nextID + 1
@@ -401,7 +521,8 @@ local function Augmented(graph, continent, context)
 				out.nodes[id], out.links[id] = p, {}
 				local cx, cy = math.floor(p.wx / 10), math.floor(p.wy / 10)
 				for dx = -1, 1 do for dy = -1, 1 do
-					for _, other in ipairs(cells[cellKey(cx + dx, cy + dy)] or {}) do
+					for i, other in ipairs(cells[cellKey(cx + dx, cy + dy)] or {}) do
+						if i % 16 == 0 then Checkpoint(context) end
 						local q = out.nodes[other]
 						if p.piece == q.piece and p.layer == q.layer and Distance(p, q) <= 10
 							and (not p.z or not q.minZ or not q.maxZ or (p.z >= q.minZ - 2 and p.z <= q.maxZ + 2)) then link(id, other) end
@@ -417,13 +538,17 @@ local function Augmented(graph, continent, context)
 	-- Manual nodes never enter the recorded-trail proximity index. Only the
 	-- player's explicit links may connect them to another node or the base graph.
 	local refs = {}
-	for _, id in ipairs(graph.list) do refs["b:" .. continent .. ":" .. id] = id end
+	for i, id in ipairs(graph.list) do
+		if i % 16 == 0 then Checkpoint(context) end
+		refs["b:" .. continent .. ":" .. id] = id
+	end
 	local manualRefs = {}
 	for ref in pairs(type(manual) == "table" and manual.nodes or {}) do
 		if type(ref) == "string" then manualRefs[#manualRefs + 1] = ref end
 	end
 	table.sort(manualRefs)
 	for _, ref in ipairs(manualRefs) do
+		Checkpoint(context)
 		local raw = manual.nodes[ref]
 		if type(raw) == "table" and raw.cont == continent and Number(raw.wx) and Number(raw.wy)
 			and not raw.unknown and (not raw.ambiguous or raw.floorResolved) then
@@ -435,6 +560,7 @@ local function Augmented(graph, continent, context)
 		end
 	end
 	for _, edge in ipairs(type(manual) == "table" and manual.links or {}) do
+		Checkpoint(context)
 		local a, b = refs[edge.a], refs[edge.b]
 		local first, last = a and out.nodes[a], b and out.nodes[b]
 		if a and b and a ~= b and first.layer == last.layer
@@ -454,6 +580,7 @@ local function Augmented(graph, continent, context)
 end
 
 local function AddPoint(route, p, context)
+	Checkpoint(context)
 	p = CopyPoint(p)
 	p.enemy = not context.ghost and (Enemy(p, context) or p.roadEnemy) and true or nil
 	p.highLevel = not context.ghost and (High(p, context) or p.roadHigh) and true or nil
@@ -501,7 +628,7 @@ end
 -- A small binary heap; no graph-sized quadratic scans while planning a journey.
 local function Solve(graph, from, to, context)
 	local entries, startReason = StartAttachments(graph, from, context)
-	local finish, finishReason = Attachment(graph, to, false, context)
+	local finish, finishReason = Destination(graph, to, context)
 	if not entries or not finish then return nil, startReason or finishReason end
 	local function approach(distance)
 		local radius, factor = context.entryRadius or 100, context.offroadFactor or 2
@@ -556,7 +683,8 @@ local function Solve(graph, from, to, context)
 		if reverse(finish.a, finish.b) then ends[finish.b] = tail + finalLeg(graph.nodes[finish.b]) end
 	end
 	local direct, best, reverseDrop
-	for _, entry in ipairs(entries) do
+	for i, entry in ipairs(entries) do
+		if i % 16 == 0 then Checkpoint(context) end
 		local walked = approach(entry.distance)
 		if entry.node then seed(entry.node, walked, entry)
 		else
@@ -574,12 +702,14 @@ local function Solve(graph, from, to, context)
 	end
 	local winner, visited = nil, 0
 	while #heap > 0 do
+		Checkpoint(context)
 		local id, cost = pop()
 		if best and cost >= best then break end
 		if distances[id] == cost then
 			visited = visited + 1
 			if ends[id] and (not best or cost + ends[id] < best) then winner, best = id, cost + ends[id] end
-			for _, nextID in ipairs(graph.links[id]) do
+			for i, nextID in ipairs(graph.links[id]) do
+				if i % 16 == 0 then Checkpoint(context) end
 				if Allowed(graph.nodes[nextID], context) then
 					local nextCost = cost + Cost(graph.nodes[id], graph.nodes[nextID], context)
 					if not distances[nextID] or nextCost < distances[nextID] then
@@ -596,9 +726,11 @@ local function Solve(graph, from, to, context)
 	local straight = Distance(from, to)
 	local nearNode
 	if pin and not reverseDrop and not (context.tops and next(context.tops)) then
-		for _, id in ipairs(graph.list) do
+		local endpoint = EndpointQuery(from, true, context)
+		for i, id in ipairs(graph.list) do
+			if i % 16 == 0 then Checkpoint(context) end
 			local p = graph.nodes[id]
-			if EndpointAllowed(p, from, true, context) then
+			if endpoint(p) then
 				local d = Distance(from, p)
 				if not nearNode or d < nearNode then nearNode = d end
 			end
@@ -627,7 +759,7 @@ local function Solve(graph, from, to, context)
 	end
 	if winner then
 		local ids = {}
-		while winner do ids[#ids + 1], winner = winner, previous[winner] end
+		while winner do Checkpoint(context) ids[#ids + 1], winner = winner, previous[winner] end
 		if not start.node then entryPoint() end
 		local previousNode
 		for i = #ids, 1, -1 do
@@ -653,6 +785,7 @@ local function Solve(graph, from, to, context)
 	AddPoint(route, target, context)
 	local length, enemy, firstEnemy = start.distance, false, nil
 	for i, p in ipairs(route) do
+		if i % 16 == 0 then Checkpoint(context) end
 		if i > 1 then length = length + Distance(route[i - 1], p) end
 		if p.enemy then enemy, firstEnemy = true, firstEnemy or i end
 	end
@@ -687,8 +820,8 @@ function mod.GPSRoadRoute(from, to, context)
 	if type(from) ~= "table" or type(to) ~= "table" or not Number(from.cont) or not Number(to.cont)
 		or not Number(from.wx) or not Number(from.wy) or not Number(to.wx) or not Number(to.wy) then return nil, "position" end
 	if from.cont ~= to.cont then return nil, "continent" end
-	context = context or {}
-	local graph = not context.excludeBundled and Network(from.cont) or EMPTY_GRAPH
+	context = Query(context)
+	local graph = not context.excludeBundled and Network(from.cont, context) or EMPTY_GRAPH
 	from, to = ResolveFloor(from), ResolveFloor(to)
 	if not context.allowUnknownFloor then
 		if to.unknown or (to.ambiguous and not to.floorResolved) then return nil, "floor" end
@@ -701,12 +834,15 @@ end
 
 function mod.GPSInvalidateRoads()
 	cachedData, cachedNetworks, extraCache = nil, nil, {}
+	graphRevision = graphRevision + 1
 end
+
+function mod.GPSRoadGraphRevision() return graphRevision end
 
 -- Read-only diagnostics used by the offline parity audit.
 function mod.GPSRoadEntries(at, context)
 	local graph = Network(at.cont)
-	return graph and StartAttachments(graph, at, context or {}) or nil
+	return graph and StartAttachments(graph, at, Query(context)) or nil
 end
 
 function mod.GPSRoadCanWalk(continent, fromID, toID)

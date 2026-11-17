@@ -34,7 +34,7 @@ class InstanceTests(unittest.TestCase):
         self.lua.execute(helpers)
         self.lua.execute(re.search(r'function mod:RefreshInstancePins\(.*?\nend\n', WORLD, re.S).group())
         self.lua.execute("""
-            affected = { 'friends', 'friendzones', 'boats', 'zeppelins', 'routes', 'flight', 'route', 'quests', 'gps', 'gpsroads', 'gpsroadnodes' }
+            affected = { 'friends', 'friendzones', 'boats', 'zeppelins', 'routes', 'flight', 'route', 'quests', 'gps', 'gpsnext', 'gpsroads', 'gpsroadnodes' }
             preserved = { 'group', 'waypoint', 'ping', 'userpins', 'sketch', 'dungeons', 'needroll' }
             for _, keys in ipairs({ affected, preserved }) do
                 for _, key in ipairs(keys) do S.PinSet(key, 0) end
@@ -106,7 +106,7 @@ class InstanceTests(unittest.TestCase):
             for _, key in ipairs(affected) do S.SetPinSetOn(sets[key], true) end
             Check(true)
             local built = 0
-            local lateKeys = { 'quests', 'gps', 'gpsroads', 'gpsroadnodes' }
+            local lateKeys = { 'quests', 'gps', 'gpsnext', 'gpsroads', 'gpsroadnodes' }
             for _, key in ipairs(lateKeys) do
                 sets[key] = nil
                 local late = S.PinSet(key, 0)

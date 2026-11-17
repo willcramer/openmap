@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+## v0.8.10-gps.13 (2026-11-17)
+
+### Improved
+
+- **Smoother automatic rerouting:** off-route planning and green-line redraws share a small
+  CPU allowance each frame. The current route and TomTom waypoint stay available until the
+  replacement is ready. Closing the map avoids building invisible route markers.
+- **Less routing work:** reuse destination attachments and recorded-road projections, and
+  avoid repeated eligibility checks and unnecessary candidate allocations. Road costs,
+  directions, floor checks and manual connections retain their existing behavior.
+- **Safe cancellation:** stopping navigation, replacing a waypoint, changing routing data or
+  moving to another floor cancels stale work before it can replace your route.
+
 ## v0.8.10-gps.12 (2026-11-17)
 
 ### Improved

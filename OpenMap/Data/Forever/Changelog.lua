@@ -4,6 +4,11 @@
 local _, ns = ...
 
 ns.MapChangelog = {
+	{ version = "v0.8.10-gps.13", date = "2026-11-17", heads = { [1] = "Improved", }, items = {
+		"|cff6e2c0aSmoother automatic rerouting:|r off-route planning and green-line redraws share a small CPU allowance each frame. The current route and TomTom waypoint stay available until the replacement is ready. Closing the map avoids building invisible route markers.",
+		"|cff6e2c0aLess routing work:|r reuse destination attachments and recorded-road projections, and avoid repeated eligibility checks and unnecessary candidate allocations. Road costs, directions, floor checks and manual connections retain their existing behavior.",
+		"|cff6e2c0aSafe cancellation:|r stopping navigation, replacing a waypoint, changing routing data or moving to another floor cancels stale work before it can replace your route.",
+	} },
 	{ version = "v0.8.10-gps.12", date = "2026-11-17", heads = { [1] = "Improved", }, items = {
 		"|cff6e2c0aUpdated OpenMap base:|r merged the official v0.8.10 release, including blank-map and saved settings fixes, combat-safe map behavior, paced loading, rendering improvements, corrected flight-path discovery, dungeon-map controls and Portuguese zone tiles.",
 		"|cff6e2c0aGPS features retained:|r route planning, green map guidance, TomTom waypoint updates, hidden-tracker preferences, manual road editing, recordings, location menus and the computer icon remain available. GPS node markers follow the shared instance visibility rules.",
@@ -22,9 +27,5 @@ ns.MapChangelog = {
 	} },
 	{ version = "v0.8.10-gps.8", date = "2026-11-16", heads = { [1] = "Improved", }, items = {
 		"|cff6e2c0aHide the GPS tracker:|r the custom guidance window has a Hide button. Navigation, the map route and TomTom waypoint updates continue while it is hidden. Restore it with the GPS tracker setting or /omgps gps tracker on; off hides it. The visibility choice stays saved.",
-	} },
-	{ version = "v0.8.10-gps.7", date = "2026-11-16", heads = { [1] = "Improved", }, items = {
-		"|cff6e2c0aOpenMap - GPS:|r renamed the custom build in the AddOn List and its status messages.",
-		"|cff6e2c0aRight-click menu by default:|r new and existing profiles start with the location menu. You can still select Zoom out; that choice persists after this one-time default update.",
 	} },
 }

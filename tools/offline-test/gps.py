@@ -165,6 +165,12 @@ class GPS(unittest.TestCase):
             assert(mod.GPSStart(1,.7,.1))
             assert(mod.GPSStatus().state=='recorded')
             NOW=10 move(.15,.4)
+            assert(mod.GPSPlanningStats().active and mod.GPSStatus().state=='recorded')
+            for _=1,100 do
+                mod.GPSRunPlanning(1)
+                if not mod.GPSPlanningStats().active then break end
+                NOW=NOW+1/120
+            end
             assert(mod.GPSStatus().state=='direct')
             assert(#mod.GPSStatus().route==1)
             assert(mod.GPSStatus().instruction:find('terrain is not checked',1,true))

@@ -13,14 +13,15 @@ The current GPS build includes official OpenMap **v0.8.10**, merged from upstrea
 
 ## Install
 
-Use **OpenMapGPS-v0.8.10-gps.12-forever.zip**, the separate-addon build. The older gps.1 ZIP
+Use **OpenMapGPS-v0.8.10-gps.13-forever.zip**, the separate-addon build. The older gps.1 ZIP
 used the original addon's folder and should not be used for a side-by-side install.
 If you already installed gps.1 into `OpenMap`, reinstall the official OpenMap there first.
 
 1. Quit WoW. Leave your existing `Interface/AddOns/OpenMap` folder in place.
 2. Extract the Forever GPS ZIP into `Interface/AddOns`. The new folder must be
    `Interface/AddOns/OpenMapGPS`, containing `OpenMapGPS.toc`.
-3. Restart the client after updating to load the added textures and refresh its AddOn List metadata. **OpenMap - GPS** has
+3. Restart the client on first install, or after updates that add textures. Updating gps.12 to
+   gps.13 changes Lua only, so `/reload` is enough. **OpenMap - GPS** has
    its own entry, rather than being nested under OpenMap.
 4. In AddOns, enable **OpenMap - GPS** and disable original **OpenMap**, then reload. To use
    the original again, enable it and disable OpenMap - GPS in that same list.
@@ -225,6 +226,21 @@ Position reads can be unavailable or secret in instances or combat. Guidance wai
 doing arithmetic on those values. Setting a different waypoint lets another addon take over;
 GPS must not replace that addon's destination.
 
+## Automatic replanning
+
+When you move away from a road route, GPS calculates its replacement across frames rather than
+blocking one frame for the entire search. Planning and route-marker drawing share a target of
+1 ms of addon CPU time per frame. Individual API calls and guidance updates can exceed that
+target; it is not a guaranteed frame-time ceiling. The existing five-second cooldown and movement
+thresholds remain. The current route and waypoint stay in place until a valid replacement is ready.
+
+Destination attachments and recorded-road projections are cached with their routing context.
+Changes to preferences, topology, source data or profiles invalidate the relevant work. Stopping,
+changing waypoint ownership, teleporting, taking a taxi or changing floors cancels stale results.
+Green map lines are built in a hidden staging layer and swapped when complete; closing the map
+defers marker work while guidance and TomTom continue. An explicit new destination or routing-option
+change still plans synchronously. This change targets recurring automatic off-route hitches.
+
 ## In-game acceptance test
 
 1. Navigate to a nearby pin on level ground; close the map, turn in place and check the arrow.
@@ -257,6 +273,10 @@ GPS must not replace that addon's destination.
     controller and Zephras maps. Navigate over the new path, disconnect/delete your edits, and check
     rerouting. Cancel the delete prompt once. Reload and confirm edits persist but editing is off.
     Repeat with normal right-click configured as Zoom out; Finish editing must restore zoom-out.
+14. Start a long bundled route and walk more than 60 yards off its current segment. Continue moving
+    for several recalculations with the map closed, then open. Check for recurring five-second
+    FPS dips, complete green lines and continued TomTom updates with the tracker hidden. Stop or
+    replace the waypoint during a recalculation and confirm no older route returns.
 
 Offline tests cover the Lua logic and stubbed client behavior. Arrow alignment, actual protected
 API behavior, terrain, and the live window layout still require this game-client test.

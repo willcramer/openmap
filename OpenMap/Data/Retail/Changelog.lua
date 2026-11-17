@@ -4,6 +4,10 @@
 local _, ns = ...
 
 ns.MapChangelog = {
+	{ version = "v0.8.10-gps.13", date = "2026-11-17", heads = { [1] = "Improved", }, items = {
+		"|cff6e2c0aAutomatic rerouting:|r planning and route redraws run in small steps across frames, retaining the current route until a valid replacement is ready. Closed maps skip route-marker work.",
+		"|cff6e2c0aRouting caches:|r reuse destination attachments and recorded-road projections. Stale work is cancelled when navigation, waypoint ownership, routing data or player floor changes.",
+	} },
 	{ version = "v0.8.10-gps.12", date = "2026-11-17", heads = { [1] = "Improved", }, items = {
 		"|cff6e2c0aUpdated OpenMap base:|r merged the official v0.8.10 map, combat, startup, dungeon and saved settings fixes while retaining GPS navigation, manual roads, recordings and tracker controls.",
 		"|cff6e2c0aGPS overlays:|r guidance, road display and node markers follow shared instance visibility. The separate OpenMap - GPS addon identity and saved data remain independent.",
@@ -20,9 +24,5 @@ ns.MapChangelog = {
 	} },
 	{ version = "v0.8.10-gps.8", date = "2026-11-16", heads = { [1] = "Improved", }, items = {
 		"|cff6e2c0aGPS tracker visibility:|r hide the guidance window while navigation, route drawing and TomTom continue. A saved preference and tracker on/off commands restore or hide it.",
-	} },
-	{ version = "v0.8.10-gps.7", date = "2026-11-16", heads = { [1] = "Improved", }, items = {
-		"|cff6e2c0aOpenMap - GPS:|r updated the custom addon's display name.",
-		"|cff6e2c0aContext menu by default:|r right-click opens the location menu on new and existing profiles. Later choices of Zoom out remain saved.",
 	} },
 }

@@ -73,6 +73,7 @@ Map\GPSRoadView.lua
 Map\GPS.lua
 Map\GPSRoadEdit.lua
 Map\GPSNative.lua
+Map\GPSMinimap.lua
 Map\GPSPanel.lua
 Map\Combat.lua
 Map\Pins.lua

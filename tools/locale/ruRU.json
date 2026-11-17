@@ -674,5 +674,7 @@
  "The road editor limit has been reached.": "Достигнут предел редактора дорог.",
  "Only your own road nodes can be deleted.": "Можно удалять только собственные дорожные узлы.",
  "This road connection was not added by you.": "Это дорожное соединение добавлено не вами.",
- "This connection would bypass a one-way road.": "Это соединение обошло бы ограничение односторонней дороги."
+ "This connection would bypass a one-way road.": "Это соединение обошло бы ограничение односторонней дороги.",
+ "Calculating GPS route...": "Расчёт маршрута GPS...",
+ "GPS route on minimap": "Маршрут GPS на мини-карте"
 }

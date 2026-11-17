@@ -12,6 +12,16 @@ local function Number(value)
 	if type(value) == "number" and value == value and value > -math.huge and value < math.huge then return value end
 end
 
+local function Checkpoint()
+	if mod.GPSPlanningCheckpoint then mod.GPSPlanningCheckpoint() end
+end
+
+function mod.GPSRoomsReady(continent)
+	continent = Number(continent)
+	return continent ~= nil and buildingSource == ns.GPSBuildingData and roadSource == ns.GPSRoadData
+		and cache[continent] ~= nil
+end
+
 local function Index(continent)
 	if buildingSource ~= ns.GPSBuildingData or roadSource ~= ns.GPSRoadData then
 		buildingSource, roadSource, cache = ns.GPSBuildingData, ns.GPSRoadData, {}
@@ -19,11 +29,13 @@ local function Index(continent)
 	if cache[continent] then return cache[continent] end
 	local network = buildingSource and buildingSource.networks and buildingSource.networks[continent]
 	local indexed = { pieces = {}, network = network }
-	cache[continent] = indexed
-	if not network then return indexed end
+	if not network then cache[continent] = indexed return indexed end
 	local layers = {}
 	local roads = roadSource and roadSource.networks and roadSource.networks[continent]
+	local worked = 0
 	for _, node in pairs(roads and roads.nodes or {}) do
+		worked = worked + 1
+		if worked % 16 == 0 then Checkpoint() end
 		if node.piece then
 			local layer = node.layer or false
 			if not layers[node.piece] then layers[node.piece] = { value = layer }
@@ -32,6 +44,8 @@ local function Index(continent)
 	end
 	for _, building in pairs(network.buildings or {}) do
 		for group, room in pairs(building.pieces or {}) do
+			worked = worked + 1
+			if worked % 16 == 0 then Checkpoint() end
 			local key = tostring(building.id) .. ":" .. tostring(group)
 			local hint = layers[key]
 			local layer = room.indoor and true or nil
@@ -40,6 +54,8 @@ local function Index(continent)
 				room = room, layer = layer, layerAmbiguous = hint and hint.mixed or false }
 		end
 	end
+	-- A cancelled worker must never leave a partial floor index available.
+	cache[continent] = indexed
 	return indexed
 end
 

@@ -674,5 +674,7 @@
  "The road editor limit has been reached.": "도로 편집기 한도에 도달했습니다.",
  "Only your own road nodes can be deleted.": "직접 추가한 도로 지점만 삭제할 수 있습니다.",
  "This road connection was not added by you.": "직접 추가한 도로 연결이 아닙니다.",
- "This connection would bypass a one-way road.": "이 연결은 도로의 일방통행 제한을 우회합니다."
+ "This connection would bypass a one-way road.": "이 연결은 도로의 일방통행 제한을 우회합니다.",
+ "Calculating GPS route...": "GPS 경로 계산 중...",
+ "GPS route on minimap": "미니맵 GPS 경로"
 }

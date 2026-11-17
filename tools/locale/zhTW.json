@@ -674,5 +674,7 @@
  "The road editor limit has been reached.": "已達到道路編輯器的上限。",
  "Only your own road nodes can be deleted.": "只能刪除自己新增的道路節點。",
  "This road connection was not added by you.": "此道路連線不是由你新增的。",
- "This connection would bypass a one-way road.": "此連線會繞過道路的單向通行限制。"
+ "This connection would bypass a one-way road.": "此連線會繞過道路的單向通行限制。",
+ "Calculating GPS route...": "正在計算 GPS 路線...",
+ "GPS route on minimap": "小地圖 GPS 路線"
 }

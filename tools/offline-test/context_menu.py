@@ -415,7 +415,7 @@ class RoadEditorMenuIntegrationTests(unittest.TestCase):
             OpenAt(.9,.8)Choose('Connect selected node')
             assert(mod.GPSRoadEditLinked(second,'b:0:3'))
             assert(player.x==.1 and player.y==.1,'placing a road needed player movement')
-            assert(mod.GPSStart(900001,.9,.9))
+            assert(PlanGPS(900001,.9,.9))
             local a,b=false,false
             for _,point in ipairs(mod.GPSStatus().route)do
                 a=a or point.source=='manual'and point.wx==500 and point.wy==200

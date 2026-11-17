@@ -64,6 +64,30 @@ class GPSRooms(unittest.TestCase):
             assert(a.pieces['100:1'] and a.pieces['100:2'] and #a.candidates==2)
         """)
 
+    def test_cancelled_cold_index_is_not_published_and_rebuilds_completely(self):
+        self.lua.execute("""
+            local nodes=ns.GPSRoadData.networks[0].nodes
+            for i=4,80 do nodes[i]={piece='100:'..i,layer=i}end
+            local rooms=ns.GPSBuildingData.networks[0].buildings[1].pieces
+            for i=4,80 do rooms[i]={indoor=true,zmin=i*10,zmax=i*10+5,polygon=square(0,0,10)}end
+            assert(not mod.GPSRoomsReady(0))
+            mod.GPSPlanningCheckpoint=function()coroutine.yield()end
+            local pending=coroutine.create(function()return mod.GPSRoadNodeContext(0,{piece='100:80'})end)
+            assert(coroutine.resume(pending))
+            assert(coroutine.status(pending)=='suspended'and not mod.GPSRoomsReady(0))
+            -- Abandon the first worker, then build with the ordinary synchronous API.
+            mod.GPSPlanningCheckpoint=nil
+            for i=4,80 do
+                local room=mod.GPSRoadNodeContext(0,{piece='100:'..i})
+                assert(room.layer==i and room.minZ==i*10 and room.maxZ==i*10+5)
+            end
+            assert(mod.GPSRoomsReady(0))
+            ns.GPSRoadData={networks={[0]={nodes={}}}}
+            assert(not mod.GPSRoomsReady(0),'source replacement kept the old ready flag')
+            local rebuilt=mod.GPSRoadNodeContext(0,{piece='100:80'})
+            assert(rebuilt.layer==true and mod.GPSRoomsReady(0))
+        """)
+
     def test_boundary_is_included_and_shared_wall_remains_ambiguous(self):
         self.lua.execute("""
             assert(mod.GPSRoomContext(0,0,5,2).piece=='100:1')

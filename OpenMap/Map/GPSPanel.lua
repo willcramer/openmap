@@ -253,12 +253,14 @@ local function Refresh()
 	local status = mod.GPSStatus()
 	mod.GPSDrawRoute(status, true)
 	if mod.GPSDrawNative then mod.GPSDrawNative(status, true) end
+	if mod.GPSDrawMinimap then mod.GPSDrawMinimap(status) end
 	if mod.GPSRefreshRoadView then mod.GPSRefreshRoadView() end
 	if hud then
-		hud:SetShown(mod.db.gpsShowTracker ~= false and (status.active or status.state == "faction-stop"
+		hud:SetShown(mod.db.gpsShowTracker ~= false and (status.active or status.planning or status.state == "faction-stop"
 			or status.recording ~= nil and status.recording ~= false))
 		hud.title:SetText(status.recording and L["Recording: %s"]:format(status.recording) or status.title or L["GPS"])
-		hud.instruction:SetText(status.recording and RecordingText(status) or status.instruction or "")
+		hud.instruction:SetText(status.recording and RecordingText(status)
+			or status.planning and L["Calculating GPS route..."] or status.instruction or "")
 		hud.stop:SetText(status.recording and L["Discard"] or L["Stop"])
 		local distance = Distance(status.distance)
 		if status.active and status.total and status.total > 1 then
@@ -277,16 +279,21 @@ local function Refresh()
 		panel.edit:SetText(editing and L["Finish editing"] or L["Edit road network"])
 		panel.edit:SetEnabled(type(mod.GPSSetRoadEditing) == "function")
 		local text = status.instruction or L["Choose a waypoint or a saved route."]
+		if status.planning then text = L["Calculating GPS route..."] end
 		if status.recording then text = RecordingText(status) end
 		panel.status:SetText(text)
 		panel.save:SetEnabled(status.recording and true or false)
 		panel.save:SetText((status.recordingState == "gap" or status.recordingState == "full") and L["Save partial"] or L["Save route"])
 		panel.stop:SetText(status.recording and L["Discard recording"] or L["Stop GPS"])
-		panel.stop:SetEnabled(status.active or status.state == "faction-stop" or status.recording and true or false)
+		panel.stop:SetEnabled(status.active or status.planning or status.state == "faction-stop" or status.recording and true or false)
 		panel.guide:SetEnabled(not status.recording)
 		panel.roads:SetChecked(mod.GPSRoadsShown and mod.GPSRoadsShown() or false)
 		panel.roads:SetEnabled(type(mod.GPSSetRoadsShown) == "function")
 		panel.tracker:SetChecked(mod.db.gpsShowTracker ~= false)
+		panel.minimap:SetChecked(mod.db.gpsShowMinimap ~= false)
+		panel.minimap:SetEnabled(type(mod.GPSSetMinimapShown) == "function")
+		if status.planningError then panel.message:SetText(status.planningError)
+		elseif status.planning then panel.message:SetText("") end
 		local name = RouteName()
 		local saved = mod.db.gpsRoutes and mod.db.gpsRoutes[name] ~= nil
 		panel.record:SetEnabled(not status.recording and name ~= "" and not saved)
@@ -316,6 +323,9 @@ function mod:GPSTrackerOptions(opts, get, off)
 	opts.gpsShowTracker = { type = "toggle", name = L["GPS tracker"], order = 35.05,
 		get = get, disabled = off,
 		set = function(_, value) mod.GPSSetTrackerShown(value) end }
+	opts.gpsShowMinimap = { type = "toggle", name = L["GPS route on minimap"], order = 35.06,
+		get = get, disabled = off,
+		set = function(_, value) if mod.GPSSetMinimapShown then mod.GPSSetMinimapShown(value) end end }
 end
 
 local function BuildHUD()
@@ -377,7 +387,7 @@ local function BuildPanel()
 	panel:Hide()
 	panel:SetFrameStrata("DIALOG")
 	local top = ns.Look:Window(panel, L["GPS navigation"])
-	panel:SetSize(420, 464 + top)
+	panel:SetSize(420, 490 + top)
 	Movable(panel, "gpsPanelAt", 0, 0)
 	local y = -math.max(top, 24) - 12
 	panel.help = Label(panel, "GameFontHighlightSmall", 18, y, 384)
@@ -388,6 +398,10 @@ local function BuildPanel()
 		Refresh()
 	end)
 	panel.tracker = Check(panel, L["GPS tracker"], 18, y - 68, 384, function(on) mod.GPSSetTrackerShown(on) end)
+	panel.minimap = Check(panel, L["GPS route on minimap"], 18, y - 94, 384, function(on)
+		if mod.GPSSetMinimapShown then mod.GPSSetMinimapShown(on) end
+	end)
+	y = y - 26
 	panel.guide = Button(panel, L["Guide to waypoint"], 186, 18, y - 102, function() Waypoint() Refresh() end)
 	panel.stop = Button(panel, L["Stop GPS"], 186, 216, y - 102, function() StopOrDiscard() Refresh() end)
 	panel.nameLabel = Label(panel, "GameFontNormalSmall", 18, y - 142, 384)
@@ -470,6 +484,7 @@ function mod:SetupGPSPanel()
 	BuildHUD()
 	if mod.SetupGPSRooms then mod:SetupGPSRooms() end
 	if mod.SetupGPSNative then mod:SetupGPSNative() end
+	if mod.SetupGPSMinimap then mod:SetupGPSMinimap() end
 	ticker = CreateFrame("Frame", nil, UIParent)
 	local elapsed = 0
 	ticker:SetScript("OnUpdate", function(_, dt)
@@ -484,6 +499,7 @@ function mod:SetupGPSPanel()
 		if mod.GPSRunPlanning then mod.GPSRunPlanning(math.max(0, 1 - (WorkClock() - started))) end
 		mod.GPSRunRouteDrawing(math.max(0, 1 - (WorkClock() - started)))
 		if mod.GPSRunNativeDrawing then mod.GPSRunNativeDrawing(math.max(0, 1 - (WorkClock() - started))) end
+		if mod.GPSRunMinimapDrawing then mod.GPSRunMinimapDrawing(math.max(0, 1 - (WorkClock() - started))) end
 	end)
 	local previous = mod.OnGPSChanged
 	mod.OnGPSChanged = function()

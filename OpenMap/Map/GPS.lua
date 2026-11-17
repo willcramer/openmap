@@ -62,6 +62,9 @@ end
 local function CancelPlanning()
 	if planning then planStats.cancelled = planStats.cancelled + 1 end
 	planning, status.planning = nil, false
+	if not active and status.state == "planning" then
+		status.state, status.instruction = "stopped", L["GPS stopped."]
+	end
 end
 
 local function Rules()
@@ -76,7 +79,7 @@ local function Rules()
 	return rules
 end
 
-local function Point(mapID, x, y)
+local function Point(mapID, x, y, raw)
 	mapID, x, y = Number(mapID), Number(x), Number(y)
 	if not mapID or mapID < 1 or mapID % 1 ~= 0 or not x or not y or x < 0 or x > 1 or y < 0 or y > 1 then return end
 	local u, v
@@ -89,7 +92,7 @@ local function Point(mapID, x, y)
 	wx, wy = Number(wx), Number(wy)
 	if not wx or not wy then return end
 	local p = { map = mapID, x = x, y = y, u = u, v = v, cont = continent, wx = wx, wy = wy }
-	if mod.GPSRoomContext then
+	if not raw and mod.GPSRoomContext then
 		local room = mod.GPSRoomContext(continent, wx, wy, nil, mapID)
 		if room then for k, value in pairs(room) do p[k] = value end end
 	end
@@ -155,7 +158,9 @@ function mod.GPSPlayer()
 	local x, y = Safe.XY(pos)
 	x, y = Number(x), Number(y)
 	if not x or not y or x == 0 and y == 0 then return end
-	local p = Point(mapID, x, y)
+	-- This public position tuple carries no room fields. Room observation is
+	-- resolved separately by Player, so a minimap read never builds room indexes.
+	local p = Point(mapID, x, y, true)
 	if p then
 		local z
 		if type(UnitPosition) == "function" then
@@ -166,11 +171,11 @@ function mod.GPSPlayer()
 	end
 end
 
-local function Player()
+local function Player(raw)
 	local mapID, x, y, u, v, cont, wx, wy, z = mod.GPSPlayer()
 	if mapID then
 		local p = { map = mapID, x = x, y = y, u = u, v = v, cont = cont, wx = wx, wy = wy, z = z }
-		if mod.GPSObserveRoom or mod.GPSRoomContext then
+		if not raw and (mod.GPSObserveRoom or mod.GPSRoomContext) then
 			local room
 			if mod.GPSObserveRoom then room = mod.GPSObserveRoom(cont, wx, wy, mapID, z)
 			else room = mod.GPSRoomContext(cont, wx, wy, z, mapID) end
@@ -263,6 +268,7 @@ local function Track()
 	if not p or not p.map or not p.x or not p.y then return end
 	owned = p
 	if mod.TrackPoint then mod.TrackPoint(p.map, p.x, p.y, active.title) end
+	if planning and planning.owner == active then planning.waypoint = p end
 end
 
 local function Stop(state, clear)
@@ -270,6 +276,7 @@ local function Stop(state, clear)
 	local ours = SameWaypoint(owned)
 	active, owned = nil, nil
 	status.active, status.state = false, state or "stopped"
+	status.planningError = nil
 	status.player = nil
 	status.bearing, status.distance, status.remaining = nil, nil, nil
 	status.instruction = L["GPS stopped."]
@@ -508,35 +515,69 @@ local function SamePieces(a, b)
 	return true
 end
 
-local function SamePlanningFloor(a, b)
+local function SamePlanningFloor(a, b, allowUnresolved)
 	return a and b and a.cont == b.cont and a.layer == b.layer and a.piece == b.piece
-		and not b.unknown and (not b.ambiguous or b.floorResolved)
+		and (not b.unknown and (not b.ambiguous or b.floorResolved)
+			or allowUnresolved and a.unknown == b.unknown and a.ambiguous == b.ambiguous)
 		and SamePieces(a.pieces, b.pieces)
 		and not (a.z and b.z and math.abs(a.z - b.z) > 8)
 		and not (mod.GPSOtherFloor and mod.GPSOtherFloor(a, b))
 end
 
-local function QueuePlan(player)
-	if planning or not active then return end
-	local job = { owner = active, from = SnapshotPoint(player), target = SnapshotPoint(active.target),
+local function QueuePlan(player, target, title, mode, prepare, raw, stopOnFailure)
+	local replacing = target ~= nil or prepare ~= nil
+	if not replacing and (planning or not active) then return end
+	if replacing then CancelPlanning() end
+	if not prepare then target = target or active and active.target end
+	local waypointMap, waypointX, waypointY
+	if mod.WaypointPoint then waypointMap, waypointX, waypointY = mod.WaypointPoint() end
+	local job = { owner = active, from = SnapshotPoint(player), target = target and SnapshotPoint(target),
+		title = title or not replacing and active and active.title or L["GPS"], mode = mode or "navigate", replacing = replacing,
+		prepare = prepare, stopOnFailure = stopOnFailure,
+		waypoint = waypointMap and { map = waypointMap, x = waypointX, y = waypointY }, roomsResolved = not raw,
 		db = mod.db, recordings = Routes(), revision = roadsRevision, rules = Rules(),
 		graphRevision = mod.GPSRoadGraphRevision and mod.GPSRoadGraphRevision(),
 		faction = Safe.Call(UnitFactionGroup, "player"), level = Safe.Call(UnitLevel, "player"),
 		ghost = Safe.Call(_G.UnitIsGhost, "player") == true,
 		useRoads = mod.db.gpsUseRoads, allowEnemy = mod.db.gpsAllowEnemy,
 		offroad = mod.db.gpsOffroad, aboveLevel = mod.db.gpsAboveLevel }
-	active.destinationCache = active.destinationCache or {}
+	job.destinationCache = not replacing and active.destinationCache or {}
+	job.destinationCache = job.destinationCache or {}
+	if not replacing then active.destinationCache = job.destinationCache end
 	job.co = coroutine.create(function()
-		local route, source, stats = Plan(job.from, job.target, job.owner.destinationCache)
+		if raw then
+			local room
+			if mod.GPSObserveRoom then
+				room = mod.GPSObserveRoom(job.from.cont, job.from.wx, job.from.wy, job.from.map, job.from.z)
+			elseif mod.GPSRoomContext then
+				room = mod.GPSRoomContext(job.from.cont, job.from.wx, job.from.wy, job.from.z, job.from.map)
+			end
+			if room then for key, value in pairs(room) do job.from[key] = value end end
+			if job.target and mod.GPSRoomContext then
+				room = mod.GPSRoomContext(job.target.cont, job.target.wx, job.target.wy, job.target.z, job.target.map)
+				if room then for key, value in pairs(room) do job.target[key] = value end end
+			end
+			job.roomsResolved = true
+		end
+		local route, source, stats
+		if prepare then route, source, job.error = prepare(job.from)
+		else route, source, stats = Plan(job.from, job.target, job.destinationCache) end
 		if route then job.remaining = RemainingLengths(route) end
 		return route, source, stats
 	end)
 	planning, status.planning = job, true
+	status.planningError = nil
+	if not active then
+		status.state, status.title = "planning", job.title
+		status.instruction = L["Calculating GPS route..."]
+	end
 	planStats.started = planStats.started + 1
+	Notify()
+	return true
 end
 
 local function PlanningValid(job)
-	return active == job.owner and active.mode == "navigate" and active.target
+	return active == job.owner and (job.replacing or active and active.mode == "navigate" and active.target)
 		and mod.db == job.db and Routes() == job.recordings and roadsRevision == job.revision
 		and Rules() == job.rules
 		and (not mod.GPSRoadGraphRevision or mod.GPSRoadGraphRevision() == job.graphRevision)
@@ -546,19 +587,35 @@ local function PlanningValid(job)
 		and (Safe.Call(_G.UnitIsGhost, "player") == true) == job.ghost
 end
 
+local function PlanningWaypointValid(job)
+	if job.waypoint then return SameWaypoint(job.waypoint) end
+	return not mod.WaypointPoint or not mod.WaypointPoint()
+end
+
+local function RejectPlanning(job, message)
+	CancelPlanning()
+	if active and active == job.owner then active.destinationCache, active.replanAt, lastPlayer = {}, 0, nil end
+	if message then
+		status.planningError = message
+		if not active then status.instruction = message end
+		if job.replacing and ns.Print then ns:Print(message) end
+	end
+	Notify()
+end
+
 function mod.GPSRunPlanning(budget)
 	local job = planning
 	if not job then return 0 end
-	if owned and not SameWaypoint(owned) then Stop("stopped", false) return 0 end
+	if not PlanningWaypointValid(job) then Stop("stopped", false) return 0 end
 	if not PlanningValid(job) then
-		CancelPlanning()
-		if active == job.owner then active.destinationCache, active.replanAt, lastPlayer = {}, 0, nil end
+		RejectPlanning(job)
 		return 0
 	end
-	if not SamePlanningFloor(job.from, status.player) or Distance(job.from, status.player) > 100
+	local player = Player(not job.roomsResolved)
+	if not player or player.cont ~= job.from.cont or job.roomsResolved and not SamePlanningFloor(job.from, player, job.replacing)
+		or player and Distance(job.from, player) > 100
 		or Safe.Call(UnitOnTaxi, "player") then
-		CancelPlanning()
-		if active == job.owner then active.replanAt, lastPlayer = 0, nil end
+		RejectPlanning(job, job.replacing and L["GPS is waiting for your position."])
 		return 0
 	end
 	local done, spent, ok, route, source, stats = mod.GPSRunBudgetedWork(job, budget)
@@ -566,27 +623,31 @@ function mod.GPSRunPlanning(budget)
 	if not done then return spent end
 	planStats.lastTotalMS, planStats.lastFrames = job.totalMS or 0, job.frames or 0
 	if not ok then
-		planning, status.planning = nil, false
 		planStats.failed = planStats.failed + 1
+		RejectPlanning(job, L["GPS cannot navigate to that location."])
 		if type(geterrorhandler) == "function" then geterrorhandler()(route) end
 		return spent
 	end
 	-- Re-read position and ownership before publication: a loading screen,
 	-- floor change, teleport or another addon's waypoint makes this result stale.
-	local player = Player()
-	if not PlanningValid(job) or not SamePlanningFloor(job.from, player) or Distance(job.from, player) > 100
-		or Safe.Call(UnitOnTaxi, "player") or owned and not SameWaypoint(owned) then
-		CancelPlanning()
-		if active == job.owner then active.replanAt, lastPlayer = 0, nil end
+	player = Player()
+	if not PlanningValid(job) or not SamePlanningFloor(job.from, player, job.replacing) or Distance(job.from, player) > 100
+		or Safe.Call(UnitOnTaxi, "player") or not PlanningWaypointValid(job) then
+		RejectPlanning(job)
 		return spent
 	end
 	planning, status.planning = nil, false
 	planStats.completed = planStats.completed + 1
 	if route then
+		if job.replacing then
+			active = { title = job.title, target = job.target, mode = job.mode, destinationCache = job.destinationCache }
+			lastPlayer = nil
+		end
 		active.state, status.roadSource, status.roadStats = source, source, stats
 		active.route, active.index, status.route = route, 1, route
 		active.remaining, active.origin = job.remaining, job.from
 		status.index, status.total, status.state = 1, #route, source
+		status.active, status.title, status.player = true, active.title, player
 		status.drawAsync = true
 		-- Settle progress against the latest player first. Its intermediate
 		-- origin/step changes must not publish another waypoint or map request.
@@ -595,43 +656,29 @@ function mod.GPSRunPlanning(budget)
 		publishing = false
 		Track()
 		Notify()
+	else
+		local message = job.error or RouteError(source)
+		if job.stopOnFailure then Stop("stopped", true) end
+		status.planningError = message
+		if not active then status.state, status.instruction = "stopped", message end
+		if job.replacing and ns.Print then ns:Print(message) end
+		Notify()
 	end
 	return spent
 end
 
 function mod.GPSPlanningStats()
-	local result = { active = planning ~= nil, budgetMS = PLAN_BUDGET_MS }
+	local result = { active = planning ~= nil, budgetMS = PLAN_BUDGET_MS,
+		replacing = planning and planning.replacing or false }
 	for key, value in pairs(planStats) do result[key] = value end
 	return result
 end
 
-local function Start(route, title, state, mode, target, destinationCache)
-	Stop("stopped", false)
-	lastPlayer = nil
-	active = { route = route, index = 1, title = title or L["GPS"], state = state, mode = mode, target = target,
-		origin = Player(), destinationCache = destinationCache or {}, remaining = RemainingLengths(route) }
-	status.drawAsync = false
-	status.route, status.title, status.state = route, active.title, state
-	status.roadSource = state
-	if state ~= "bundled" then status.roadStats = nil end
-	status.active, status.index, status.total = true, 1, #route
-	status.player = active.origin
-	Track()
-	Notify()
-	mod.GPSUpdate()
-	return true
-end
-
 function mod.GPSStart(mapID, x, y, title)
-	CancelPlanning()
-	local target, player = Point(mapID, x, y), Player()
+	local target, player = Point(mapID, x, y, true), Player(true)
 	if not target then return nil, L["GPS cannot navigate to that location."] end
 	if not player then return nil, L["GPS is waiting for your position."] end
-	local cache = {}
-	local route, source, stats = Plan(player, target, cache)
-	if not route then return nil, RouteError(source) end
-	status.roadSource, status.roadStats = source, stats
-	return Start(route, Name(title), source, "navigate", target, cache)
+	return QueuePlan(player, target, Name(title), "navigate", nil, true)
 end
 
 function mod.GPSList()
@@ -693,24 +740,31 @@ function mod.GPSPlay(name, mode)
 	if type(trail) ~= "table" or type(trail.points) ~= "table" then return nil, L["GPS route not found."] end
 	mode = mode or "once"
 	if mode ~= "once" and mode ~= "reverse" and mode ~= "loop" and mode ~= "pingpong" then return nil, L["Unknown GPS playback mode."] end
-	local route = {}
-	for _, sample in ipairs(trail.points) do
-		local p = SamplePoint(sample)
-		if not p or #route > 0 and Distance(route[#route], p) > 100 then return nil, L["This recording has a gap and cannot be followed."] end
-		route[#route + 1] = p
-	end
-	if #route < 2 then return nil, L["GPS route not found."] end
-	if mode == "loop" and Distance(route[1], route[#route]) > 100 then return nil, L["A loop must finish near its starting point."] end
-	if mode == "reverse" then
-		local reversed = {}
-		for i = #route, 1, -1 do reversed[#reversed + 1] = route[i] end
-		route = reversed
-	end
-	local player = Player()
+	local player = Player(true)
 	if not player then return nil, L["GPS is waiting for your position."] end
-	if player.cont ~= route[1].cont then return nil, L["No recorded route connects these continents."] end
-	if Distance(player, route[1]) > ATTACH then return nil, L["Move within 100 yards of the route's starting point."] end
-	return Start(route, name, "recorded", mode)
+	return QueuePlan(player, nil, name, mode, function(from)
+		local route = {}
+		for _, sample in ipairs(trail.points) do
+			mod.GPSPlanningCheckpoint()
+			local p = SamplePoint(sample)
+			if not p or #route > 0 and Distance(route[#route], p) > 100 then
+				return nil, nil, L["This recording has a gap and cannot be followed."]
+			end
+			route[#route + 1] = p
+		end
+		if #route < 2 then return nil, nil, L["GPS route not found."] end
+		if mode == "loop" and Distance(route[1], route[#route]) > 100 then
+			return nil, nil, L["A loop must finish near its starting point."]
+		end
+		if mode == "reverse" then
+			local reversed = {}
+			for i = #route, 1, -1 do mod.GPSPlanningCheckpoint() reversed[#reversed + 1] = route[i] end
+			route = reversed
+		end
+		if from.cont ~= route[1].cont then return nil, nil, L["No recorded route connects these continents."] end
+		if Distance(from, route[1]) > ATTACH then return nil, nil, L["Move within 100 yards of the route's starting point."] end
+		return route, "recorded"
+	end, true)
 end
 
 local function SegmentDistance(p, a, b)
@@ -785,8 +839,10 @@ local function Rejoin(player)
 end
 
 function mod.GPSUpdate()
-	local player = Player()
+	local raw = planning and not planning.roomsResolved
+	local player = Player(raw)
 	status.player = active and player or nil
+	if raw then return end
 	-- Room continuity must be observed before a journey starts; entering a
 	-- building with GPS stopped still tells the next journey which floor is ours.
 	if not active and not recording then return end
@@ -813,6 +869,9 @@ function mod.GPSUpdate()
 		status.distance, status.remaining = nil, nil
 		return
 	end
+	-- A replacement is prepared against a fixed origin. Keep its previous
+	-- guidance and owned waypoint intact until that request is ready to publish.
+	if planning and planning.replacing then return end
 	Rejoin(player)
 	local route, index = active.route, active.index
 	local p = route[index]
@@ -915,6 +974,7 @@ function mod.GPSSetRoutingOption(key, value)
 	elseif key == "gpsAboveLevel" then
 		if value ~= "allow" and value ~= "warn" and value ~= "avoid" and value ~= "never" and value ~= "deny" then return false end
 	else return false end
+	local requested = planning
 	CancelPlanning()
 	if active then active.destinationCache = {} end
 	mod.db[key] = value
@@ -925,19 +985,12 @@ function mod.GPSSetRoutingOption(key, value)
 		Notify()
 		return true
 	end
-	if active and active.mode == "navigate" then
-		local player = Player()
+	if requested and requested.replacing or active and active.mode == "navigate" then
+		local player = Player(true)
 		if player then
-			local route, source, stats = Plan(player, active.target)
-			if route then
-				local target, title = active.target, active.title
-				status.roadSource, status.roadStats = source, stats
-				Start(route, title, source, "navigate", target)
-			else
-				Stop("stopped", true)
-				status.instruction = RouteError(source)
-				ns:Print(status.instruction)
-			end
+			if requested and requested.replacing then
+				QueuePlan(player, requested.target, requested.title, requested.mode, requested.prepare, true, requested.stopOnFailure)
+			else QueuePlan(player, active.target, active.title, "navigate", nil, true, true) end
 		end
 	end
 	Notify()

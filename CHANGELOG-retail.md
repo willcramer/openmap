@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+## v0.8.10-gps.14 (2026-11-17)
+
+### Improved
+
+- **Asynchronous GPS starts:** new destinations, saved playback and routing changes plan across
+  frames, with calculating feedback and cancellation. Cold room indexing is paced too.
+- **Minimap route:** green guidance follows minimap zoom and rotation. Its saved GPS route on
+  minimap setting is enabled by default and independent of tracker visibility.
+
 ## v0.8.10-gps.13 (2026-11-17)
 
 ### Improved

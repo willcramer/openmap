@@ -4,6 +4,11 @@
 local _, ns = ...
 
 ns.MapChangelog = {
+	{ version = "v0.8.10-gps.14", date = "2026-11-17", heads = { [1] = "Improved", }, items = {
+		"|cff6e2c0aStart GPS without a blocking search:|r new destinations, saved-route playback and routing changes use the cancellable planner across frames. Calculating GPS route shows progress; Stop cancels pending work. An existing route stays available until its replacement is ready.",
+		"|cff6e2c0aGreen route on the minimap:|r nearby route segments appear on the minimap, adapting to its zoom and rotation. GPS route on minimap is enabled by default and can be turned off independently of the tracker and world-map route.",
+		"|cff6e2c0aCold-start work is paced:|r room/floor indexing joins the planner's frame budget, with incomplete indexes discarded safely after cancellation.",
+	} },
 	{ version = "v0.8.10-gps.13", date = "2026-11-17", heads = { [1] = "Improved", }, items = {
 		"|cff6e2c0aSmoother automatic rerouting:|r off-route planning and green-line redraws share a small CPU allowance each frame. The current route and TomTom waypoint stay available until the replacement is ready. Closing the map avoids building invisible route markers.",
 		"|cff6e2c0aLess routing work:|r reuse destination attachments and recorded-road projections, and avoid repeated eligibility checks and unnecessary candidate allocations. Road costs, directions, floor checks and manual connections retain their existing behavior.",
@@ -24,8 +29,5 @@ ns.MapChangelog = {
 	{ version = "v0.8.10-gps.9", date = "2026-11-16", heads = { [1] = "Improved", }, items = {
 		"|cff6e2c0aGPS controls in the map menu:|r open GPS navigation to show the road network, record and save new paths, select and follow saved routes, delete a saved route, or hide the tracker. Route names and playback modes are labeled, and deletion asks for confirmation.",
 		"|cff6e2c0aRoad nodes on the map:|r the Road network display marks actual bundled nodes and saved trail samples, alongside road connections. The view updates when a recording is saved or deleted. Wide views limit markers to keep the map responsive; zoom in to inspect a junction.",
-	} },
-	{ version = "v0.8.10-gps.8", date = "2026-11-16", heads = { [1] = "Improved", }, items = {
-		"|cff6e2c0aHide the GPS tracker:|r the custom guidance window has a Hide button. Navigation, the map route and TomTom waypoint updates continue while it is hidden. Restore it with the GPS tracker setting or /omgps gps tracker on; off hides it. The visibility choice stays saved.",
 	} },
 }

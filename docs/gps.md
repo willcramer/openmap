@@ -13,15 +13,15 @@ The current GPS build includes official OpenMap **v0.8.10**, merged from upstrea
 
 ## Install
 
-Use **OpenMapGPS-v0.8.10-gps.13-forever.zip**, the separate-addon build. The older gps.1 ZIP
+Use **OpenMapGPS-v0.8.10-gps.14-forever.zip**, the separate-addon build. The older gps.1 ZIP
 used the original addon's folder and should not be used for a side-by-side install.
 If you already installed gps.1 into `OpenMap`, reinstall the official OpenMap there first.
 
 1. Quit WoW. Leave your existing `Interface/AddOns/OpenMap` folder in place.
 2. Extract the Forever GPS ZIP into `Interface/AddOns`. The new folder must be
    `Interface/AddOns/OpenMapGPS`, containing `OpenMapGPS.toc`.
-3. Restart the client on first install, or after updates that add textures. Updating gps.12 to
-   gps.13 changes Lua only, so `/reload` is enough. **OpenMap - GPS** has
+3. Restart the client after installing this update so the added minimap module is loaded.
+   **OpenMap - GPS** has
    its own entry, rather than being nested under OpenMap.
 4. In AddOns, enable **OpenMap - GPS** and disable original **OpenMap**, then reload. To use
    the original again, enable it and disable OpenMap - GPS in that same list.
@@ -37,7 +37,7 @@ Its commands are `/openmapgps` and `/omgps`;
 the original retains `/openmap` and `/omap`.
 
 Open the map, press its **OpenMap** menu button, then choose **GPS navigation**. Its controls
-offer road display, tracker visibility, recording, saving, saved-route selection, playback and
+offer road display, tracker/minimap visibility, recording, saving, saved-route selection, playback and
 confirmed deletion, plus **Edit road network** for placing nodes directly on the map. These
 actions do not require slash commands. You can star GPS navigation
 in the map menu to give it a shortcut on the map. `/omgps gps` also opens the same controls.
@@ -226,10 +226,14 @@ Position reads can be unavailable or secret in instances or combat. Guidance wai
 doing arithmetic on those values. Setting a different waypoint lets another addon take over;
 GPS must not replace that addon's destination.
 
-## Automatic replanning
+## Planning and minimap guidance
 
-When you move away from a road route, GPS calculates its replacement across frames rather than
-blocking one frame for the entire search. Planning and route-marker drawing share a target of
+New destinations, saved-route playback, changes to routing preferences and automatic off-route
+recalculations run across frames. The panel shows **Calculating GPS route...** while work is
+pending, and **Stop GPS** cancels it. An existing route remains available until its replacement
+is ready. Invalid destinations and routing failures are reported when validation completes.
+
+Planning and route-marker drawing share a target of
 1 ms of addon CPU time per frame. Individual API calls and guidance updates can exceed that
 target; it is not a guaranteed frame-time ceiling. The existing five-second cooldown and movement
 thresholds remain. The current route and waypoint stay in place until a valid replacement is ready.
@@ -238,8 +242,14 @@ Destination attachments and recorded-road projections are cached with their rout
 Changes to preferences, topology, source data or profiles invalidate the relevant work. Stopping,
 changing waypoint ownership, teleporting, taking a taxi or changing floors cancels stale results.
 Green map lines are built in a hidden staging layer and swapped when complete; closing the map
-defers marker work while guidance and TomTom continue. An explicit new destination or routing-option
-change still plans synchronously. This change targets recurring automatic off-route hitches.
+defers world-map marker work while guidance and TomTom continue. Cold room/floor indexing also
+runs inside the planner, and cancelled work cannot expose a partial index.
+
+The nearby green route also appears on the minimap. It follows minimap zoom and rotation and
+clips at the view's edge. **GPS route on minimap** in GPS navigation or Options controls this
+display; it starts enabled and persists independently of **GPS tracker**. Hiding the tracker
+does not hide either map route. The minimap overlay hides when safe position, floor or projection
+information is unavailable. It does not change the minimap's controls or mask.
 
 ## In-game acceptance test
 
@@ -277,6 +287,10 @@ change still plans synchronously. This change targets recurring automatic off-ro
     for several recalculations with the map closed, then open. Check for recurring five-second
     FPS dips, complete green lines and continued TomTom updates with the tracker hidden. Stop or
     replace the waypoint during a recalculation and confirm no older route returns.
+15. Start a long route from a fresh UI reload and check responsiveness while Calculating GPS route
+    is shown. Cancel before completion, then request another destination. Check minimap alignment
+    while walking and turning, at each zoom, with rotation on and off. Hide/show the tracker and
+    minimap route independently. Stop GPS and confirm both map lines disappear.
 
 Offline tests cover the Lua logic and stubbed client behavior. Arrow alignment, actual protected
 API behavior, terrain, and the live window layout still require this game-client test.

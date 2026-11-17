@@ -4,6 +4,10 @@
 local _, ns = ...
 
 ns.MapChangelog = {
+	{ version = "v0.8.10-gps.14", date = "2026-11-17", heads = { [1] = "Improved", }, items = {
+		"|cff6e2c0aAsynchronous GPS starts:|r new destinations, saved playback and routing changes plan across frames, with calculating feedback and cancellation. Cold room indexing is paced too.",
+		"|cff6e2c0aMinimap route:|r green guidance follows minimap zoom and rotation. Its saved GPS route on minimap setting is enabled by default and independent of tracker visibility.",
+	} },
 	{ version = "v0.8.10-gps.13", date = "2026-11-17", heads = { [1] = "Improved", }, items = {
 		"|cff6e2c0aAutomatic rerouting:|r planning and route redraws run in small steps across frames, retaining the current route until a valid replacement is ready. Closed maps skip route-marker work.",
 		"|cff6e2c0aRouting caches:|r reuse destination attachments and recorded-road projections. Stale work is cancelled when navigation, waypoint ownership, routing data or player floor changes.",
@@ -21,8 +25,5 @@ ns.MapChangelog = {
 	{ version = "v0.8.10-gps.9", date = "2026-11-16", heads = { [1] = "Improved", }, items = {
 		"|cff6e2c0aGPS controls in the map menu:|r GPS navigation offers road display, recording, saving, route selection, playback, confirmed deletion and tracker visibility without slash commands.",
 		"|cff6e2c0aRoad nodes on the map:|r the optional road display marks actual network nodes and saved trail samples. Zoom in to inspect a junction; wide views keep a bounded marker budget.",
-	} },
-	{ version = "v0.8.10-gps.8", date = "2026-11-16", heads = { [1] = "Improved", }, items = {
-		"|cff6e2c0aGPS tracker visibility:|r hide the guidance window while navigation, route drawing and TomTom continue. A saved preference and tracker on/off commands restore or hide it.",
 	} },
 }

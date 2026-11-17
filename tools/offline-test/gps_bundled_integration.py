@@ -91,6 +91,7 @@ class BundledGPSIntegrationTests(unittest.TestCase):
                 mod.GPSInvalidateRoads()
             end
         ''')
+        self.lua.execute((HERE / 'gps_wait.lua').read_text(), self.lua.globals().mod)
 
     def run_lua(self, source):
         self.lua.execute(source)
@@ -103,13 +104,15 @@ class BundledGPSIntegrationTests(unittest.TestCase):
                 [3] = {wx=500,wy=100,map=900001,links={[2]=true}}
             })
             SlashCmdList.OPENMAP('gps go 900001 50 10')
+            assert(mod.GPSStatus().planning and not mod.GPSStatus().active)
+            assert(DrainGPS())
             assert(mod.GPSStatus().active and mod.GPSStatus().roadSource == 'bundled')
             assert(not WorldMapFrame:IsShown() and OpenMapGPSGuide:IsShown())
             local other = UiMapPoint.CreateFromCoordinates(900001,.8,.8)
             C_Map.SetUserWaypoint(other)
             TickGPS()
             assert(not mod.GPSStatus().active and WAYPOINT == other)
-            assert(mod.GPSStart(900001,.5,.1))
+            assert(PlanGPS(900001,.5,.1))
             player.x = .3 TickGPS()
             player.x = .5 TickGPS()
             TickGPS()
@@ -128,7 +131,7 @@ class BundledGPSIntegrationTests(unittest.TestCase):
             mod.GPSRoomContext = function()
                 return { piece='fixture:0',layer=true,pieces={['fixture:0']=true},zmin=0,zmax=10 }
             end
-            assert(mod.GPSStart(900001,.1,.5))
+            assert(PlanGPS(900001,.1,.5))
             assert(mod.GPSStatus().roadSource == 'bundled')
             local originalCost = mod.GPSStatus().roadStats.cost
             mod.GPSStop()
@@ -139,7 +142,7 @@ class BundledGPSIntegrationTests(unittest.TestCase):
             local saved = mod.db.gpsRoutes['Road bridge'].points
             assert(saved[1].z == 8 and saved[1].piece == 'fixture:0' and saved[1].layer)
             player.y = .1
-            assert(mod.GPSStart(900001,.1,.5))
+            assert(PlanGPS(900001,.1,.5))
             assert(mod.GPSStatus().roadSource == 'bundled')
             local used = false
             for _, p in ipairs(mod.GPSStatus().route) do if p.source == 'recorded' then used=true end end
@@ -147,7 +150,7 @@ class BundledGPSIntegrationTests(unittest.TestCase):
             assert(mod.GPSStatus().roadStats.cost < originalCost, 'saved bridge did not improve the route')
             mod.GPSStop()
             assert(mod.GPSDelete('Road bridge'))
-            assert(mod.GPSStart(900001,.1,.5))
+            assert(PlanGPS(900001,.1,.5))
             assert(math.abs(mod.GPSStatus().roadStats.cost - originalCost) < 1e-6)
             for _, point in ipairs(mod.GPSStatus().route) do
                 assert(point.source ~= 'recorded', 'deleted bridge stayed in graph cache')
@@ -160,10 +163,10 @@ class BundledGPSIntegrationTests(unittest.TestCase):
                 [1]={wx=100,wy=100,map=900001,type='horde',links={[2]=true}},
                 [2]={wx=500,wy=100,map=900001,type='horde',links={[1]=true}}
             })
-            local ok, err = mod.GPSStart(900001,.5,.1)
+            local ok, err = PlanGPS(900001,.5,.1)
             assert(not ok and err and not mod.GPSStatus().active)
             mod.db.gpsAllowEnemy = true
-            assert(mod.GPSStart(900001,.5,.1))
+            assert(PlanGPS(900001,.5,.1))
             assert(mod.GPSStatus().roadStats.enemy and mod.GPSStatus().instruction:find('faction'))
             mod.GPSStop()
             RoadFixture({
@@ -172,10 +175,10 @@ class BundledGPSIntegrationTests(unittest.TestCase):
                 [3]={wx=500,wy=100,map=900001,links={[2]=true}}
             })
             mod.db.gpsOffroad = 'deny'
-            assert(not mod.GPSStart(900001,.5,.1))
+            assert(not PlanGPS(900001,.5,.1))
             assert(not mod.GPSStatus().active)
             mod.db.gpsOffroad = 'allow'
-            assert(mod.GPSStart(900001,.5,.1))
+            assert(PlanGPS(900001,.5,.1))
             assert(mod.GPSStatus().roadSource == 'bundled')
         ''')
 
@@ -189,7 +192,7 @@ class BundledGPSIntegrationTests(unittest.TestCase):
                 [5]={wx=500,wy=100,map=900001,links={[4]=true}}
             })
             assert(mod.db.gpsAllowEnemy==false)
-            assert(mod.GPSStart(900001,.5,.1,'Across the border'))
+            assert(PlanGPS(900001,.5,.1,'Across the border'))
             local status=mod.GPSStatus()
             assert(status.active and status.roadSource=='bundled' and status.roadStats.factionStop)
             assert(status.route[#status.route].nodeID==2 and status.route[#status.route].factionStop,
@@ -202,7 +205,7 @@ class BundledGPSIntegrationTests(unittest.TestCase):
                 'border stop lost its visible explanation with the map closed')
             assert(not OpenMapGPSGuide.arrow:IsShown() and WAYPOINT==nil)
             assert(status.resumeTarget and status.resumeTarget.x==.5)
-            assert(mod.GPSSetRoutingOption('gpsAllowEnemy',true))
+            assert(RoutingGPS('gpsAllowEnemy',true))
             status=mod.GPSStatus()
             assert(status.active and status.roadSource=='bundled')
             assert(status.roadStats.enemy and status.instruction:find('faction'),
@@ -220,14 +223,14 @@ class BundledGPSIntegrationTests(unittest.TestCase):
                 [2]={wx=300,wy=100,map=900001,type='offroad',links={[1]=true,[3]=true}},
                 [3]={wx=500,wy=100,map=900001,links={[2]=true}}
             })
-            assert(mod.GPSSetRoutingOption('gpsOffroad','needed'))
-            assert(mod.GPSStart(900001,.5,.1))
+            assert(RoutingGPS('gpsOffroad','needed'))
+            assert(PlanGPS(900001,.5,.1))
             local expensive=mod.GPSStatus().roadStats.cost
             assert(mod.GPSStatus().roadSource=='bundled' and expensive>10000,
                 'needed off-road mode incorrectly became a hard ban')
-            assert(mod.GPSSetRoutingOption('gpsOffroad','allow'))
+            assert(RoutingGPS('gpsOffroad','allow'))
             assert(mod.GPSStatus().active and mod.GPSStatus().roadStats.cost<expensive/100)
-            assert(mod.GPSSetRoutingOption('gpsOffroad','deny'))
+            assert(RoutingGPS('gpsOffroad','deny'))
             assert(not mod.GPSStatus().active and mod.GPSStatus().state~='direct')
         ''')
 
@@ -239,11 +242,11 @@ class BundledGPSIntegrationTests(unittest.TestCase):
                 [3]={wx=500,wy=100,map=900001,type='horde',links={[2]=true}}
             })
             ns.GPSRoadLevels={areas={},zones={[900001]={low=50,high=60}}}
-            assert(mod.GPSSetRoutingOption('gpsOffroad','deny'))
-            assert(mod.GPSSetRoutingOption('gpsAboveLevel','never'))
-            assert(not mod.GPSStart(900001,.5,.1))
+            assert(RoutingGPS('gpsOffroad','deny'))
+            assert(RoutingGPS('gpsAboveLevel','never'))
+            assert(not PlanGPS(900001,.5,.1))
             UnitIsGhost=function() return true end
-            assert(mod.GPSStart(900001,.5,.1))
+            assert(PlanGPS(900001,.5,.1))
             local status=mod.GPSStatus()
             assert(status.active and status.roadSource=='bundled' and not status.roadStats.factionStop)
             for _,point in ipairs(status.route) do
@@ -262,10 +265,10 @@ class BundledGPSIntegrationTests(unittest.TestCase):
             })
             ns.GPSRoadLevels = { areas={},zones={[900001]={low=30,high=40}} }
             mod.db.gpsAboveLevel = 'deny'
-            local ok, err = mod.GPSStart(900001,.5,.1)
+            local ok, err = PlanGPS(900001,.5,.1)
             assert(not ok and err and not mod.GPSStatus().active)
             mod.db.gpsAboveLevel = 'allow'
-            assert(mod.GPSStart(900001,.5,.1))
+            assert(PlanGPS(900001,.5,.1))
             assert(mod.GPSStatus().roadSource == 'bundled')
         ''')
 
@@ -277,7 +280,7 @@ class BundledGPSIntegrationTests(unittest.TestCase):
                 [2]={wx=500,wy=100,map=2521,links={[1]=true}}
             },2991)
             assert(ns.MapStitch.Rect(2521) == nil)
-            assert(mod.GPSStart(2521,.5,.1))
+            assert(PlanGPS(2521,.5,.1))
             local status = mod.GPSStatus()
             assert(status.active and status.roadSource == 'bundled' and status.u == nil)
             assert(status.map == 2521 and status.distance and status.bearing)
@@ -298,7 +301,7 @@ class BundledGPSIntegrationTests(unittest.TestCase):
                      stairDirection=1,stairAngleSign=1,centerWX=100,centerWY=100,kind='stairs'}
                 },nil,{source='bundled'}
             end
-            assert(mod.GPSStart(900001,.11,.1))
+            assert(PlanGPS(900001,.11,.1))
             for _=1,12 do TickGPS() end
             assert(mod.GPSStatus().active and mod.GPSStatus().index == 2,
                 'overlapping stair top advanced without walking the spiral')
@@ -316,7 +319,7 @@ class BundledGPSIntegrationTests(unittest.TestCase):
             mod.GPSRoadRoute = function()
                 return {{cont=0,wx=500,wy=500,map=900001,x=.5,y=.5,minZ=95,maxZ=105}},nil,{source='bundled'}
             end
-            assert(mod.GPSStart(900001,.5,.5))
+            assert(PlanGPS(900001,.5,.5))
             for _=1,5 do TickGPS() end
             assert(mod.GPSStatus().active and mod.GPSStatus().instruction:find('floor'))
             player.z=100 TickGPS()
@@ -354,7 +357,7 @@ class BundledGPSIntegrationTests(unittest.TestCase):
             end
             assert(first and last,'source dataset has no neutral outdoor test edge')
             player.map,player.x,player.y=first.map,(first.wx-OFFSET)/SCALE,(first.wy-OFFSET)/SCALE
-            assert(mod.GPSStart(last.map,(last.wx-OFFSET)/SCALE,(last.wy-OFFSET)/SCALE))
+            assert(PlanGPS(last.map,(last.wx-OFFSET)/SCALE,(last.wy-OFFSET)/SCALE))
             local status=mod.GPSStatus()
             assert(status.roadSource=='bundled' and status.roadStats.nodes==4467)
             assert(status.route[1].source=='bundled' and not WorldMapFrame:IsShown())
@@ -382,7 +385,7 @@ class BundledGPSIntegrationTests(unittest.TestCase):
             assert(anchor,'Brill platform position override missing')
             local destination=realRoads.networks[0].nodes[4455]
             player.map,player.x,player.y=anchor.zone,(anchor.wx-OFFSET)/SCALE,(anchor.wy-OFFSET)/SCALE
-            assert(mod.GPSStart(destination.map,(destination.wx-OFFSET)/SCALE,(destination.wy-OFFSET)/SCALE))
+            assert(PlanGPS(destination.map,(destination.wx-OFFSET)/SCALE,(destination.wy-OFFSET)/SCALE))
             local status=mod.GPSStatus()
             assert(status.active and status.roadSource=='bundled')
             assert(status.route[1].nodeID==4452,'passenger platform snapped to the stair foot or road below')

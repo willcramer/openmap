@@ -1,6 +1,6 @@
 # GPS road-network validation
 
-Candidate: **v0.8.10-gps.13**, Forever Maps dataset **2.0.166**, separate addon **OpenMapGPS**
+Candidate: **v0.8.10-gps.14**, Forever Maps dataset **2.0.166**, separate addon **OpenMapGPS**
 (display name **OpenMap - GPS**).
 This is an offline-verified test build. No live game-client verification is claimed.
 
@@ -26,7 +26,7 @@ This is an offline-verified test build. No live game-client verification is clai
   This evidence covers those contracts; it is not proof of every possible journey.
   A deliberate difference protects the last partial segment against reversing a one-way drop,
   which the reference can allow on its final pin approach. See the decision record.
-- Seventeen room tests and twelve full-addon vertical tests cover real building geometry,
+- Eighteen room tests and twelve full-addon vertical tests cover real building geometry,
   249,563 same-building floor pairs, stairs in both directions, intermediate exits, first movement
   without a pause, floor-safe arrival, idle room observation, missed road corners, elevator flags
   without player height, and the Ruins above Undercity separately from its underground map.
@@ -34,7 +34,7 @@ This is an offline-verified test build. No live game-client verification is clai
 ## OpenMap integration and installation
 
 - All six loader modes, navigation and controller-waypoint checks pass for Forever and Retail.
-  Existing focused tests also pass. The consolidated local run has 50 successful invocations,
+  Existing focused tests also pass. The consolidated local run has 51 successful invocations,
   including upstream's new performance and flight-discovery suites.
 - Official OpenMap v0.8.10 (`0f4d2e4b6fe82b9032618fd3b824eaaa5b36dcef`) is merged into the
   GPS branch. Changelog sections retain both custom history and official release notes; locale
@@ -139,10 +139,47 @@ green lines from becoming visible. Closed maps defer route geometry while guidan
 
 These are offline CPU measurements with mocked client APIs; the simulated drawing cost is not a
 measurement of the game's renderer. They do not establish a live FPS result or a hard 1 ms ceiling.
-Individual API calls, garbage collection and guidance updates can overrun the target. Explicitly
-starting a new journey or changing routing options still plans synchronously. The recurring
-automatic off-route calculation is the scope of this change. Live acceptance must include moving
+Individual API calls, garbage collection and guidance updates can overrun the target. These
+measurements document the gps.13 automatic-replanning change; gps.14 additionally queues initial
+journeys and routing-option changes, as described below. Live acceptance must include moving
 off-route with the map closed and open, the tracker hidden, and TomTom enabled.
+
+## Initial planning and minimap guidance
+
+New destinations, saved-trail playback, routing-option changes and manual-road replans now use
+the same cooperative worker. Accepted requests return before the search starts, with a calculating
+message and a working Stop action. Existing guidance and its waypoint remain available during a
+replacement. Floor metadata and room indexing are resolved within that worker. Eighteen room
+tests include interrupted cold indexing; no incomplete index is published.
+
+- Nineteen async tests cover raw acceptance, deferred errors, initial cancellation, external
+  waypoint takeover with and without a previous pin, superseding requests, retained old guidance,
+  pending-target preservation after options/manual changes, and saved-trail reversal. Older
+  behavior fixtures explicitly drain the real worker before checking completed results.
+- Eighteen minimap tests exercise actual Lua output: exact yard-to-pixel scale, axes derived from
+  map transforms, round/square clipping, rotation, zoom, movement, source readiness, pooled regions,
+  unavailable/secret APIs, floor/continent boundaries and cancellation. Surface roads remain hidden
+  while the player is on an underground floor. A 24,000-point route uses a cooperative spatial
+  hierarchy; nearby updates inspect route blocks instead of scanning the whole journey. At most
+  256 visible segments use 512 pooled lines across the staging buffers. Hidden or unprojectable
+  segments do not become straight shortcuts. Unknown custom minimap shapes use safe circular
+  clipping. The overlay does not alter Blizzard's minimap layout, input or mask.
+- Independent full-addon tests compare gps.13 with the new build over four fixed journeys, with
+  world-map/minimap combinations. The initial GPSStart call falls from roughly 89–112 ms to under
+  0.13 ms. Full cold update peaks are about 1.4–2.4 ms, including route and minimap drawing. Cold
+  completion takes about 0.8–1.2 seconds at simulated 120 Hz; the wait is spread across frames.
+  Preference/manual changes return in under 0.1 ms in this harness, and a 2,000-point reversed
+  playback request drops from about 25 ms to 0.07 ms before its deferred work.
+- Four seconds of movement with minimap guidance produce roughly 80 redraws and peak updates of
+  0.23–1.04 ms. Seven independent caller/ownership checks pass. Completed world-route output
+  matches gps.13 exactly, and before/after minimap and control previews use actual Lua geometry.
+
+The new numbers use Lua 5.1 and mocked client APIs, with simulated per-region drawing costs.
+They establish addon work distribution, not live FPS or terrain alignment. The 1 ms budget remains
+a cooperative target. Idle room observation keeps its prior continuity behavior and may warm a
+cold index outside a route request. Minimap guidance hides inside instances and whenever safe
+position/floor/radius information is unavailable. In-game checks must include TomTom, the tracker
+hidden, minimap zoom/rotation, route cancellation and overlapping floors.
 
 ## Still requires the game
 

@@ -42,7 +42,8 @@ AI coding agents: read [AGENTS.md](../AGENTS.md) too.
    python -P tools/offline-test/press.py    # a press that wandered off isn't a click
    python -P tools/offline-test/gps.py      # recorded-road planning, playback, gaps and ownership
    python -P tools/offline-test/gps_integration.py # GPS through Init/Nav/HUD, with the map closed
-   python -P tools/offline-test/gps_async.py # automatic replanning, cancellation and staged rendering
+   python -P tools/offline-test/gps_async.py # initial planning, automatic rerouting and cancellation
+   python -P tools/offline-test/gps_minimap.py # minimap projection, clipping and budgeted drawing
    python -P tools/offline-test/gps_planner.py # cooperative router and destination cache parity
    python -P tools/offline-test/gps_render.py # interrupted drawing-pool cleanup
    python -P tools/offline-test/gps_package.py # separate-addon archive identities and guards
@@ -80,7 +81,7 @@ AI coding agents: read [AGENTS.md](../AGENTS.md) too.
 ## Clients
 
 The custom GPS build can be packaged separately with
-`python -P tools/package/build.py v0.8.10-gps.13 --client=forever --variant=gps`.
+`python -P tools/package/build.py v0.8.10-gps.14 --client=forever --variant=gps`.
 `tools/package/variant.py` rewrites only the archive's addon identity; source and normal packages
 remain OpenMap. The variant's `BootGPS.lua` runs first and keeps all map code dormant while
 the original is loaded. Explicit `Group: OpenMapGPS` prevents the AddOn List from nesting it under

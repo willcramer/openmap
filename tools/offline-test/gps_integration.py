@@ -69,10 +69,11 @@ class GPSIntegrationTests(unittest.TestCase):
                 assert(#ERRORS == 0, ERRORS[1])
             end
         ''')
+        self.lua.execute((HERE / 'gps_wait.lua').read_text(), self.lua.globals().gpsmod)
 
     def test_commands_and_live_arrival_with_map_closed(self):
         self.lua.execute(r'''
-            SlashCmdList.OPENMAP("gps go 900001 30 20")
+            CommandGPS("gps go 900001 30 20")
             assert(gpsmod.GPSStatus().active and not WorldMapFrame:IsShown())
             assert(gpsmod.GPSStatus().player and gpsmod.GPSStatus().player.x == PX)
             assert(WAYPOINT.uiMapID == 900001 and WAYPOINT.position.x == .3)
@@ -87,42 +88,42 @@ class GPSIntegrationTests(unittest.TestCase):
 
     def test_recording_saved_by_command_preserves_name_and_plays(self):
         self.lua.execute(r'''
-            SlashCmdList.OPENMAP("gps record Evening Walk")
+            CommandGPS("gps record Evening Walk")
             assert(gpsmod.GPSStatus().recording == "Evening Walk")
             PX = .22
             TickGPS()
             PX = .24
             TickGPS()
-            SlashCmdList.OPENMAP("gps save")
+            CommandGPS("gps save")
             assert(not gpsmod.GPSStatus().recording)
             assert(gpsmod.db.gpsRoutes["Evening Walk"])
             assert(#gpsmod.GPSList() == 1)
             PX = .2
-            SlashCmdList.OPENMAP("gps follow Evening Walk")
+            CommandGPS("gps follow Evening Walk")
             assert(gpsmod.GPSStatus().active)
-            SlashCmdList.OPENMAP("gps stop")
+            CommandGPS("gps stop")
             assert(not gpsmod.GPSStatus().active)
             assert(gpsmod.GPSStatus().state == "stopped")
             assert(gpsmod.GPSStatus().instruction == testns.L["GPS stopped."])
-            SlashCmdList.OPENMAP("gps delete Evening Walk")
+            CommandGPS("gps delete Evening Walk")
             assert(#gpsmod.GPSList() == 0)
         ''')
 
     def test_external_waypoint_takes_over_and_survives_stop(self):
         self.lua.execute(r'''
-            SlashCmdList.OPENMAP("gps go 900001 40 20")
+            CommandGPS("gps go 900001 40 20")
             local other = UiMapPoint.CreateFromCoordinates(900001, .8, .6)
             C_Map.SetUserWaypoint(other)
             TickGPS()
             assert(not gpsmod.GPSStatus().active)
             assert(WAYPOINT == other)
-            SlashCmdList.OPENMAP("gps stop")
+            CommandGPS("gps stop")
             assert(WAYPOINT == other)
         ''')
 
     def test_position_gaps_suspend_guidance_without_arrival(self):
         self.lua.execute(r'''
-            SlashCmdList.OPENMAP("gps go 900001 40 20")
+            CommandGPS("gps go 900001 40 20")
             MISSING = true
             TickGPS()
             assert(gpsmod.GPSStatus().active)
@@ -136,7 +137,7 @@ class GPSIntegrationTests(unittest.TestCase):
 
     def test_secret_positions_do_not_reach_guidance_arithmetic(self):
         self.lua.execute(r'''
-            SlashCmdList.OPENMAP("gps go 900001 40 20")
+            CommandGPS("gps go 900001 40 20")
             ENABLE_SECRETS()
             C_Map.GetPlayerMapPosition = function()
                 return { x = Secret(.2), y = Secret(.2) }
@@ -151,16 +152,16 @@ class GPSIntegrationTests(unittest.TestCase):
             gpsmod:SetupGPSPanel()
             gpsmod:SetupGPSPanel()
             assert(#FRAMES == frames, "setup allocated duplicate tickers or HUDs")
-            SlashCmdList.OPENMAP("gps")
+            CommandGPS("gps")
             assert(OpenMapGPSPanel:IsShown())
-            SlashCmdList.OPENMAP("gps")
+            CommandGPS("gps")
             assert(not OpenMapGPSPanel:IsShown())
             assert(#ERRORS == 0, ERRORS[1])
         ''')
 
     def test_single_point_recording_can_be_discarded_from_hud(self):
         self.lua.execute(r'''
-            SlashCmdList.OPENMAP("gps record False Start")
+            CommandGPS("gps record False Start")
             TickGPS()
             assert(OpenMapGPSGuide:IsShown())
             local stop
@@ -171,9 +172,9 @@ class GPSIntegrationTests(unittest.TestCase):
             stop:GetScript("OnClick")(stop)
             assert(not gpsmod.GPSStatus().recording and not OpenMapGPSGuide:IsShown())
             assert(#gpsmod.GPSList() == 0)
-            SlashCmdList.OPENMAP("gps record Real Start")
+            CommandGPS("gps record Real Start")
             assert(gpsmod.GPSStatus().recording == "Real Start")
-            SlashCmdList.OPENMAP("gps cancelrecord")
+            CommandGPS("gps cancelrecord")
             assert(not gpsmod.GPSStatus().recording)
         ''')
 
@@ -221,7 +222,7 @@ class GPSIntegrationTests(unittest.TestCase):
             gpsmod.db.gpsRoutes['Tracker road']={points={
                 {900001,.2,.2},{900001,.3,.2},{900001,.4,.2}
             }}
-            assert(gpsmod.GPSPlay('Tracker road','once'))
+            assert(PlayGPS('Tracker road','once'))
             TickGPS()
             assert(OpenMapGPSGuide:IsShown()and WAYPOINT.position.x==.3)
             local route,waypoint,updates,lines=gpsmod.GPSStatus().route,WAYPOINT,#added,DrawnGPS().lines
@@ -251,19 +252,19 @@ class GPSIntegrationTests(unittest.TestCase):
 
     def test_tracker_commands_and_options_restore_without_changing_navigation(self):
         self.lua.execute(r'''
-            SlashCmdList.OPENMAP('gps go 900001 40 20')
+            CommandGPS('gps go 900001 40 20')
             local route,waypoint=gpsmod.GPSStatus().route,WAYPOINT
             local notifications,refreshes=0,0
             local notify,refresh=testns.NotifyOptions,gpsmod.RefreshPanel
             testns.NotifyOptions=function(...)notifications=notifications+1 if notify then notify(...)end end
             gpsmod.RefreshPanel=function(self,...)refreshes=refreshes+1 if refresh then refresh(self,...)end end
-            SlashCmdList.OPENMAP('gps tracker OFF')
+            CommandGPS('gps tracker OFF')
             assert(not OpenMapGPSGuide:IsShown()and gpsmod.db.gpsShowTracker==false)
             assert(gpsmod.GPSStatus().active and gpsmod.GPSStatus().route==route and WAYPOINT==waypoint)
             TickGPS()assert(not OpenMapGPSGuide:IsShown())
-            SlashCmdList.OPENMAP('gps tracker ON')
+            CommandGPS('gps tracker ON')
             assert(OpenMapGPSGuide:IsShown()and gpsmod.GPSStatus().active and WAYPOINT==waypoint)
-            SlashCmdList.OPENMAP('gps tracker')
+            CommandGPS('gps tracker')
             assert(not OpenMapGPSGuide:IsShown())
             local options=gpsmod:Options()
             assert(options.gpsShowTracker.name=='GPS tracker'and not options.gpsShowTracker.get({'gpsShowTracker'}))
@@ -276,21 +277,21 @@ class GPSIntegrationTests(unittest.TestCase):
 
     def test_hidden_preference_survives_new_journeys_recording_and_profile_initialization(self):
         self.lua.execute(r'''
-            SlashCmdList.OPENMAP('gps tracker off')
+            CommandGPS('gps tracker off')
             gpsmod.db.gpsUseRoads=false
             gpsmod.db.gpsRoutes['Reroute road']={points={
                 {900001,.2,.2},{900001,.3,.2},{900001,.4,.2}
             }}
-            assert(gpsmod.GPSStart(900001,.4,.2))
+            assert(PlanGPS(900001,.4,.2))
             TickGPS()assert(not OpenMapGPSGuide:IsShown()and gpsmod.GPSStatus().active)
             MISSING=true TickGPS()
             assert(gpsmod.GPSStatus().state=='waiting'and not OpenMapGPSGuide:IsShown())
             MISSING=false
             gpsmod.GPSStop()
-            assert(gpsmod.GPSStart(900001,.5,.2))
+            assert(PlanGPS(900001,.5,.2))
             assert(not OpenMapGPSGuide:IsShown())
             gpsmod.GPSStop()
-            assert(gpsmod.GPSStart(900001,.4,.2))
+            assert(PlanGPS(900001,.4,.2))
             local road=gpsmod.GPSStatus().route
             assert(gpsmod.GPSStatus().state=='recorded')
             PY=.28 TickGPS()
@@ -298,21 +299,21 @@ class GPSIntegrationTests(unittest.TestCase):
             assert(not OpenMapGPSGuide:IsShown(),'rerouting restored a hidden tracker')
             gpsmod.GPSStop()
             PY=.2
-            SlashCmdList.OPENMAP('gps record Hidden walk')
+            CommandGPS('gps record Hidden walk')
             PX=.22 TickGPS()
             assert(gpsmod.GPSStatus().recording=='Hidden walk'and gpsmod.GPSStatus().recorded==2)
             assert(not OpenMapGPSGuide:IsShown())
-            SlashCmdList.OPENMAP('gps tracker on')
+            CommandGPS('gps tracker on')
             assert(OpenMapGPSGuide:IsShown()and gpsmod.GPSStatus().recording=='Hidden walk')
             OpenMapGPSGuide.hide:GetScript('OnClick')(OpenMapGPSGuide.hide)
             assert(not OpenMapGPSGuide:IsShown()and gpsmod.GPSStatus().recording=='Hidden walk')
-            SlashCmdList.OPENMAP('gps save')
+            CommandGPS('gps save')
             assert(#gpsmod.db.gpsRoutes['Hidden walk'].points==2)
             -- InitDB is the real profile-load/default-fill path used after reload.
             local saved=OpenMapDB.worldmap
             testns:InitDB()
             assert(gpsmod.db==saved and gpsmod.defaults.gpsShowTracker==true and gpsmod.db.gpsShowTracker==false)
-            assert(gpsmod.GPSStart(900001,.5,.2))
+            assert(PlanGPS(900001,.5,.2))
             assert(not OpenMapGPSGuide:IsShown())
         ''')
 
@@ -334,6 +335,7 @@ class GPSIntegrationTests(unittest.TestCase):
             local function Click(button)
                 assert(button.uiEnabled~=false,'clicked a disabled GPS control')
                 button:GetScript('OnClick')(button,'LeftButton')
+                DrainGPS()
             end
             local function Name(text)
                 panel.name:SetText(text)
@@ -398,7 +400,7 @@ class GPSIntegrationTests(unittest.TestCase):
         self.lua.execute(r'''
             gpsmod.db.mapRightClick='zoom'
             gpsmod.GPSSetTrackerShown(false)
-            assert(gpsmod.GPSStart(900001,.4,.2))
+            assert(PlanGPS(900001,.4,.2))
             local route,waypoint=gpsmod.GPSStatus().route,WAYPOINT
             gpsmod:ToggleGPS(true)
             local panel=OpenMapGPSPanel

@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+## v0.8.10-gps.14 (2026-11-17)
+
+### Improved
+
+- **Start GPS without a blocking search:** new destinations, saved-route playback and routing
+  changes use the cancellable planner across frames. Calculating GPS route shows progress;
+  Stop cancels pending work. An existing route stays available until its replacement is ready.
+- **Green route on the minimap:** nearby route segments appear on the minimap, adapting to
+  its zoom and rotation. GPS route on minimap is enabled by default and can be turned off
+  independently of the tracker and world-map route.
+- **Cold-start work is paced:** room/floor indexing joins the planner's frame budget, with
+  incomplete indexes discarded safely after cancellation.
+
 ## v0.8.10-gps.13 (2026-11-17)
 
 ### Improved

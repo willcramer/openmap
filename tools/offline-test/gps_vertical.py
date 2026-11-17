@@ -73,7 +73,7 @@ class GPSVerticalTests(unittest.TestCase):
             local route=Stairs(0,3,4)
             player.x,player.y,player.z=.104,.1,nil
             Planned(route)
-            assert(mod.GPSStart(900001,.104,.1))
+            assert(PlanGPS(900001,.104,.1))
             for i=2,#route do MoveWorld(route[i].wx,route[i].wy)end
             for _=1,3 do TickGPS()end
             assert(mod.GPSStatus().state=='arrived',
@@ -85,7 +85,7 @@ class GPSVerticalTests(unittest.TestCase):
             local route=Stairs(2,0,10)
             player.x,player.y,player.z=.11,.1,nil
             Planned(route)
-            assert(mod.GPSStart(900001,.11,.1))
+            assert(PlanGPS(900001,.11,.1))
             for i=2,#route do MoveWorld(route[i].wx,route[i].wy)end
             for _=1,3 do TickGPS()end
             assert(mod.GPSStatus().state=='arrived',
@@ -97,7 +97,7 @@ class GPSVerticalTests(unittest.TestCase):
             local route=Stairs(0,1.5,6)
             player.x,player.y,player.z=.106,.1,nil
             Planned(route)
-            assert(mod.GPSStart(900001,route[#route].x,route[#route].y))
+            assert(PlanGPS(900001,route[#route].x,route[#route].y))
             for _=1,5 do TickGPS()end
             assert(mod.GPSStatus().active,'small radius was treated as arrival without climbing')
             for i=2,#route do MoveWorld(route[i].wx,route[i].wy)end
@@ -109,7 +109,7 @@ class GPSVerticalTests(unittest.TestCase):
         self.run_lua('''
             Planned({LivePoint(100,100),LivePoint(100,130),LivePoint(130,130),
                 LivePoint(130,100),LivePoint(160,100)})
-            assert(mod.GPSStart(900001,.16,.1))
+            assert(PlanGPS(900001,.16,.1))
             MoveWorld(130,100,0)
             assert(mod.GPSStatus().index>=4,
                 'standing on a later stretch still directs the player back to the missed corner')
@@ -121,7 +121,7 @@ class GPSVerticalTests(unittest.TestCase):
         self.run_lua('''
             Planned({LivePoint(100,130),LivePoint(130,130),
                 LivePoint(130,100),LivePoint(160,100)})
-            assert(mod.GPSStart(900001,.16,.1))
+            assert(PlanGPS(900001,.16,.1))
             MoveWorld(130,100,0)
             assert(mod.GPSStatus().index>=3,
                 'missing the first road point prevented rejoining a later stretch')
@@ -139,7 +139,7 @@ class GPSVerticalTests(unittest.TestCase):
                 LivePoint(200,100,{piece='100:2',layer=true,minZ=20,maxZ=25}),
                 LivePoint(100,100,{piece='100:2',layer=true,minZ=20,maxZ=25})
             })
-            assert(mod.GPSStart(900001,.1,.1))
+            assert(PlanGPS(900001,.1,.1))
             for _=1,8 do TickGPS()end
             assert(mod.GPSStatus().active and mod.GPSStatus().index<=2,
                 'lower floor XY matched a later upper-floor waypoint')
@@ -153,7 +153,7 @@ class GPSVerticalTests(unittest.TestCase):
             C_Map.GetAreaInfo=function(id)if id==153 then return 'Localized Ruins'end end
             IsIndoors=function()return nil end
             Planned({{cont=0,wx=100,wy=100,map=1458,x=.1,y=.1,layer=1458,kind='elevator'}})
-            assert(mod.GPSStart(1458,.1,.1))
+            assert(PlanGPS(1458,.1,.1))
             for _=1,4 do TickGPS()end
             assert(mod.GPSStatus().active and mod.GPSStatus().instruction:find('floor'),
                 'Ruins above were treated as the underground city')
@@ -167,7 +167,7 @@ class GPSVerticalTests(unittest.TestCase):
             RoomFixture()
             player.x,player.y,player.z=.1,.1,nil
             Planned({LivePoint(100,100,{piece='100:2',layer=true,minZ=20,maxZ=25})})
-            assert(mod.GPSStart(900001,.1,.1))
+            assert(PlanGPS(900001,.1,.1))
             for _=1,6 do TickGPS()end
             assert(mod.GPSStatus().active,
                 'unknown indoor floor was accepted just because both floors share XY')
@@ -193,7 +193,7 @@ class GPSVerticalTests(unittest.TestCase):
             assert(seen[#seen].piece=='100:1' and not seen[#seen].ambiguous,
                 'the known room was lost when height became unavailable before a journey')
             Planned({LivePoint(100,100,{piece='100:1',layer=true,minZ=0,maxZ=5})})
-            assert(mod.GPSStart(900001,.1,.1))
+            assert(PlanGPS(900001,.1,.1))
             assert(mod.GPSStatus().state=='arrived',
                 'a new journey ignored the room established while GPS was idle')
         ''')
@@ -207,7 +207,7 @@ class GPSVerticalTests(unittest.TestCase):
             b.pieces[2].zmin,b.pieces[2].zmax=0,5
             player.x,player.y,player.z=.11,.1,2
             Planned({LivePoint(120,100,{piece='100:2',layer=true,minZ=0,maxZ=5})})
-            assert(mod.GPSStart(900001,.12,.1))
+            assert(PlanGPS(900001,.12,.1))
             assert(mod.GPSStatus().state=='arrived',
                 'an adjacent room with the same height interval was treated as another floor')
         ''')

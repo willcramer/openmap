@@ -38,13 +38,14 @@ class GPS(unittest.TestCase):
             function move(x,y,map) player={map=map or 1,x=x,y=y} NOW=NOW+.2 mod.GPSUpdate() end
         """)
         lua.execute((ROOT / "OpenMap/Map/GPS.lua").read_text(), "OpenMap", lua.globals().ns)
+        lua.execute((ROOT / "tools/offline-test/gps_wait.lua").read_text(), lua.globals().mod)
 
     def run_lua(self, source):
         self.lua.execute(source)
 
     def test_direct_arrival_and_external_waypoint_ownership(self):
         self.run_lua("""
-            assert(mod.GPSStart(1,.5,.1,'Destination'))
+            assert(PlanGPS(1,.5,.1,'Destination'))
             assert(mod.GPSStatus().state=='direct' and mod.GPSStatus().distance==400)
             local n=tracks
             mod.GPSUpdate() mod.GPSUpdate()
@@ -52,7 +53,7 @@ class GPS(unittest.TestCase):
             waypoint={map=1,x=.8,y=.8}
             mod.GPSUpdate()
             assert(not mod.GPSStatus().active and waypoint.x==.8 and not clears)
-            assert(mod.GPSStart(1,.5,.1))
+            assert(PlanGPS(1,.5,.1))
             move(.5,.1)
             assert(mod.GPSStatus().state=='arrived' and not waypoint)
             assert(mod.GPSStatus().instruction=='You have arrived.')
@@ -65,7 +66,7 @@ class GPS(unittest.TestCase):
             assert(mod.GPSSave())
             assert(#mod.db.gpsRoutes['My walk'].points==4)
             assert(not mod.GPSRecord('My walk'))
-            assert(mod.GPSPlay('My walk','reverse'))
+            assert(PlayGPS('My walk','reverse'))
             assert(mod.GPSStatus().route[1].x==.19)
             move(.16,.1) move(.13,.1) move(.1,.1)
             assert(mod.GPSStatus().state=='arrived')
@@ -109,7 +110,7 @@ class GPS(unittest.TestCase):
             for i=1,13 do a[#a+1]={1,.1+(i-1)*.05,.4} end
             for i=1,7 do b[#b+1]={1,.7,.4-(i-1)*.05} end
             mod.db.gpsRoutes={a={points=a},b={points=b}}
-            assert(mod.GPSStart(1,.7,.1))
+            assert(PlanGPS(1,.7,.1))
             local s=mod.GPSStatus()
             assert(s.state=='recorded' and #s.route>20)
             assert(s.remaining>1100, 'route cut across the recorded detour')
@@ -120,18 +121,18 @@ class GPS(unittest.TestCase):
 
     def test_invalid_locations_and_cross_continent_guidance_are_rejected(self):
         self.run_lua("""
-            assert(not mod.GPSStart(1,0/0,.5))
-            assert(not mod.GPSStart(1,2,.5))
-            assert(not mod.GPSStart(2,.5,.5))
+            assert(not PlanGPS(1,0/0,.5))
+            assert(not PlanGPS(1,2,.5))
+            assert(not PlanGPS(2,.5,.5))
             assert(not mod.GPSStatus().active)
             player.x={secret=true}
             assert(not mod.GPSRecord('secret'))
-            assert(not mod.GPSStart(1,.5,.5))
+            assert(not PlanGPS(1,.5,.5))
         """)
 
     def test_position_loss_and_taxi_pause_without_advancing(self):
         self.run_lua("""
-            assert(mod.GPSStart(1,.5,.1))
+            assert(PlanGPS(1,.5,.1))
             TAXI=true move(.5,.1)
             assert(mod.GPSStatus().active and mod.GPSStatus().state=='waiting')
             assert(not mod.GPSStatus().distance and not mod.GPSStatus().remaining)
@@ -149,8 +150,8 @@ class GPS(unittest.TestCase):
             local points={}
             for i=1,8 do points[#points+1]={1,.1+(i-1)*.05,.1} end
             mod.db.gpsRoutes.long={points=points}
-            assert(not mod.GPSPlay('long','loop'))
-            assert(mod.GPSPlay('long','pingpong'))
+            assert(not PlayGPS('long','loop'))
+            assert(PlayGPS('long','pingpong'))
             for i=2,8 do move(.1+(i-1)*.05,.1) end
             local s=mod.GPSStatus()
             assert(s.active and s.index==2 and math.abs(s.route[1].x-.45)<1e-9)
@@ -162,7 +163,7 @@ class GPS(unittest.TestCase):
             local points={}
             for i=1,13 do points[#points+1]={1,.1+(i-1)*.05,.1} end
             mod.db.gpsRoutes.road={points=points}
-            assert(mod.GPSStart(1,.7,.1))
+            assert(PlanGPS(1,.7,.1))
             assert(mod.GPSStatus().state=='recorded')
             NOW=10 move(.15,.4)
             assert(mod.GPSPlanningStats().active and mod.GPSStatus().state=='recorded')

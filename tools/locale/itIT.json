@@ -674,5 +674,7 @@
  "The road editor limit has been reached.": "È stato raggiunto il limite dell’editor stradale.",
  "Only your own road nodes can be deleted.": "Puoi eliminare solo i tuoi nodi stradali.",
  "This road connection was not added by you.": "Non hai aggiunto questo collegamento stradale.",
- "This connection would bypass a one-way road.": "Questo collegamento aggirerebbe una strada a senso unico."
+ "This connection would bypass a one-way road.": "Questo collegamento aggirerebbe una strada a senso unico.",
+ "Calculating GPS route...": "Calcolo del percorso GPS...",
+ "GPS route on minimap": "Percorso GPS sulla minimappa"
 }
